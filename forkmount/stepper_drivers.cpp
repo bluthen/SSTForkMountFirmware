@@ -1,62 +1,146 @@
 
 #include "stepper_drivers.h"
-#include "forkmount.h"
 
-extern SSTVARS sstvars;
+static void stepper_forwardstep1(void);
+static void stepper_forwardstep2(void);
+static void stepper_backwardstep1(void);
+static void stepper_backwardstep2(void);
 
-boolean reset_started = false;
 
-static const int STEPPER_DIR_PIN = 3;
-static const int STEPPER_STEP_PIN = 2;
-static const int STEPPER_RESET = 4;
-static const int STEPPER_MS1 = 5;
-static const int STEPPER_MS2 = 6;
-static const int STEPPER_MS3 = 7;
+static const uint16_t stepsPerRotation = 200;
 
-AccelStepper Astepper1(1, STEPPER_STEP_PIN, STEPPER_DIR_PIN);
+Adafruit_MotorShield AFMS;
+Adafruit_StepperMotor* myStepper1;
+Adafruit_StepperMotor* myStepper2;
 
 void stepper_init() {
-  pinMode(STEPPER_DIR_PIN, OUTPUT);
-  pinMode(STEPPER_STEP_PIN, OUTPUT);
-  pinMode(STEPPER_RESET, OUTPUT);
-  pinMode(STEPPER_MS1, OUTPUT);  
-  pinMode(STEPPER_MS2, OUTPUT);  
-  pinMode(STEPPER_MS3, OUTPUT);  
-  digitalWrite(STEPPER_RESET, HIGH);
-  digitalWrite(STEPPER_MS1, HIGH);
-  digitalWrite(STEPPER_MS2, HIGH);
-  digitalWrite(STEPPER_MS3, HIGH);
-}
+  // Create the motor shield object with the default I2C address
+  AFMS = Adafruit_MotorShield();
+  // Or, create it with a different I2C address (say for stacking)
+  // Adafruit_MotorShield AFMS = Adafruit_MotorShield(0x61); 
 
-int reset_lp_loop = 0;
-void stepper_reset_lp() {
-  if (!reset_started) {
-    reset_started = true;
-    if (sstvars.dir > 0) {
-      digitalWrite(STEPPER_DIR_PIN, LOW);
-    } else {
-      digitalWrite(STEPPER_DIR_PIN, HIGH);
-    }
-  }
-  reset_lp_loop = 0;
-  while(reset_lp_loop < 1) {
-    digitalWrite(STEPPER_STEP_PIN, HIGH);
-    delayMicroseconds(75);
-    digitalWrite(STEPPER_STEP_PIN, LOW);
-    delayMicroseconds(75);
-    reset_lp_loop++;
-  }
-}
-
-void stepper_reset_done() {
-    if (sstvars.dir > 0) {
-      digitalWrite(STEPPER_DIR_PIN, HIGH);
-    } else {
-      digitalWrite(STEPPER_DIR_PIN, LOW);
-    }
-}
-
-void fast(long counts) {
+  // create with the default frequency 1.6KHz
+  AFMS.begin(); 
+  
+  // motor port #1 M1 and M2
+  myStepper1 = AFMS.getStepper(stepsPerRotation, 1);
+  // motor port #2 (M3 and M4)
+  myStepper2 = AFMS.getStepper(stepsPerRotation, 2);
+  stepper_forwardstep1();
+  stepper_forwardstep2();
   
 }
+
+
+// you can change these to DOUBLE or INTERLEAVE or MICROSTEP!
+void stepper_forwardstep1() {
+  myStepper1->onestep(FORWARD, MICROSTEP);
+}
+void stepper_backwardstep1() {  
+  myStepper1->onestep(BACKWARD, MICROSTEP);
+}
+
+void stepper_forwardstep1_fast() {
+  myStepper1->onestep(FORWARD, SINGLE);
+}
+void stepper_backwardstep1_fast() {  
+  myStepper1->onestep(BACKWARD, SINGLE);
+}
+
+
+
+// you can change these to DOUBLE or INTERLEAVE or MICROSTEP!
+void stepper_forwardstep2() {
+  myStepper2->onestep(FORWARD, MICROSTEP);
+}
+void stepper_backwardstep2() {  
+  myStepper2->onestep(BACKWARD, MICROSTEP);
+}
+
+// you can change these to DOUBLE or INTERLEAVE or MICROSTEP!
+void stepper_forwardstep2_fast() {
+  myStepper2->onestep(FORWARD, SINGLE);
+}
+void stepper_backwardstep2_fast() {  
+  myStepper2->onestep(BACKWARD, SINGLE);
+}
+
+
+
+
+static float RASpeed = 0.0;
+static float DECSpeed = 0.0;
+
+static long RACounts = 0;
+static long DECCounts = 0;
+
+static unsigned long RAClock = 0;
+static unsigned long DECClock = 0;
+
+
+
+void setRASpeed(float speed) {
+  RASpeed = speed;
+  RACounts = 0;
+  RAClock = millis();  
+}
+
+void setDECSpeed(float speed) {
+  DECSpeed = speed;
+  DECCounts = 0;
+  DECClock = millis();
+  
+}
+
+static float count;
+
+void runSteppers() {
+  count = RACounts - (RASpeed*((float)(millis() - RAClock))/1000.0);
+  //Serial.println(RASpeed);
+  //Serial.println(RAClock);
+  //Serial.println(RACounts);
+  //Serial.println(count);
+  if(abs(RASpeed) > 150.0) {
+    if (count < -MICROSTEP) {
+        stepper_backwardstep1_fast();
+        RACounts += MICROSTEP;
+    } else if (count > MICROSTEP) {
+        stepper_forwardstep1_fast();    
+        RACounts -= MICROSTEP;
+    }    
+  } else {
+    if (count < -1.0) {
+        stepper_backwardstep1();
+        RACounts++;
+    } else if (count > 1.0) {
+        stepper_forwardstep1();    
+        RACounts--;
+    }
+  }
+
+  count = DECCounts - (DECSpeed*((float)(millis() - DECClock))/1000.0);
+
+  if(abs(DECSpeed) > 150.0) {
+    if (count < -MICROSTEP) {
+      stepper_backwardstep2_fast();
+      DECCounts+=MICROSTEP;
+    } else if (count > MICROSTEP) {
+      stepper_forwardstep2_fast();    
+      DECCounts-=MICROSTEP;
+    }    
+  } else {
+    if (count < -1.0) {
+      stepper_backwardstep2();
+      DECCounts++;
+    } else if (count > 1.0) {
+      stepper_forwardstep2();    
+      DECCounts--;
+    }
+  }
+
+}
+
+
+//AccelStepper RAStepper1(stepper_forwardstep1, stepper_backwardstep1); // use functions to step
+//AccelStepper DECStepper2(stepper_forwardstep2, stepper_backwardstep2); // use functions to step
 
