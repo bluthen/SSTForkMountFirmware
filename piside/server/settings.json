@@ -1,0 +1,22 @@
+{
+  "microserial": {
+    "port": "/dev/serial0",
+    "baud": 115200
+  },
+  "micro": {
+    "ra_max_tps": 15000,
+    "ra_guide_rate": 72.19712,
+    "ra_direction": 1,
+    "dec_max_fps": 15000,
+    "dec_guide_rate": 2.962962962962963,
+    "dec_direction": 1
+  },
+  "utcoffset": -5,
+  "location": {},
+  "ra_track_rate": 18.04928,
+  "ra_slew_fast": 10800.0,
+  "ra_slew_slow": 2700.0,
+  "dec_slew_fast": 444.44425,
+  "dec_slew_slow": 111.1110625,
+  "park_position": {}
+}

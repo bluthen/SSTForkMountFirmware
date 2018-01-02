@@ -1,0 +1,84 @@
+body {
+    background-color: black;
+    color: red;
+    -webkit-touch-callout: none !important;
+}
+
+.direction {
+    font-size: 7ex;
+}
+
+button {
+    background-color: red;
+    color: black;
+    border: 1px solid black;
+    cursor: pointer;
+}
+input {
+    background-color: red;
+    border: 1px solid black;
+    color: black;
+}
+
+div.direction-controls {
+    position: relative;
+    color: red;
+    width: 100%;
+}
+
+table.direction-controls {
+    width: 0;
+    margin: 0 auto;
+    -webkit-user-select: none !important;
+}
+table.direction-controls td{
+    padding: 10px;
+}
+
+.direction-button {
+    background-color: red;
+    border: none;
+}
+
+.fa-arrow-circle-up:hover, .fa-arrow-circle-down:hover, .fa-arrow-circle-right:hover, .fa-arrow-circle-left:hover {
+    background-color: black;
+    color: #6d0000;
+    cursor: pointer;
+}
+
+.fa-arrow-circle-up:active, .fa-arrow-circle-down:active, .fa-arrow-circle-right:active, .fa-arrow-circle-left:active {
+    background-color: red;
+    color: black;
+}
+
+
+.btn-up {
+    position: absolute;
+    left: 8ex;
+}
+
+.btn-left {
+    position: absolute;
+    left: 0;
+    top: 8ex;
+}
+
+.btn-right {
+    position: absolute;
+    left: 17ex;
+    top: 8ex;
+}
+
+.btn-down {
+    position: absolute;
+    left: 8ex;
+    top: 15ex;
+}
+
+.cfa-rotate-45 {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}

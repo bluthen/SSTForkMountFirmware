@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>SSTEQ-25 Control Panel</title>
+    <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">-->
+    <link rel="stylesheet" type="text/css" href="main.css"/>
+    <!--link rel="stylesheet" type="text/css" href="css/fontawesome-all.min.css"/-->
+    <script src="jquery-3.2.1.min.js"></script>
+    <script src="fontawesome-all.js"></script>
+    <script src="socket.io.2.0.4.js"></script>
+    <script src="steq25.js"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>-->
+    <!--<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>-->
+    <script>
+        screen.orientation.lock('portrait');
+    </script>
+</head>
+<body>
+<div class="direction-controls">
+    <h1>Manual Control</h1>
+    Speed: <input type="radio" id="direction-controls-speed-fast" name="direction-controls-speed" value="fast"
+                  checked><label for="direction-controls-speed-fast">Fast</label><input type="radio"
+                                                                                        id="direction-controls-speed-slow"
+                                                                                        name="direction-controls-speed"
+                                                                                        value="slow"><label
+        for="direction-controls-speed-slow">Slow</label>
+    <table class="direction-controls">
+        <tbody>
+        <tr>
+            <td><i id="direction-controls-up-left" class="fas fa-arrow-circle-left fa-5x cfa-rotate-45"></i>
+            </td>
+            <td><i id="direction-controls-up" class="fas fa-arrow-circle-up fa-5x"></i>
+            </td>
+            <td><i id="direction-controls-up-right" class="fas fa-arrow-circle-up fa-5x cfa-rotate-45"></i>
+            </td>
+        </tr>
+        <tr>
+            <td><i id="direction-controls-left" class="fas fa-arrow-circle-left fa-5x"></i>
+            </td>
+            <td>&nbsp;</td>
+            <td><i id="direction-controls-right" class="fas fa-arrow-circle-right fa-5x"></i>
+            </td>
+        </tr>
+        <tr>
+            <td><i id="direction-controls-down-left" class="fas fa-arrow-circle-down fa-5x cfa-rotate-45"></i>
+            </td>
+            <td><i id="direction-controls-down" class="fas fa-arrow-circle-down fa-5x"></i>
+            </td>
+            <td><i id="direction-controls-down-right" class="fas fa-arrow-circle-right fa-5x cfa-rotate-45"></i>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+<div class="status">
+    <h1>Status</h1>
+    RA: DEC:<br/>
+    Alt: Az:<br/>
+    RA Count: Dec Count<br/>
+    Location:<span id="location"></span>, Time:<br/>
+</div>
+<div class="goto">
+    <h1>GOTO</h1>
+    Search: <input type="text"/><br/>
+    <button>Sync</button>&nbsp;<button>Goto</button>
+</div>
+
+<div class="config-variables">
+    <h1>Settings</h1>
+    <button>Set Time/Location</button><br/>
+    <button>Park Scope</button>&nbsp;<button>Set Park Position</button>
+    <table>
+        <tbody>
+        <tr>
+            <td>Tracking TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>RA Direction:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>DEC Direction:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>RA Guide TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>RA Slew-Fast TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>RA Slew-Slow TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>DEC Guide TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>DEC Slew-Fast TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        <tr>
+            <td>DEC Slew-Slow TPS:</td>
+            <td><input type="text"/></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
