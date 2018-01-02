@@ -14,7 +14,7 @@
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>-->
     <!--<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>-->
     <script>
-        screen.orientation.lock('portrait');
+        //screen.orientation.lock('portrait');
     </script>
 </head>
 <body>
@@ -58,7 +58,8 @@
     <h1>Status</h1>
     RA: DEC:<br/>
     Alt: Az:<br/>
-    RA Count: Dec Count<br/>
+    RA Speed/Ticks: <span id="ra_stat"></span><br/>
+    Dec Speed/Ticks: <span id="dec_stat"></span><br/>
     Location:<span id="location"></span>, Time:<br/>
 </div>
 <div class="goto">
@@ -75,39 +76,39 @@
         <tbody>
         <tr>
             <td>Tracking TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_ra_track_rate" type="text"/></td>
         </tr>
         <tr>
             <td>RA Direction:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_ra_direction" type="text"/></td>
         </tr>
         <tr>
             <td>DEC Direction:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_dec_direction" type="text"/></td>
         </tr>
         <tr>
             <td>RA Guide TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_ra_guide_rate" type="text"/></td>
         </tr>
         <tr>
             <td>RA Slew-Fast TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_ra_slew_fast" type="text"/></td>
         </tr>
         <tr>
             <td>RA Slew-Slow TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_ra_slew_slow" type="text"/></td>
         </tr>
         <tr>
             <td>DEC Guide TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_dec_guide_rate" type="text"/></td>
         </tr>
         <tr>
             <td>DEC Slew-Fast TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_dec_slew_fast" type="text"/></td>
         </tr>
         <tr>
             <td>DEC Slew-Slow TPS:</td>
-            <td><input type="text"/></td>
+            <td><input id="settings_dec_slew_slow" type="text"/></td>
         </tr>
         </tbody>
     </table>

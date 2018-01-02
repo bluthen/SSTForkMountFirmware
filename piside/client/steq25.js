@@ -6,7 +6,20 @@ $(document).ready(function() {
         return new URL(relativeURL, window.location.href).href;
     };
 
-    const socket = io(absoluteURL('/'));
+    console.log(absoluteURL('/'));
+    window.socket = io(absoluteURL('/'));
+    socket.on('connect', function(msg) {
+        console.log('socket io connect.');
+    });
+    socket.on('status', function(msg) {
+        console.log(msg);
+        $('#ra_stat').text(''+msg.rs+'/'+msg.rp);
+        $('#dec_stat').text(''+msg.ds+'/'+msg.dp);
+    });
+    socket.on('controls_response', function(msg) {
+        console.log(msg);
+    });
+
 
     var bind_direction_controls = function() {
         var up = $('#direction-controls-up');
@@ -83,13 +96,22 @@ $(document).ready(function() {
         })
 
     };
+
+    function update_settings() {
+        $.ajax({url:'/settings', dataType: 'json', success: function(data) {
+            $('#settings_ra_track_rate').val(data.ra_track_rate);
+            $('#settings_ra_direction').val(data.micro.ra_direction);
+            $('#settings_dec_direction').val(data.micro.dec_direction);
+            $('#settings_ra_guide_rate').val(data.micro.ra_guide_rate);
+            $('#settings_ra_slew_fast').val(data.ra_slew_fast);
+            $('#settings_ra_slew_slow').val(data.ra_slew_slow);
+            $('#settings_dec_guide_rate').val(data.micro.dec_guide_rate);
+            $('#settings_dec_slew_fast').val(data.dec_slew_fast);
+            $('#settings_dec_slew_slow').val(data.dec_slew_slow);
+        }});
+    }
+
+    update_settings();
     //init();
     bind_direction_controls();
-    navigator.geolocation.getCurrentPosition(function(position) {
-        var txt = 'Lat:' +position.coords.latitude+', Long:'+ position.coords.latitude+', Alt: '+position.coords.altitude;
-        $('#location').text(txt);
-    }, function(err) {
-        $('#location').text(''+err.message+','+err.code);
-
-    }, {enableHighAccuracy: true, timeout: 5000000})
 });

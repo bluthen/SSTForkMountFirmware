@@ -7,9 +7,9 @@
     "ra_max_tps": 15000,
     "ra_guide_rate": 72.19712,
     "ra_direction": 1,
-    "dec_max_fps": 15000,
+    "dec_max_tps": 15000,
     "dec_guide_rate": 2.962962962962963,
-    "dec_direction": 1
+    "dec_direction": -1
   },
   "utcoffset": -5,
   "location": {},
