@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "stepper_drivers.h"
+#include "forkmount.h"
 
 static const int MODE_FULL = 1;
 static const int MODE_SIXTEEN = 16;
@@ -47,10 +48,18 @@ static void dec_stepper_backwardstep_fast(void);
 
 static void ra_set_step_direction(boolean forward) {
   if(forward) {
-    digitalWrite(RA_STEPPER_DIR_PIN, HIGH);
+    if(configvars.ra_direction > 0) {
+      digitalWrite(RA_STEPPER_DIR_PIN, HIGH);      
+    } else {
+      digitalWrite(RA_STEPPER_DIR_PIN, LOW);
+    }
     ra_mode_direction = MODE_FORWARD;
   } else {
-    digitalWrite(RA_STEPPER_DIR_PIN, LOW);
+    if(configvars.ra_direction > 0) {
+      digitalWrite(RA_STEPPER_DIR_PIN, LOW);      
+    } else {
+      digitalWrite(RA_STEPPER_DIR_PIN, HIGH);      
+    }
     ra_mode_direction = MODE_BACKWARD;
   }
 }
@@ -121,10 +130,18 @@ void ra_stepper_backwardstep_fast() {
 
 void dec_set_step_direction(boolean forward) {
   if(forward) {
-    digitalWrite(DEC_STEPPER_DIR_PIN, HIGH);
+    if(configvars.dec_direction > 0) {
+      digitalWrite(DEC_STEPPER_DIR_PIN, HIGH);    
+    } else {
+      digitalWrite(DEC_STEPPER_DIR_PIN, LOW);
+    }
     dec_mode_direction = MODE_FORWARD;
   } else {
-    digitalWrite(DEC_STEPPER_DIR_PIN, LOW);
+    if(configvars.dec_direction > 0) {
+      digitalWrite(DEC_STEPPER_DIR_PIN, LOW);      
+    } else {
+      digitalWrite(DEC_STEPPER_DIR_PIN, HIGH);
+    }
     dec_mode_direction = MODE_BACKWARD;
   }  
 }
@@ -222,17 +239,26 @@ void stepperInit() {
   pinMode(DEC_STEPPER_MS3, OUTPUT);  
   dec_set_step_resolution(false);
   dec_set_step_direction(true);
+  
+  ra_stepper_backwardstep();
+  dec_stepper_backwardstep();
+  delay(10);
   ra_stepper_forwardstep();
   dec_stepper_forwardstep();
+  delay(10);
 }
 
 void setRASpeed(float speed) {
-  RASpeed = speed;
+  if(fabs(speed) > configvars.ra_max_tps) {
+    RASpeed = (fabs(speed)/speed) * configvars.ra_max_tps;
+  } else {
+    RASpeed = speed;
+  }
   RACounts = 0;
   RAClock = millis();  
 }
 
-void getRASpeed() {
+float getRASpeed() {
   return RASpeed;
 }
 
@@ -241,14 +267,18 @@ long getRAPosition() {
 }
 
 void setDECSpeed(float speed) {
-  DECSpeed = speed;
+  if(fabs(speed) > configvars.dec_max_tps) {
+    DECSpeed = (fabs(speed)/speed) * configvars.dec_max_tps;
+  } else {
+    DECSpeed = speed;
+  }
   DECCounts = 0;
   DECClock = millis();
   
 }
 
-void getDECSpeed() {
-  return DECSpeed();
+float getDECSpeed() {
+  return DECSpeed;
 }
 
 long getDECPosition() {
@@ -261,7 +291,7 @@ void runSteppers() {
   //Serial.println(RAClock);
   //Serial.println(RACounts);
   //Serial.println(count);
-  if(abs(RASpeed) > 150.0) {
+  if(abs(RASpeed) > MICROSTEP_TO_FULL_THRES) {
     if (count < -MICROSTEPS) {
         ra_stepper_backwardstep_fast();
         RACounts += MICROSTEPS;
@@ -285,7 +315,7 @@ void runSteppers() {
 
   count = DECCounts - (DECSpeed*((float)(millis() - DECClock))/1000.0);
 
-  if(abs(DECSpeed) > 150.0) {
+  if(abs(DECSpeed) > MICROSTEP_TO_FULL_THRES) {
     if (count < -MICROSTEPS) {
       dec_stepper_backwardstep_fast();
       DECCounts+=MICROSTEPS;

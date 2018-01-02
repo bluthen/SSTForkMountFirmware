@@ -1,12 +1,15 @@
+#include <pgmspace.h>
+
 #include "SerialCommand.h"
 #include "forkmount.h"
 #include "command.h"
+#include "stepper_drivers.h"
 
 
 static SerialCommand cmd;
 
 void print_prompt() {
-  WSERIAL.print(F("$ "));
+  WSERIAL.print("$ ");
 }
 
 void command_set_var() {
@@ -18,122 +21,144 @@ void command_set_var() {
   argVal = cmd.next();
 
   if (argName == NULL) {
-    WSERIAL.println(F("ERROR: Missing [variable_name] argument."));
+    WSERIAL.println("ERROR: Missing [variable_name] argument.");
     return;
   }
 
   if (argVal == NULL) {
-    WSERIAL.println(F("ERROR: Missing [value] argument."));
+    WSERIAL.println("ERROR: Missing [value] argument.");
     return;
   }
   value = atof(argVal);
 
-  if(strcmp_P(argName, F("ra_max_tps")) == 0) {
+  if(strcmp(argName, "ra_max_tps") == 0) {
     configvars.ra_max_tps = value;
-  } else if(strcmp_P(argName, F("ra_track_rate")) == 0) {
-    configvars.ra_track_rate = value;
-  } else if(strcmp_P(argName, F("ra_guide_rate")) == 0) {
+  } else if(strcmp(argName, "ra_guide_rate") == 0) {
     configvars.ra_guide_rate = value;
-  } else if(strcmp_P(argName, F("ra_slew_rate")) == 0) {
-    configvars.ra_slew_rate = value;
-  } else if(strcmp_P(argName, F("dec_max_tps")) == 0) {
+  } else if(strcmp(argName, "ra_direction") == 0) {
+    configvars.ra_direction = (int)value;
+  } else if(strcmp(argName, "dec_max_tps") == 0) {
     configvars.dec_max_tps = value;
-  } else if(strcmp_P(argName, F("dec_guide_rate")) == 0) {
+  } else if(strcmp(argName, "dec_guide_rate") == 0) {
     configvars.dec_guide_rate = value;
-  } else if(strcmp_P(argName, F("dec_slew_rate")) == 0) {
-    configvars.dec_slew_rate = value;
+  } else if(strcmp(argName, "dec_direction") == 0) {
+    configvars.dec_direction = (int)value;
   } else {
-    WSERIAL.print(F("ERROR: Invalid variable name '");
+    WSERIAL.print("ERROR: Invalid variable name '");
     WSERIAL.print(argName);
     WSERIAL.println("'");
   }
   print_prompt();
 }
 
-void command_status() {
-  WSERIAL.print(F("ra_max_tps="));
-  WSERIAL.println(configvars.ra_max_tps);
-  WSERIAL.print(F("ra_track_rate="));
-  WSERIAL.println(configvars.ra_track_rate);
-  WSERIAL.print(F("ra_guide_rate="));
-  WSERIAL.println(configvars.ra_guide_rate);
-  WSERIAL.print(F("ra_slew_rate="));
-  WSERIAL.println(configvars.ra_slew_rate);
-  WSERIAL.print(F("dec_max_tps="));
-  WSERIAL.println(configvars.dec_max_tps);
-  WSERIAL.print(F("dec_guide_rate="));
-  WSERIAL.println(configvars.dec_guide_rate);
-  WSERIAL.print(F("dec_slew_rate="));
-  WSERIAL.println(configvars.dec_slew_tps);
-  WSERIAL.print(F("debug:"));
-  WSERIAL.println(configvars.debug_enabled);
-  WSERIAL.print(F("autoguide:"));
-  WSERIAL.println(configvars.autoguide_enabled);
-  WSERIAL.print(F("tracking:"));
-  WSERIAL.println(configvars.tracking_enabled);
-  WSERIAL.print(F("ra_speed:"));
+
+void command_qs() {
+  //TODO: Maybe make binary status so we don't get close to tracking tick interval?
+  WSERIAL.print("rs:");
   WSERIAL.println(getRASpeed());
-  WSERIAL.print(F("dec_speed:"));
+  WSERIAL.print("ds:");
   WSERIAL.println(getDECSpeed());
-  WSERIAL.print(F("ra_pos:"));
+  WSERIAL.print("rp:");
   WSERIAL.println(getRAPosition());
-  WSERIAL.print(F("dec_pos:"));
+  WSERIAL.print("dp:");
+  WSERIAL.println(getDECPosition());
+  print_prompt();  
+}
+
+void command_status() {
+  WSERIAL.print("ra_max_tps=");
+  WSERIAL.println(configvars.ra_max_tps);
+  WSERIAL.print("ra_guide_rate=");
+  WSERIAL.println(configvars.ra_guide_rate);
+  WSERIAL.print("ra_direction=");
+  WSERIAL.println(configvars.ra_direction);
+  WSERIAL.print("dec_max_tps=");
+  WSERIAL.println(configvars.dec_max_tps);
+  WSERIAL.print("dec_guide_rate=");
+  WSERIAL.println(configvars.dec_guide_rate);
+  WSERIAL.print("dec_direction=");
+  WSERIAL.println(configvars.dec_direction);
+  WSERIAL.print("debug:");
+  WSERIAL.println(configvars.debug_enabled);
+  WSERIAL.print("autoguide:");
+  WSERIAL.println(configvars.autoguide_enabled);
+  WSERIAL.print("ra_speed:");
+  WSERIAL.println(getRASpeed());
+  WSERIAL.print("dec_speed:");
+  WSERIAL.println(getDECSpeed());
+  WSERIAL.print("ra_pos:");
+  WSERIAL.println(getRAPosition());
+  WSERIAL.print("dec_pos:");
   WSERIAL.println(getDECPosition());
   print_prompt();
 }
 
-void command_mv_ra() {
-  
-}
+void command_ra_set_speed() {
+  char* argVal;
+  float value;
 
-void command_mv_dec() {
-  
-}
+  argVal = cmd.next();
 
-void command_stop_tracking() {
-  //What if tracking is currently happening?
-  configvars.tracking_enabled = false;  
+  if (argVal == NULL) {
+    WSERIAL.println("ERROR: Missing [value] argument.");
+    return;
+  }
+  value = atof(argVal);
+  setRASpeed(value);
+  WSERIAL.print("ra_speed:");
+  WSERIAL.println(getRASpeed());  
   print_prompt();
 }
 
-void command_start_tracking() {
-  configvars.tracking_enabled = true;
+void command_dec_set_speed() {
+  char* argVal;
+  float value;
+
+  argVal = cmd.next();
+
+  if (argVal == NULL) {
+    WSERIAL.println("ERROR: Missing [value] argument.");
+    return;
+  }
+  value = atof(argVal);
+  setDECSpeed(value);
+  WSERIAL.print("dec_speed:");
+  WSERIAL.println(getDECSpeed());
   print_prompt();
 }
 
-void command_help() {
-  WSERIAL.println(F("Commands:"));
-  WSERIAL.println(F("  set_var [variable_name] [value] Sets variable");
-  WSERIAL.println(F("  mv_ra [tick_position]           Moves RA to tick position"));
-  WSERIAL.println(F("  mv_dec [tick_position]          Moves DEC to tick position"));
-  WSERIAL.println(F("  stop_tracking                   Stops RA motor from tracking"));
-  WSERIAL.println(F("  start_tracking                  Starts RA motor tracking"));
-  WSERIAL.println(F("  disable_autoguide               Disables Autoguiding port input"));
-  WSERIAL.println(F("  enable_autoguide                Enables Autoguiding prot input"));
-  WSERIAL.println(F("  status                          Shows status/variable info"));
-  WSERIAL.println(F("  help                            This help info"));
+
+void command_help(const char* cmd) {
+  WSERIAL.println("Commands:");
+  WSERIAL.println("  set_var [variable_name] [value] Sets variable");
+  WSERIAL.println("  ra_set_speed [tps]           Moves RA to tick position");
+  WSERIAL.println("  dec_set_speed [tps]          Moves DEC to tick position");
+  WSERIAL.println("  autoguide_disable            Disables Autoguiding port input");
+  WSERIAL.println("  autoguide_enable             Enables Autoguiding prot input");
+  WSERIAL.println("  status                       Shows status/variable info");
+  WSERIAL.println("  qs                           Shows speed/position info");
+  WSERIAL.println("  help                         This help info");
   print_prompt();
 }
 
-void command_disable_autoguide() {
+void command_autoguide_disable() {
   configvars.autoguide_enabled = false;
 }
 
-void command_enable_autoguide() {
+void command_autoguide_enable() {
   configvars.autoguide_enabled = true;  
 }
 
 
 void command_init(void) {
+  WSERIAL.begin(115200);
   cmd.addCommand("set_var", command_set_var);
-  cmd.addCommand("mv_ra", command_mv_ra);
-  cmd.addCommand("mv_dec", command_mv_dec);
-  cmd.addCommand("stop_tracking", command_stop_tracking);
-  cmd.addCommand("start_tracking", command_start_tracking);
-  cmd.addCommand("disable_autoguide", command_disable_autoguide);
-  cmd.addCommand("enable_autoguide", command_enable_autoguide);
+  cmd.addCommand("ra_set_speed", command_ra_set_speed);
+  cmd.addCommand("dec_set_speed", command_dec_set_speed);
+  cmd.addCommand("autoguide_disable", command_autoguide_disable);
+  cmd.addCommand("autoguide_disable", command_autoguide_enable);
   cmd.addCommand("status", command_status);
-  cmd.addCommand("help", command_help);
+  cmd.addCommand("qs", command_qs);
   cmd.setDefaultHandler(command_help);
   print_prompt();
 }

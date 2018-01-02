@@ -1,6 +1,5 @@
 
 #include <Wire.h>
-#include <EEPROM.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -10,11 +9,6 @@
 #include "command.h"
 
 const char* sstversion = "v1.0.0";
-const static float DIRECTION = 1.0;
-const float raTrackingRate = DIRECTION * 5.20;
-//const float raTrackingRate = 12000; //@12V 2:09 
-const float raGuideRate = 4 * raTrackingRate;
-const float decGuideRate = DIRECTION * 0.22;
 
 const static int AUTOGUIDE_DEC_NEGY_PIN = 17;
 const static int AUTOGUIDE_DEC_POSY_PIN = 16;
@@ -22,7 +16,9 @@ const static int AUTOGUIDE_RA_NEGX_PIN = 7;
 const static int AUTOGUIDE_RA_POSX_PIN = 8;
 
 boolean sst_debug = false;
-boolean autoguide_enabled = true;
+boolean ra_autoguiding = false;
+boolean dec_autoguiding = false;
+CONFIGVARS configvars;
 
 void autoguide_init()
 {
@@ -42,20 +38,25 @@ void autoguide_init()
 void setup()
 {  
   Serial.begin(115200);
-  Serial.print(F("StarSync Tracker Fork Mount"));
-  Serial.println(sstversion);
+  ra_autoguiding = false;
+  dec_autoguiding = false;
 
   stepperInit();
-
-  autoguide_init();
-  setRASpeed(raTrackingRate);
+  setRASpeed(0.0);
   setDECSpeed(0.0);
-
-
-  if(sst_debug) {
-    Serial.print("Speed: tracking - ");
-    Serial.println(raTrackingRate);
-  }
+  autoguide_init();
+  command_init();
+  Serial.print(F("StarSync Tracker Fork Mount "));
+  Serial.println(sstversion);
+  //Some dumb initial values
+  configvars.ra_max_tps = 12000;
+  configvars.ra_guide_rate = 20;
+  configvars.dec_max_tps = 12000;
+  configvars.dec_guide_rate = 6;
+  configvars.debug_enabled = false;
+  configvars.autoguide_enabled = true;
+  configvars.ra_direction = 1;
+  configvars.dec_direction = 1;
 }
 
 
@@ -70,7 +71,10 @@ const uint8_t AG_NEGX_MASK = 2;
 const uint8_t AG_POSX_MASK = 3;
 
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50;
+unsigned long debounceDelay    = 50;
+
+float prevRASpeed  = 0;
+float prevDECSpeed = 0;
 
 void autoguide_read()
 {
@@ -82,7 +86,16 @@ void autoguide_read()
 
 void autoguide_run()
 {
+  //TODO: Autoguide probably shouldn't extra change the counts?
+  // Or there could be a extra guide counter.
   if(!configvars.autoguide_enabled) {
+    prevRASpeed = 0;
+    prevDECSpeed = 0;
+    status = 0;
+    debounce_status = 0;
+    prev_status = 0;
+    ra_autoguiding = false;
+    dec_autoguiding = false;
     return;
   }
   
@@ -105,40 +118,71 @@ void autoguide_run()
 
     // If no directions are pressed we are just tracking
     if ((status & 0x0F) == 0x0F) {
-      setRASpeed(raTrackingRate);
-      setDECSpeed(0.0);
+      if (ra_autoguiding) {
+        setRASpeed(prevRASpeed);
+        ra_autoguiding = false;
+        prevRASpeed = 0.0;
+      }
+      if (dec_autoguiding) {
+        setDECSpeed(prevDECSpeed);
+        dec_autoguiding = false;
+        prevDECSpeed = 0.0;
+      }
       if(sst_debug) {
         Serial.print("no buttons: ");
       }
-
     } else {
       if(!(status & (1 << AG_POSY_MASK))) {
-        setDECSpeed(decGuideRate);
+        if(!dec_autoguiding) {
+          dec_autoguiding = true;
+          prevDECSpeed = getDECSpeed();        
+        }
+        setDECSpeed(configvars.dec_guide_rate);
         if(sst_debug) {
           Serial.print("DEC up ");
         }
       } else if(!(status & (1 << AG_NEGY_MASK))) {
-        setDECSpeed(-1.0 * decGuideRate);        
+        if(!dec_autoguiding) {
+          dec_autoguiding = true;
+          prevDECSpeed = getDECSpeed();
+        }
+        setDECSpeed(-1.0 * configvars.dec_guide_rate);
         if(sst_debug) {
           Serial.print("DEC down ");
         }
       } else {
-        setDECSpeed(0.0);      
+        if (dec_autoguiding) {
+          setDECSpeed(prevDECSpeed);      
+          dec_autoguiding = false;
+          prevDECSpeed = 0.0;
+        }
       }
   
       if(!(status & (1 << AG_POSX_MASK))) {
-        setRASpeed(raGuideRate);        
+        if(!ra_autoguiding) {
+          prevRASpeed = getRASpeed();
+          ra_autoguiding = true;
+        }
+        setRASpeed(configvars.ra_guide_rate);        
         if(sst_debug) {
           Serial.print("RA Right ");
         }
 
       } else if(!(status & (1 << AG_NEGX_MASK))) {
-        setRASpeed(-1.0*raGuideRate);
+        if(!ra_autoguiding) {
+          ra_autoguiding = true;
+          prevRASpeed = getRASpeed();
+        }
+        setRASpeed(-1.0*configvars.ra_guide_rate);
         if(sst_debug) {
           Serial.print("RA Left");
         }
       } else {
-        setRASpeed(raTrackingRate);      
+        if(ra_autoguiding) {
+          setRASpeed(prevRASpeed);
+          ra_autoguiding = false;
+          prevRASpeed = 0.0;
+        }
       }
     }
   }

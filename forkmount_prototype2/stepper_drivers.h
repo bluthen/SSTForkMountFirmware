@@ -2,6 +2,7 @@
 #define __STEPPER_DRIVERS_H
 
 #define MICROSTEPS 16
+#define MICROSTEP_TO_FULL_THRES 800
 void stepperInit(void);
 
 void setRASpeed(float speed);
