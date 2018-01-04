@@ -100,6 +100,7 @@ $(document).ready(function() {
     function update_settings() {
         $.ajax({url:'/settings', dataType: 'json', success: function(data) {
             $('#settings_ra_track_rate').val(data.ra_track_rate);
+            $('#settings_dec_ticks_per_degree').val(data.dec_ticks_per_degree);
             $('#settings_ra_direction').val(data.micro.ra_direction);
             $('#settings_dec_direction').val(data.micro.dec_direction);
             $('#settings_ra_guide_rate').val(data.micro.ra_guide_rate);
@@ -114,4 +115,28 @@ $(document).ready(function() {
     update_settings();
     //init();
     bind_direction_controls();
+
+    $('#settings_save').click(function() {
+        var settings = {ra_track_rate: $('#settings_ra_track_rate').val(),
+        dec_ticks_per_degree: $('#settings_dec_ticks_per_degree').val(),
+        ra_direction: $('#settings_ra_direction').val(),
+        dec_direction: $('#settings_dec_direction').val(),
+        ra_guide_rate: $('#settings_ra_guide_rate').val(),
+        ra_slew_fast: $('#settings_ra_slew_fast').val(),
+        ra_slew_slow: $('#settings_ra_slew_slow').val(),
+        dec_guide_rate: $('#settings_dec_guide_rate').val(),
+        dec_slew_fast: $('#settings_dec_slew_fast').val(),
+        dec_slew_slow: $('#settings_dec_slew_slow').val()}
+        $.ajax({
+            url: '/settings',
+            method: 'PUT',
+            data: {'settings': JSON.stringify(settings)},
+            success: function() {
+                $('#settings_save_status').text('Saved').show().fadeOut(1000);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                $('#settings_save_status').text(textStatus).show().fadeOut(1000);
+            }
+        });
+    });
 });

@@ -1,13 +1,7 @@
 import threading
-import time
-from flask_socketio import SocketIO, emit
-import queue
-import json
-import filelock
 import serial
 from functools import partial
 import datetime
-import re
 
 timers = {}
 OPPOSITE_MANUAL = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
@@ -39,7 +33,7 @@ class SimpleInterval:
         self._func()
 
 
-def send_status():
+def get_status():
     with microseriallock:
         microserial.reset_input_buffer()
         microserial.write(b'qs\r')
@@ -63,7 +57,22 @@ def send_status():
            status[line_status[0]] = line_status[1]
     #print(status)
     print('status'+str(datetime.datetime.now()))
+    return status
+
+def send_status():
+    status = get_status()
     socketio.emit('status', status)
+
+
+def micro_update_settings():
+    with microseriallock:
+        microserial.write(('set_var ra_max_tps %f\r' % settings['micro']['ra_max_tps']).encode())
+        microserial.write(('set_var ra_guide_rate %f\r' % settings['micro']['ra_guide_rate']).encode())
+        microserial.write(('set_var ra_direction %f\r' % settings['micro']['ra_direction']).encode())
+        microserial.write(('set_var dec_max_tps %f\r' % settings['micro']['dec_max_tps']).encode())
+        microserial.write(('set_var dec_guide_rate %f\r' % settings['micro']['dec_guide_rate']).encode())
+        microserial.write(('set_var dec_direction %f\r' % settings['micro']['dec_direction']).encode())
+        microserial.write(('ra_set_speed %f\r' % settings['ra_track_rate']).encode())
 
 
 def init(osocketio, fsettings):
@@ -77,13 +86,7 @@ def init(osocketio, fsettings):
     #Load settings file
     #Open serial port
     microserial = serial.Serial(settings['microserial']['port'], settings['microserial']['baud'], timeout=2)
-    microserial.write(('set_var ra_max_tps %f\r' % settings['micro']['ra_max_tps']).encode())
-    microserial.write(('set_var ra_guide_rate %f\r' % settings['micro']['ra_guide_rate']).encode())
-    microserial.write(('set_var ra_direction %f\r' % settings['micro']['ra_direction']).encode())
-    microserial.write(('set_var dec_max_tps %f\r' % settings['micro']['dec_max_tps']).encode())
-    microserial.write(('set_var dec_guide_rate %f\r' % settings['micro']['dec_guide_rate']).encode())
-    microserial.write(('set_var dec_direction %f\r' % settings['micro']['dec_direction']).encode())
-    microserial.write(('ra_set_speed %f\r' % settings['ra_track_rate']).encode())
+    micro_update_settings()
     status_interval = SimpleInterval(send_status, 1)
 
 
@@ -122,3 +125,45 @@ def manual_control(direction, speed):
                 microserial.write(('dec_set_speed -%f\r' % settings['dec_slew_' + speed]).encode())
             timers[direction] = threading.Timer(0.75, partial(manual_control, direction, None))
             timers[direction].start()
+
+
+def move_to_skycoord(sync_info, wanted_skycoord):
+    pass
+
+
+def move_to_ticks(wanted_ticks):
+    pass
+
+
+SIDEREAL_RATE = 0.004178074551055444  # 15.041"/s
+
+
+def skycoord_to_ticks(sync_info, wanted_skycoord):
+    """
+    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoords, 'ticks': {'ra': int, 'dec': int}
+    :param wanted_skycoord: astropy.coordinates.SkyCoord
+    :return: {'ra': ticks_int, 'dec': ticks_int}
+    """
+    # TODO: Shortest path and zero cross in mind
+    # d_ra = sync_info['coords'].icrs.ra.deg - wanted_skycoord.icrs.ra.deg
+    # d_dec = sync_info['coords'].icrs.dec.deg - wanted_skycoord.icrs.dec.deg
+    # ticks_ra = sync_info['ticks']['ra'] + d_ra * (settings['ra_track_rate']/(SIDEREAL_RATE))
+    # ticks_dec = sync_info['ticks']['ra'] + d_dec * settings['dec_ticks_per_degree']
+    # return {'ra': ticks_ra, 'dec': ticks_dec}
+    pass
+
+
+def ticks_to_skycoord(sync_info, ticks):
+    """
+    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoords, 'ticks': [RA_int, DEC_int]
+    :param ticks: {'ra': ticks_int, 'dec': ticks_int}
+    :return: SkyCoord
+    """
+    # Less than zero
+    # d_ra = (ticks['ra'] - sync_info['ticks']['ra']) / (settings['ra_track_rate']/(SIDEREAL_RATE))
+    # d_dec = (ticks['dec'] - sync_info['ticks']['dec']) / settings['dec_ticks_per_degree']
+    # coord = SkyCoord(ra=(sync_info['coords'].icrs.ra.deg+d_ra)*u.degree,
+    #                  dec=(sync_info['coords'].icrs.dec.deg+d_dec)*u.degree,
+    #                  frame='icrs')
+    # return coord
+    pass

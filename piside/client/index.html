@@ -54,7 +54,7 @@
         </tbody>
     </table>
 </div>
-<div class="status">
+<div class="status" style="position: relative;">
     <h1>Status</h1>
     RA: DEC:<br/>
     Alt: Az:<br/>
@@ -71,12 +71,17 @@
 <div class="config-variables">
     <h1>Settings</h1>
     <button>Set Time/Location</button><br/>
-    <button>Park Scope</button>&nbsp;<button>Set Park Position</button>
+    <button>Park Scope</button>&nbsp;<button>Set Park Position</button><br/><br/>
+    <div style="border: 1px solid red;">
     <table>
         <tbody>
         <tr>
-            <td>Tracking TPS:</td>
+            <td>Tracking Ticks/Second:</td>
             <td><input id="settings_ra_track_rate" type="text"/></td>
+        </tr>
+        <tr>
+            <td>DEC Ticks/Degree:</td>
+            <td><input id="settings_dec_ticks_per_degree" type="text"/></td>
         </tr>
         <tr>
             <td>RA Direction:</td>
@@ -112,6 +117,8 @@
         </tr>
         </tbody>
     </table>
+    <button id="settings_save">Save</button><span id="settings_save_status"></span><br/>
+    </div>
 </div>
 </body>
 </html>
