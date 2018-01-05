@@ -1,27 +1,27 @@
 /*globals $ */
-$(document).ready(function() {
+$(document).ready(function () {
     'use strict';
 
-    var absoluteURL = function(relativeURL) {
+    var absoluteURL = function (relativeURL) {
         return new URL(relativeURL, window.location.href).href;
     };
 
     console.log(absoluteURL('/'));
     window.socket = io(absoluteURL('/'));
-    socket.on('connect', function(msg) {
+    socket.on('connect', function (msg) {
         console.log('socket io connect.');
     });
-    socket.on('status', function(msg) {
+    socket.on('status', function (msg) {
         console.log(msg);
-        $('#ra_stat').text(''+msg.rs+'/'+msg.rp);
-        $('#dec_stat').text(''+msg.ds+'/'+msg.dp);
+        $('#ra_stat').text('' + msg.rs + '/' + msg.rp);
+        $('#dec_stat').text('' + msg.ds + '/' + msg.dp);
     });
-    socket.on('controls_response', function(msg) {
+    socket.on('controls_response', function (msg) {
         console.log(msg);
     });
 
 
-    var bind_direction_controls = function() {
+    var bind_direction_controls = function () {
         var up = $('#direction-controls-up');
         var upleft = $('#direction-controls-up-left');
         var upright = $('#direction-controls-up-right');
@@ -35,30 +35,30 @@ $(document).ready(function() {
 
         var intervals = {};
         var oppositeMap = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'};
-        var sendPressed = function(direction, speed) {
-            console.log('sendPressed: '+direction+', '+speed);
+        var sendPressed = function (direction, speed) {
+            console.log('sendPressed: ' + direction + ', ' + speed);
             socket.emit('manual_control', {direction: direction, speed: speed})
         };
-        var sendUnpressed = function(direction) {
-            console.log('sendUnpressed: '+direction);
+        var sendUnpressed = function (direction) {
+            console.log('sendUnpressed: ' + direction);
             socket.emit('manual_control', {direction: direction, speed: null})
         };
-        var pressed = function(direction, speed) {
+        var pressed = function (direction, speed) {
             //If we are already going opposite direction then ignore.
-            if(intervals.hasOwnProperty(oppositeMap[direction])) {
+            if (intervals.hasOwnProperty(oppositeMap[direction])) {
                 return;
             }
-            console.log('Pressing: '+direction);
-            if(intervals.hasOwnProperty(direction)) {
+            console.log('Pressing: ' + direction);
+            if (intervals.hasOwnProperty(direction)) {
                 clearTimeout(intervals[direction]);
             }
-            intervals[direction] = setInterval(function() {
+            intervals[direction] = setInterval(function () {
                 sendPressed(direction, speed);
             }, 250);
             sendPressed(direction, speed);
         };
 
-        var unpressed = function(direction, speed) {
+        var unpressed = function (direction, speed) {
             console.log('let go: ' + direction);
             if (intervals.hasOwnProperty(direction)) {
                 clearInterval(intervals[direction]);
@@ -68,7 +68,7 @@ $(document).ready(function() {
         };
 
 
-        all.on('mousedown touchstart', function(e) {
+        all.on('mousedown touchstart', function (e) {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
             var directions = id.split('direction-controls-')[1].split('-');
@@ -78,17 +78,17 @@ $(document).ready(function() {
             } else {
                 speed = 'slow';
             }
-            for(i = 0; i < directions.length; i++) {
+            for (i = 0; i < directions.length; i++) {
                 var direction = directions[i];
                 pressed(direction, speed);
             }
             e.preventDefault();
         });
-        all.on('mouseup touchstop', function(e) {
+        all.on('mouseup touchstop', function (e) {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
             var directions = id.split('direction-controls-')[1].split('-');
-            for(i = 0; i < directions.length; i++) {
+            for (i = 0; i < directions.length; i++) {
                 var direction = directions[i];
                 unpressed(direction);
             }
@@ -98,43 +98,51 @@ $(document).ready(function() {
     };
 
     function update_settings() {
-        $.ajax({url:'/settings', dataType: 'json', success: function(data) {
-            $('#settings_ra_track_rate').val(data.ra_track_rate);
-            $('#settings_dec_ticks_per_degree').val(data.dec_ticks_per_degree);
-            $('#settings_ra_direction').val(data.micro.ra_direction);
-            $('#settings_dec_direction').val(data.micro.dec_direction);
-            $('#settings_ra_guide_rate').val(data.micro.ra_guide_rate);
-            $('#settings_ra_slew_fast').val(data.ra_slew_fast);
-            $('#settings_ra_slew_slow').val(data.ra_slew_slow);
-            $('#settings_dec_guide_rate').val(data.micro.dec_guide_rate);
-            $('#settings_dec_slew_fast').val(data.dec_slew_fast);
-            $('#settings_dec_slew_slow').val(data.dec_slew_slow);
-        }});
+        $.ajax({
+            url: '/settings', dataType: 'json', success: function (data) {
+                $('#settings_ra_track_rate').val(data.ra_track_rate);
+                $('#settings_dec_ticks_per_degree').val(data.dec_ticks_per_degree);
+                $('#settings_ra_max_accel_tpss').val(data.ra_max_accel_tpss);
+                $('#settings_dec_max_accel_tpss').val(data.ra_max_accel_tpss);
+                $('#settings_ra_direction').val(data.micro.ra_direction);
+                $('#settings_dec_direction').val(data.micro.dec_direction);
+                $('#settings_ra_guide_rate').val(data.micro.ra_guide_rate);
+                $('#settings_ra_slew_fast').val(data.ra_slew_fast);
+                $('#settings_ra_slew_slow').val(data.ra_slew_slow);
+                $('#settings_dec_guide_rate').val(data.micro.dec_guide_rate);
+                $('#settings_dec_slew_fast').val(data.dec_slew_fast);
+                $('#settings_dec_slew_slow').val(data.dec_slew_slow);
+            }
+        });
     }
 
     update_settings();
     //init();
     bind_direction_controls();
 
-    $('#settings_save').click(function() {
-        var settings = {ra_track_rate: $('#settings_ra_track_rate').val(),
-        dec_ticks_per_degree: $('#settings_dec_ticks_per_degree').val(),
-        ra_direction: $('#settings_ra_direction').val(),
-        dec_direction: $('#settings_dec_direction').val(),
-        ra_guide_rate: $('#settings_ra_guide_rate').val(),
-        ra_slew_fast: $('#settings_ra_slew_fast').val(),
-        ra_slew_slow: $('#settings_ra_slew_slow').val(),
-        dec_guide_rate: $('#settings_dec_guide_rate').val(),
-        dec_slew_fast: $('#settings_dec_slew_fast').val(),
-        dec_slew_slow: $('#settings_dec_slew_slow').val()}
+    $('#settings_save').click(function () {
+        var settings = {
+            ra_track_rate: $('#settings_ra_track_rate').val(),
+            dec_ticks_per_degree: $('#settings_dec_ticks_per_degree').val(),
+            ra_direction: $('#settings_ra_direction').val(),
+            dec_direction: $('#settings_dec_direction').val(),
+            ra_max_accel_tpss: $('#settings_ra_max_accel_tpss').val(),
+            dec_max_accel_tpss: $('#settings_dec_max_accel_tpss').val(),
+            ra_guide_rate: $('#settings_ra_guide_rate').val(),
+            ra_slew_fast: $('#settings_ra_slew_fast').val(),
+            ra_slew_slow: $('#settings_ra_slew_slow').val(),
+            dec_guide_rate: $('#settings_dec_guide_rate').val(),
+            dec_slew_fast: $('#settings_dec_slew_fast').val(),
+            dec_slew_slow: $('#settings_dec_slew_slow').val()
+        };
         $.ajax({
             url: '/settings',
             method: 'PUT',
             data: {'settings': JSON.stringify(settings)},
-            success: function() {
+            success: function () {
                 $('#settings_save_status').text('Saved').show().fadeOut(1000);
             },
-            error: function(jqXHR, textStatus, errorThrown) {
+            error: function (jqXHR, textStatus, errorThrown) {
                 $('#settings_save_status').text(textStatus).show().fadeOut(1000);
             }
         });
