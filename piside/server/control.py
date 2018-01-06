@@ -3,25 +3,27 @@ import serial
 from functools import partial
 import datetime
 import math
+import time
 
 import datetime
 import astropy
 import astropy.units as u
 
-
 SIDEREAL_RATE = 0.004178074551055444  # 15.041"/s
 AXIS_RA = 1
 AXIS_DEC = 2
-
 
 timers = {}
 OPPOSITE_MANUAL = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
 settings = None
 microserial = None
 microseriallock = threading.RLock()
+slew_lock = threading.RLock()
 status_interval = None
 socketio = None
 inited = False
+
+cancel_slew = False
 
 
 class SimpleInterval:
@@ -103,90 +105,158 @@ def init(osocketio, fsettings):
 
 
 def manual_control(direction, speed):
-    global microserial, microseriallock
-    if direction not in ['left', 'right', 'up', 'down']:
+    #TODO: Acceleration limit
+    global microserial, microseriallock, slew_lock
+    got_lock = slew_lock.aquire(blocking=False)
+    if not got_lock:
+        for direction in ['left', 'right', 'up', 'down']:
+            if direction in timers:
+                timers[direction].cancel()
+                del timers[direction]
         return
-    # If not currently slewing somewhere else
-    if direction in timers:
-        timers[direction].cancel()
-        del timers[direction]
-    if not speed:
-        if direction in ['left', 'right']:
-            # TODO: if currently tracking (when would we not?)
-            with microseriallock:
-                microserial.write(('ra_set_speed %f\r' % settings['ra_track_rate']).encode())
-            # else:
-            # ra_set_speed 0
-            pass
+    try:
+        if direction not in ['left', 'right', 'up', 'down']:
+            return
+        # If not currently slewing somewhere else
+        if direction in timers:
+            timers[direction].cancel()
+            del timers[direction]
+        if not speed:
+            if direction in ['left', 'right']:
+                # TODO: if currently tracking (when would we not?)
+                with microseriallock:
+                    microserial.write(('ra_set_speed %f\r' % settings['ra_track_rate']).encode())
+                # else:
+                # ra_set_speed 0
+                pass
+            else:
+                with microseriallock:
+                    microserial.write(b'dec_set_speed 0\r')
         else:
+            # If not current manually going other direction
             with microseriallock:
-                microserial.write(b'dec_set_speed 0\r')
+                if OPPOSITE_MANUAL[direction] in timers:
+                    return
+                if direction == 'left':
+                    microserial.write(('ra_set_speed %f\r' % settings['ra_slew_' + speed]).encode())
+                elif direction == 'right':
+                    microserial.write(('ra_set_speed -%f\r' % settings['ra_slew_' + speed]).encode())
+                elif direction == 'up':
+                    print('Trying to do dec_set_speed')
+                    microserial.write(('dec_set_speed %f\r' % settings['dec_slew_' + speed]).encode())
+                elif direction == 'down':
+                    microserial.write(('dec_set_speed -%f\r' % settings['dec_slew_' + speed]).encode())
+                timers[direction] = threading.Timer(0.75, partial(manual_control, direction, None))
+                timers[direction].start()
+    finally:
+        slew_lock.release()
+
+
+def ra_set_speed(speed):
+    with microseriallock:
+        microserial.write(('ra_set_speed %f\r' % settings['ra_slew_' + speed]).encode())
+
+
+def dec_set_speed(speed):
+    with microseriallock:
+        microserial.write(('ra_set_speed %f\r' % settings['ra_slew_' + speed]).encode())
+
+
+def move_to_skycoord_calc2(move_info, a, set_speed_func):
+    t = astropy.time.Time.now() - move_info['lasttime']
+    t.format = 'sec'
+    t = t.value
+    if abs(move_info['v0']) < move_info['max_speed']:
+        move_info['steps'] += t * move_info['v0']
+        old_v0 = move_info['v0']
+        move_info['v0'] = calc_speed(a, move_info['v0'], t)
+        if abs(move_info['v0']) > move_info['max_speed']:
+            move_info['v0'] = math.copysign(move_info['max_speed'], move_info['v0'])
+        if old_v0 != move_info['v0']:
+            set_speed_func(move_info['v0'])
+        move_info['lasttime'] = astropy.time.Time.now()
     else:
-        # If not current manually going other direction
-        with microseriallock:
-            if OPPOSITE_MANUAL[direction] in timers:
-                return
-            if direction == 'left':
-                microserial.write(('ra_set_speed %f\r' % settings['ra_slew_' + speed]).encode())
-            elif direction == 'right':
-                microserial.write(('ra_set_speed -%f\r' % settings['ra_slew_' + speed]).encode())
-            elif direction == 'up':
-                print('Trying to do dec_set_speed')
-                microserial.write(('dec_set_speed %f\r' % settings['dec_slew_' + speed]).encode())
-            elif direction == 'down':
-                microserial.write(('dec_set_speed -%f\r' % settings['dec_slew_' + speed]).encode())
-            timers[direction] = threading.Timer(0.75, partial(manual_control, direction, None))
-            timers[direction].start()
+        move_info['steps'] += t * move_info['v0']
+        move_info['lasttime'] = astropy.time.Time.now()
+
+
+def move_to_skycoord_calc(move_info, set_speed_func):
+    steps = move_info['wanted_steps'] - move_info['steps']
+    dsteps = steps_needed_to_deaccelerate(-move_info['a'], move_info['v0'], move_info['vi'])
+    if abs(steps) - abs(dsteps) <= 0:
+        # Start slowing down
+        move_to_skycoord_calc2(move_info, -move_info['a'], set_speed_func)
+    else:
+        move_to_skycoord_calc2(move_info, move_info['a'], set_speed_func)
+
+
+def move_to_skycoord_threadf(sync_info, wanted_skycoord):
+    with slew_lock:
+        cancel_slew = False
+        need_step_position = skycoord_to_steps(sync_info, wanted_skycoord)
+        status = get_status()
+
+        ra_info = {'lasttime': astropy.time.Time.now(), 'a': 0, 'vi': 0, 'v0': 0, 'wanted_steps': need_step_position['ra'],
+                   'max_speed': settings['ra_slew_fast']}
+
+        dec_info = {'lasttime': ra_info['lasttime'], 'a': 0, 'vi': 0, 'v0': 0, 'wanted_steps': need_step_position['dec'],
+                    'max_speed': settings['ra_slew_fast']}
+
+        ra_info['a'] = math.copysign(settings['ra_max_accel_tpss'], need_step_position['ra'] - status['rp'])
+        dec_info['a'] = math.copysign(settings['dec_max_accel_tpss'], need_step_position['dec'] - status['dp'])
+
+        ra_info['vi'] = settings['ra_track_rate']
+        dec_info['vi'] = 0.0
+
+        ra_info['v0'] = status['rs']
+        dec_info['v0'] = status['ds']
+
+        ra_info['steps'] = status['rp']
+        dec_info['steps'] = status['dp']
+
+        loop_count = 0
+        while not cancel_slew:
+            if abs(ra_info['wanted_steps'] - ra_info['steps']) <= math.ceil(settings['ra_track_rate']) and abs(
+                            dec_info['wanted_steps'] - dec_info['steps']) <= math.ceil(15*settings['dec_ticks_per_degree']/(60.0*60.0)):
+                break
+            move_to_skycoord_calc(ra_info, ra_set_speed)
+            move_to_skycoord_calc(dec_info, dec_set_speed)
+            loop_count += 1
+            time.sleep(0.2)
+            need_step_position = skycoord_to_steps(sync_info, wanted_skycoord)
+            status = get_status()
+            ra_info['wanted_steps'] = need_step_position['ra']
+            dec_info['wanted_steps'] = need_step_position['dec']
+            ra_info['v0'] = status['rs']
+            dec_info['v0'] = status['ds']
+            ra_info['steps'] = status['rp']
+            dec_info['steps'] = status['dp']
+
+        # When we are done set back to tracking rate
+        ra_set_speed(settings['ra_track_rate'])
+        dec_set_speed(0.0)
 
 
 def move_to_skycoord(sync_info, wanted_skycoord):
-    need_step_position = skycoord_to_steps(sync_info, wanted_skycoord)
-    status = get_status()
-    raLastTime = astropy.time.Time.now()
-    decLastTime = raLastTime
+    cancel_slew = True
+    thread = threading.Thread(target=move_to_skycoord_threadf, args=(sync_info, wanted_skycoord))
+    thread.start()
 
-    ra_a = math.copysign(settings['ra_max_accel_tpss'], need_step_position['ra'] - status['rp'])
-    dec_a = math.copysign(settings['dec_max_accel_tpss'], need_step_position['dec'] - status['dp'])
 
-    ra_vi = settings['ra_track_rate']
-    dec_vi = 0.0
+def cancel_slews():
+    cancel_slew = True
 
-    ra_v0 = status['rs']
-    dec_v0 = status['ds']
-
-    #RA
-    while abs(need_step_position['ra'] - status['rp']) > 1:
-        steps = need_step_position['ra'] - status['rp']
-        dsteps = steps_needed_to_deaccelerate(-ra_a, ra_v0, ra_vi)
-        if abs(steps) - abs(dsteps) <= 0:
-            # Start slowing down
-            # speed = speed
-        else:
-            if abs(ra_v0) < settings['ra_slew_fast']:
-                t = astropy.time.Time.now() - ralastTime
-                t.format = 'sec'
-                t = t.value
-                status['rp'] += t*ra_v0
-                ra_v0 = calc_speed(ra_a, ra_v0, t)
-                if abs(ra_v0) > settings['ra_slew_fast']:
-                    ra_v0 = math.copysign(settings['ra_slew_fast'], ra_v0)
-                status['rs'] = ra_v0
-                #TODO: set_speed ra_v0
-                ralastTime = astropy.time.Time.now()
-    #After X iterations get status from micro again
-
-    #DEC
 
 def calc_speed(a, v0, t):
-    return 2*a*t+v0
+    return 2 * a * t + v0
 
 
 def steps_needed_to_deaccelerate(a, v0, vi):
     a = float(a)
     v0 = float(v0)
     vi = float(vi)
-    t = (vi-v0)/(2.0*a)
-    return a*t*t + v0*t
+    t = (vi - v0) / (2.0 * a)
+    return a * t * t + v0 * t
 
 
 def deg_d(wanted, current):

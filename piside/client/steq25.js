@@ -120,6 +120,52 @@ $(document).ready(function () {
     //init();
     bind_direction_controls();
 
+    var ra_format = function(ra) {
+        ra = parseFloat(ra);
+        var remain = ra - parseInt(ra);
+        var min = parseInt(remain*60);
+        var sec = (remain - (min/60.0))*60*60;
+        return parseInt(ra, 10)+'h'+min+'m'+sec.toFixed(1)+'s'
+    };
+
+    var dec_format = function(dec) {
+        dec = parseFloat(dec);
+        var remain = dec - parseInt(dec);
+        var arcmin = parseInt(remain*60);
+        var arcsec = (remain - (arcmin/60.0))*60*60;
+        return parseInt(dec, 10)+'&deg;'+arcmin+'\''+arcsec.toFixed(1)+'"'
+    };
+
+    var search_object = _.throttle(function() {
+        var search = $('#search_txt').val();
+        $('#search_info').empty();
+        var action='<a href="#">Sync</a>&nbsp; &nbsp;<a href="#">Goto</a>'
+        $.ajax({
+            url: '/search_object',
+            method: 'GET',
+            data: {'search': search},
+            success: function(d) {
+                var i = 0;
+                var tbody = $('#search_results tbody');
+                tbody.empty();
+                for(i = 0; i < d.dso.length; i++) {
+                    tbody.append('<tr><td>'+d.dso[i][20]+'</td><td>'+ra_format(d.dso[i][0])+'/'+dec_format(d.dso[i][1])+'</td><td></td></td><td>'+action+'</td>')
+                }
+                for(i = 0; i < d.stars.length; i++) {
+                    tbody.append('<tr><td>'+d.stars[i][6]+', '+d.stars[i][5]+'</td><td>'+ra_format(d.stars[i][7])+'/'+dec_format(d.stars[i][8])+'</td><td></td></td><td>'+action+'</td>')
+                }
+
+                console.log(d);
+
+                if(d.dso.length >= 10 || d.stars.length >= 10) {
+                    $('#search_info').text('Too many results. Results were cut.')
+                }
+            }
+        })
+    }, 500);
+
+    $('#search_txt').on('input', search_object);
+
     $('#settings_save').click(function () {
         var settings = {
             ra_track_rate: $('#settings_ra_track_rate').val(),

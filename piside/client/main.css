@@ -40,6 +40,10 @@ table.direction-controls td{
     border: none;
 }
 
+#search_results, #search_results td, #search_results th {
+    border: 1px solid red; border-Collapse: collapse
+}
+
 .fa-arrow-circle-up:hover, .fa-arrow-circle-down:hover, .fa-arrow-circle-right:hover, .fa-arrow-circle-left:hover {
     background-color: black;
     color: #6d0000;

@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="main.css"/>
     <!--link rel="stylesheet" type="text/css" href="css/fontawesome-all.min.css"/-->
     <script src="jquery-3.2.1.min.js"></script>
+    <script src="lodash.min.js"></script>
     <script src="fontawesome-all.js"></script>
     <script src="socket.io.2.0.4.js"></script>
     <script src="steq25.js"></script>
@@ -64,7 +65,19 @@
 </div>
 <div class="goto">
     <h1>GOTO</h1>
-    Search: <input type="text"/><br/>
+    <div>
+        Search for stars or objects. For example "Vega" or "M 100".
+    </div>
+    Search: <input id="search_txt" type="text"/><br/>
+    <div>
+        <span id="search_info"></span>
+        <table id="search_results" style="">
+            <thead>
+            <tr><th>Name</th><th>RA/Dec</th><th>Alt-Az</th><th>Action</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
     <button>Sync</button>&nbsp;<button>Goto</button>
 </div>
 
