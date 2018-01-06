@@ -71,15 +71,20 @@ def search_object():
     search = request.args.get('search', None)
     if not search:
         return
+    dso_search = search
+    star_search = search
     if re.match(r'.*\d+$', search):
-        search += '|'
-    search = '%'+search+'%'
+        dso_search = '%'+dso_search+'|%'
+        star_search = '%'+star_search
+    else:
+        dso_search = '%'+dso_search+'%'
+        star_search = '%'+star_search+'%'
     #catalogs = {'IC': ['IC'], 'NGC': ['NGC'], 'M': ['M', 'Messier'], 'Pal': ['Pal'], 'C': ['C', 'Caldwell'], 'ESO': ['ESO'], 'UGC': ['UGC'], 'PGC': ['PGC'], 'Cnc': ['Cnc'], 'Tr': ['Tr'], 'Col': ['Col'], 'Mel': ['Mel'], 'Harvard': ['Harvard'], 'PK': ['PK']}
     with db_lock:
         cur = conn.cursor()
-        cur.execute('SELECT * from dso where search like ? limit 10', (search,))
+        cur.execute('SELECT * from dso where search like ? limit 10', (dso_search,))
         dso = cur.fetchall()
-        cur.execute('SELECT * from stars where bf like ? or proper like ? limit 10', (search, search))
+        cur.execute('SELECT * from stars where bf like ? or proper like ? limit 10', (star_search, star_search))
         stars = cur.fetchall()
     return jsonify({'dso': dso, 'stars': stars})
 
