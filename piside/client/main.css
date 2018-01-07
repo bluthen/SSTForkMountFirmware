@@ -1,11 +1,45 @@
+h1, h2 {
+    text-decoration: underline;
+}
+
 body {
     background-color: black;
     color: red;
     -webkit-touch-callout: none !important;
 }
 
+a {
+    color: red;
+}
+
+#large_logo {
+    float: right;
+    margin-right: 3ex;
+    top: 0px;
+}
+
 .direction {
     font-size: 7ex;
+}
+
+::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+    color: #4b4b4b;
+}
+
+::-moz-placeholder { /* Firefox 19+ */
+    color: #4b4b4b;
+}
+
+:-ms-input-placeholder { /* IE 10+ */
+    color: #4b4b4b;
+}
+
+:-moz-placeholder { /* Firefox 18- */
+    color: #4b4b4b;
+}
+
+::placeholder {
+    color: #4b4b4b;
 }
 
 button {
@@ -14,6 +48,7 @@ button {
     border: 1px solid black;
     cursor: pointer;
 }
+
 input {
     background-color: red;
     border: 1px solid black;
@@ -31,7 +66,8 @@ table.direction-controls {
     margin: 0 auto;
     -webkit-user-select: none !important;
 }
-table.direction-controls td{
+
+table.direction-controls td {
     padding: 10px;
 }
 
@@ -41,7 +77,13 @@ table.direction-controls td{
 }
 
 #search_results, #search_results td, #search_results th {
-    border: 1px solid red; border-Collapse: collapse
+    border: 1px solid red;
+    border-Collapse: collapse
+}
+
+#location_search_results, #location_search_results td, #location_search_results th {
+    border: 1px solid red;
+    border-Collapse: collapse
 }
 
 .fa-arrow-circle-up:hover, .fa-arrow-circle-down:hover, .fa-arrow-circle-right:hover, .fa-arrow-circle-left:hover {
@@ -54,7 +96,6 @@ table.direction-controls td{
     background-color: red;
     color: black;
 }
-
 
 .btn-up {
     position: absolute;

@@ -1,13 +1,14 @@
 import threading
 import serial
 from functools import partial
-import datetime
-import math
 import time
 
 import datetime
 import astropy
 import astropy.units as u
+import math
+
+import main
 
 SIDEREAL_RATE = 0.004178074551055444  # 15.041"/s
 AXIS_RA = 1
@@ -22,6 +23,7 @@ slew_lock = threading.RLock()
 status_interval = None
 socketio = None
 inited = False
+runtime_settings = None
 
 cancel_slew = False
 
@@ -73,8 +75,29 @@ def get_status():
     return status
 
 
+def update_location():
+    el = astropy.coordinates.EarthLocation(lat=settings['location']['lat'] * u.deg, lon=['location']['long'] * u.deg,
+                                           heigh=760.0 * u.m)
+    runtime_settings['earth_location'] = el
+
+
 def send_status():
     status = get_status()
+    status['ra'] = None
+    status['dec'] = None
+    status['alt'] = None
+    status['az'] = None
+    status['time_been_set'] = runtime_settings['time_been_set']
+    status['synced'] = runtime_settings['sync_info'] is not None
+    if status['synced']:
+        coord = steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']})
+        status['ra'] = coord.icrs.ra.deg
+        status['dec'] = coord.icrs.dec.deg
+        if runtime_settings['earth_location']:
+            altaz = astropy.coordinates.SkyCoord(coord, obstime=astropy.time.Time.now(), location=runtime_settings['earth_location']).altaz
+            status['alt'] = altaz.alt.deg
+            status['az'] = altaz.az.deg
+
     socketio.emit('status', status)
 
 
@@ -89,12 +112,13 @@ def micro_update_settings():
         microserial.write(('ra_set_speed %f\r' % settings['ra_track_rate']).encode())
 
 
-def init(osocketio, fsettings):
-    global settings, microserial, microseriallock, status_interval, socketio, inited
+def init(osocketio, fsettings, fruntime_settings):
+    global settings, microserial, microseriallock, status_interval, socketio, inited, runtime_settings
     if inited:
         return
     inited = True
     print('Inited')
+    runtime_settings = fruntime_settings
     settings = fsettings
     socketio = osocketio
     # Load settings file
@@ -105,9 +129,9 @@ def init(osocketio, fsettings):
 
 
 def manual_control(direction, speed):
-    #TODO: Acceleration limit
+    # TODO: Acceleration limit
     global microserial, microseriallock, slew_lock
-    got_lock = slew_lock.aquire(blocking=False)
+    got_lock = slew_lock.acquire(blocking=False)
     if not got_lock:
         for direction in ['left', 'right', 'up', 'down']:
             if direction in timers:
@@ -191,15 +215,18 @@ def move_to_skycoord_calc(move_info, set_speed_func):
 
 
 def move_to_skycoord_threadf(sync_info, wanted_skycoord):
+    global cancel_slew
     with slew_lock:
         cancel_slew = False
         need_step_position = skycoord_to_steps(sync_info, wanted_skycoord)
         status = get_status()
 
-        ra_info = {'lasttime': astropy.time.Time.now(), 'a': 0, 'vi': 0, 'v0': 0, 'wanted_steps': need_step_position['ra'],
+        ra_info = {'lasttime': astropy.time.Time.now(), 'a': 0, 'vi': 0, 'v0': 0,
+                   'wanted_steps': need_step_position['ra'],
                    'max_speed': settings['ra_slew_fast']}
 
-        dec_info = {'lasttime': ra_info['lasttime'], 'a': 0, 'vi': 0, 'v0': 0, 'wanted_steps': need_step_position['dec'],
+        dec_info = {'lasttime': ra_info['lasttime'], 'a': 0, 'vi': 0, 'v0': 0,
+                    'wanted_steps': need_step_position['dec'],
                     'max_speed': settings['ra_slew_fast']}
 
         ra_info['a'] = math.copysign(settings['ra_max_accel_tpss'], need_step_position['ra'] - status['rp'])
@@ -217,7 +244,8 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord):
         loop_count = 0
         while not cancel_slew:
             if abs(ra_info['wanted_steps'] - ra_info['steps']) <= math.ceil(settings['ra_track_rate']) and abs(
-                            dec_info['wanted_steps'] - dec_info['steps']) <= math.ceil(15*settings['dec_ticks_per_degree']/(60.0*60.0)):
+                            dec_info['wanted_steps'] - dec_info['steps']) <= math.ceil(
+                                15 * settings['dec_ticks_per_degree'] / (60.0 * 60.0)):
                 break
             move_to_skycoord_calc(ra_info, ra_set_speed)
             move_to_skycoord_calc(dec_info, dec_set_speed)
@@ -237,13 +265,33 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord):
         dec_set_speed(0.0)
 
 
+def slew(ra, dec):
+    """
+
+    :param ra: float as deg
+    :param dec: float as deg
+    :return:
+    """
+    # TODO: Error conditions
+    wanted_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, format='icrs')
+    move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord)
+
+
 def move_to_skycoord(sync_info, wanted_skycoord):
+    """
+    Slew to position
+    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoords, 'steps': {'ra': int, 'dec': int}
+    :param wanted_skycoord: astropy.coordinates.SkyCoord
+    :return:
+    """
+    global cancel_slew
     cancel_slew = True
     thread = threading.Thread(target=move_to_skycoord_threadf, args=(sync_info, wanted_skycoord))
     thread.start()
 
 
 def cancel_slews():
+    global cancel_slew
     cancel_slew = True
 
 
@@ -276,19 +324,30 @@ def clean_deg(deg):
     return deg
 
 
-def ra_deg_now(ra_deg, time):
+def ra_deg_now(ra_deg, time_st):
     """
     Gives RA in degrees now if we didn't track since time.
     :param ra_deg: In degrees
-    :param time: Time astropy.time.Time from when it stopped tracking
+    :param time_st: Time astropy.time.Time from when it stopped tracking
     :return:
     """
     now = astropy.time.Time.now()
-    td = now - time
+    td = now - time_st
     td.format = 'sec'
     ra_deg = ra_deg - (td.value * SIDEREAL_RATE)
     ra_deg = clean_deg(ra_deg)
     return ra_deg
+
+
+def sync(ra, dec):
+    sync_info = {}
+    status = get_status()
+
+    sync_info['time'] = astropy.time.Time.now()
+    sync_info['steps'] = {'ra': status['rp'], 'dec': status['dp']}
+    coords = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+    sync_info['coords'] = coords
+    runtime_settings['sync_info'] = sync_info
 
 
 def skycoord_to_steps(sync_info, wanted_skycoord):

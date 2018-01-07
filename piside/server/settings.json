@@ -21,5 +21,6 @@
   "dec_slew_fast": 444.44,
   "ra_slew_fast": 10800.0,
   "ra_max_accel_tpss": 10800.0,
-  "dec_max_accel_tpss": 444.44
+  "dec_max_accel_tpss": 444.44,
+  "location": {"lat": null, "long": null, "name": null}
 }

@@ -57,88 +57,132 @@
 </div>
 <div class="status" style="position: relative;">
     <h1>Status</h1>
-    RA: DEC:<br/>
-    Alt: Az:<br/>
-    RA Speed/Ticks: <span id="ra_stat"></span><br/>
-    Dec Speed/Ticks: <span id="dec_stat"></span><br/>
-    Location:<span id="location"></span>, Time:<br/>
+    <img src="logo-dred.png" id="large_logo">
+    RA/DEC:<span id="status_radec"></span><br/>
+    Alt/Az:<span id="status_altaz"></span><br/>
+    RA Speed/Ticks: <span id="status_ra_ticks"></span><br/>
+    Dec Speed/Ticks: <span id="status_dec_ticks"></span><br/>
+    Location:<span id="location"></span><br/>
 </div>
 <div class="goto">
-    <h1>GOTO</h1>
+    <h1>Sync/Slew To</h1>
+    <h2>Object Search</h2>
     <div>
         Search for stars or objects. For example "Vega" or "M 100".
     </div>
+    <div style="font-size: 80%">DSO and Star database based on <a href="http://www.astronexus.com/hyg">The HYG
+        Database</a></div>
     Search: <input id="search_txt" type="text"/><br/>
     <div>
         <span id="search_info"></span>
         <table id="search_results" style="">
             <thead>
-            <tr><th>Name</th><th>RA/Dec</th><th>Alt-Az</th><th>Action</th></tr>
+            <tr>
+                <th>Name</th>
+                <th>RA/Dec</th>
+                <th>Alt-Az</th>
+                <th>Action</th>
+            </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
-    <button>Sync</button>&nbsp;<button>Goto</button>
+    <h2>Manual Coordinates</h2>
+    RA: <input type="text" id="goto_manual_ra" placeholder="hh mm ss.s"><br/>
+    DEC: <input type="text" id="goto_manual_dec" placeholder="±dd mm ss.s"><br/>
+    <button id="manual_sync"><i class="fas fa-sync" alt="Sync"></i>Sync</button>&nbsp;<button id="manual_slewto"><i
+        class="far fa-play-circle"></i>Slew To
+</button>
 </div>
 
 <div class="config-variables">
     <h1>Settings</h1>
-    <button>Set Time/Location</button><br/>
-    <button>Park Scope</button>&nbsp;<button>Set Park Position</button><br/><br/>
+    <h2>Location</h2>
+    <h3>Location Search</h3>
+    <div>Search for a location by US Zip code or city name. For example "66044" or "Lawrence, KS".</div>
+    <div style="font-size: 80%">Zip code database from GeoNames (<a href="geonames.org">geonames.org</a>)</div>
+    Search: <input id="location_search_txt" type="text"/><br/>
+    <div>
+        <span id="location_search_info"></span>
+        <table id="location_search_results" style="">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Lat/Long</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <h3>Manual Location</h3>
+    <div>Or you can put in coordinates manually. For example, Lat: "N39 1' 44", Long: "W95 12' 31" or Lat: "39.0289"
+        Long: "-95.2086"
+    </div>
+    <div>
+        Lat: <input id="manual_lat"><br/>
+        Long: <input id="manual_long"><br/>
+        Name: <input id="manual_name"><br/>
+        <button id="location_manual_set"><i class="fas fa-globe"></i>Set Location</button>
+    </div>
+    <h2>Movement settings</h2>
+    <button>Park Scope</button>&nbsp;<button>Set Park Position</button>
+    <br/><br/>
     <div style="border: 1px solid red;">
-    <table>
-        <tbody>
-        <tr>
-            <td>RA Tracking Steps/Second:</td>
-            <td><input id="settings_ra_track_rate" type="text"/></td>
-        </tr>
-        <tr>
-            <td>DEC Steps/Degree:</td>
-            <td><input id="settings_dec_ticks_per_degree" type="text"/></td>
-        </tr>
-        <tr>
-            <td>RA Max Acceleration (steps/Sec^2):</td>
-            <td><input id="settings_ra_max_accel_tpss" type="text"/></td>
-        </tr>
-        <tr>
-            <td>DEC Max Acceleration (steps/Sec^2):</td>
-            <td><input id="settings_dec_max_accel_tpss" type="text"/></td>
-        </tr>
-        <tr>
-            <td>RA Direction:</td>
-            <td><input id="settings_ra_direction" type="text"/></td>
-        </tr>
-        <tr>
-            <td>DEC Direction:</td>
-            <td><input id="settings_dec_direction" type="text"/></td>
-        </tr>
-        <tr>
-            <td>RA Guide Steps/Sec:</td>
-            <td><input id="settings_ra_guide_rate" type="text"/></td>
-        </tr>
-        <tr>
-            <td>RA Slew-Fast Steps/Sec:</td>
-            <td><input id="settings_ra_slew_fast" type="text"/></td>
-        </tr>
-        <tr>
-            <td>RA Slew-Slow Steps/Sec:</td>
-            <td><input id="settings_ra_slew_slow" type="text"/></td>
-        </tr>
-        <tr>
-            <td>DEC Guide Steps/Sec:</td>
-            <td><input id="settings_dec_guide_rate" type="text"/></td>
-        </tr>
-        <tr>
-            <td>DEC Slew-Fast Steps/Sec:</td>
-            <td><input id="settings_dec_slew_fast" type="text"/></td>
-        </tr>
-        <tr>
-            <td>DEC Slew-Slow Steps/Sec:</td>
-            <td><input id="settings_dec_slew_slow" type="text"/></td>
-        </tr>
-        </tbody>
-    </table>
-    <button id="settings_save">Save</button><span id="settings_save_status"></span><br/>
+        <table>
+            <tbody>
+            <tr>
+                <td>RA Tracking Steps/Second:</td>
+                <td><input id="settings_ra_track_rate" type="text"/></td>
+            </tr>
+            <tr>
+                <td>DEC Steps/Degree:</td>
+                <td><input id="settings_dec_ticks_per_degree" type="text"/></td>
+            </tr>
+            <tr>
+                <td>RA Max Acceleration (steps/Sec^2):</td>
+                <td><input id="settings_ra_max_accel_tpss" type="text"/></td>
+            </tr>
+            <tr>
+                <td>DEC Max Acceleration (steps/Sec^2):</td>
+                <td><input id="settings_dec_max_accel_tpss" type="text"/></td>
+            </tr>
+            <tr>
+                <td>RA Direction:</td>
+                <td><input id="settings_ra_direction" type="text"/></td>
+            </tr>
+            <tr>
+                <td>DEC Direction:</td>
+                <td><input id="settings_dec_direction" type="text"/></td>
+            </tr>
+            <tr>
+                <td>RA Guide Steps/Sec:</td>
+                <td><input id="settings_ra_guide_rate" type="text"/></td>
+            </tr>
+            <tr>
+                <td>RA Slew-Fast Steps/Sec:</td>
+                <td><input id="settings_ra_slew_fast" type="text"/></td>
+            </tr>
+            <tr>
+                <td>RA Slew-Slow Steps/Sec:</td>
+                <td><input id="settings_ra_slew_slow" type="text"/></td>
+            </tr>
+            <tr>
+                <td>DEC Guide Steps/Sec:</td>
+                <td><input id="settings_dec_guide_rate" type="text"/></td>
+            </tr>
+            <tr>
+                <td>DEC Slew-Fast Steps/Sec:</td>
+                <td><input id="settings_dec_slew_fast" type="text"/></td>
+            </tr>
+            <tr>
+                <td>DEC Slew-Slow Steps/Sec:</td>
+                <td><input id="settings_dec_slew_slow" type="text"/></td>
+            </tr>
+            </tbody>
+        </table>
+        <button id="settings_save">Save</button>
+        <span id="settings_save_status"></span><br/>
     </div>
 </div>
 </body>
