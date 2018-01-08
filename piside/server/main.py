@@ -9,6 +9,8 @@ import sqlite3
 import iso8601
 import subprocess
 import datetime
+import sys
+import traceback
 
 monkey_patch()
 
@@ -74,11 +76,18 @@ def settings_put():
 def set_location():
     location = request.form.get('location', None)
     location = json.loads(location)
+    print(location)
     if 'lat' not in location or 'long' not in location or 'name' not in location:
         return 'Missing arguments', 400
-    location = {'lat': str(location['lat']), 'long': str(location['long']), 'name': str(location['name'])}
-    control.update_location(location)
+    location = {'lat': float(location['lat']), 'long': float(location['long']), 'name': str(location['name'])}
+    old_location = settings['location']
     settings['location'] = location
+    try:
+        control.update_location()
+    except:
+        settings['location'] = old_location
+        traceback.print_exc(file=sys.stdout)
+        return 'Invalid location', 400
     with settings_json_lock:
         with open('settings.json', mode='w') as f:
             json.dump(settings, f)

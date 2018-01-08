@@ -15,15 +15,15 @@ $(document).ready(function () {
     socket.on('status', function (msg) {
         //console.log(msg);
         status = msg;
-        var status_radec = $('status_radec');
-        var status_altaz = $('status_altaz');
+        var status_radec = $('#status_radec');
+        var status_altaz = $('#status_altaz');
         status_radec.empty();
         status_altaz.empty();
         if(status.ra) {
-            status_radec.text(formating.ra((24.0/360)*status.ra)+'/'+formating.dec(status.dec));
+            status_radec.html(formating.ra((24.0/360)*status.ra)+'/'+formating.dec(status.dec));
         }
         if (status.alt) {
-            status_altaz.text(formating.dec(status.alt)+'/'+formating.dec(status.az));
+            status_altaz.html(formating.dec(status.alt)+'/'+formating.dec(status.az));
         }
         $('#status_ra_ticks').text('' + msg.rs + '/' + msg.rp);
         $('#status_dec_ticks').text('' + msg.ds + '/' + msg.dp);
@@ -177,7 +177,7 @@ $(document).ready(function () {
         },
         dec: function (dec) {
             dec = parseFloat(dec);
-            var remain = dec - parseInt(dec, 10);
+            var remain = Math.abs(dec - parseInt(dec, 10));
             var arcmin = parseInt(remain * 60);
             var arcsec = (remain - (arcmin / 60.0)) * 60 * 60;
             return parseInt(dec, 10) + '&deg;' + arcmin + '\'' + arcsec.toFixed(1) + '"'
@@ -237,7 +237,7 @@ $(document).ready(function () {
         $.ajax({
             url: '/set_location',
             method: 'PUT',
-            data: {lat: lat, long: long, name: name},
+            data: {location: JSON.stringify({lat: lat, long: long, name: name})},
             success: function (d) {
                 update_settings();
                 //TODO: Confirm Dialog?
@@ -258,9 +258,9 @@ $(document).ready(function () {
             data: {'search': search},
             success: function (d) {
                 var i;
-                var setclicked = function(lat, lon) {
+                var setclicked = function(lat, lon, name) {
                     return function(e) {
-                        set_location(lat, lon);
+                        set_location(lat, lon, name);
                         e.preventDefault();
                     }
                 };
@@ -323,7 +323,7 @@ $(document).ready(function () {
         });
     };
 
-    $('location_manual_set').click(function () {
+    $('#location_manual_set').click(function () {
         var match, lat_deg, long_deg;
         var lat = $('#manual_lat').val();
         var long = $('#manual_long').val();
@@ -339,7 +339,7 @@ $(document).ready(function () {
             //Degree mode
             lat_deg = parseFloat(lat)
         } else {
-            match = lat.match(/^([NS])(\d+) (\d+)' (\d*.?\d+)?/);
+            match = lat.match(/^([NS])(\d+)[° ](\d+)' ?(\d*.?\d+)?/);
             if (match) {
                 lat_deg = parseInt(match[2], 10);
                 if (match[1] === 'S') {
@@ -358,7 +358,7 @@ $(document).ready(function () {
             //Degree mode
             long_deg = parseFloat(long)
         } else {
-            match = long.match(/^([WE])(\d+) (\d+)' (\d*.?\d+)?/);
+            match = long.match(/^([WE])(\d+)[° ](\d+)' ?(\d*.?\d+)?/);
             if (match) {
                 long_deg = parseInt(match[2], 10);
                 if (match[1] === 'W') {
@@ -375,7 +375,7 @@ $(document).ready(function () {
 
         //convert coordinates
         //Check lat long and name are okay
-        set_location(lat, long, name);
+        set_location(lat_deg, long_deg, name);
     });
 
     $('#location_search_txt').on('input', search_location);
