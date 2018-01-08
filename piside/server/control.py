@@ -82,8 +82,18 @@ def update_location():
         return
     el = EarthLocation(lat=settings['location']['lat'] * u.deg,
                        lon=settings['location']['long'] * u.deg,
-                       height=760.0 * u.m)
+                       height=405.0 * u.m)
     runtime_settings['earth_location'] = el
+
+
+def to_altaz_asdeg(coord):
+    if runtime_settings['earth_location']:
+        altaz = SkyCoord(coord, obstime=astropy.time.Time.now(),
+                     location=runtime_settings['earth_location']).altaz
+        # print(altaz)
+        return {'alt': altaz.alt.deg, 'az': altaz.az.deg}
+    else:
+        return {'alt': None, 'az': None}
 
 
 def send_status():
@@ -99,14 +109,10 @@ def send_status():
         status['ra'] = coord.icrs.ra.deg
         status['dec'] = coord.icrs.dec.deg
         # print('earth_location', runtime_settings['earth_location'])
-        if runtime_settings['earth_location']:
-            # print(coord)
-            # print(runtime_settings['earth_location'])
-            altaz = SkyCoord(coord, obstime=astropy.time.Time.now(),
-                             location=runtime_settings['earth_location']).altaz
-            # print(altaz)
-            status['alt'] = altaz.alt.deg
-            status['az'] = altaz.az.deg
+        altaz = to_altaz_asdeg(coord)
+        # print(altaz)
+        status['alt'] = altaz['alt']
+        status['az'] = altaz['az']
 
     socketio.emit('status', status)
 

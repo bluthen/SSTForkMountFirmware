@@ -12,6 +12,11 @@ import datetime
 import sys
 import traceback
 
+import astropy.time
+import astropy.coordinates
+from astropy.coordinates import solar_system_ephemeris
+import astropy.units as u
+
 monkey_patch()
 
 st_queue = None
@@ -138,11 +143,35 @@ def set_time():
     return 'NTP Set', 200
 
 
+def to_list_of_lists(tuple_of_tuples):
+    b = [list(x) for x in tuple_of_tuples]
+    return b
+
+
 @app.route('/search_object', methods=['GET'])
 def search_object():
+    do_altaz = True
     search = request.args.get('search', None)
     if not search:
         return
+    planet_search = search.lower()
+    bodies = solar_system_ephemeris.bodies
+    planets = []
+    for body in bodies:
+        if body.find('earth') != -1:
+            continue
+        if body.find(planet_search) != -1:
+            coord = astropy.coordinates.get_body(body, astropy.time.Time.now(),
+                                                 location=runtime_settings['earth_location'])
+            ra = coord.ra.deg
+            dec = coord.dec.deg
+            coord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+            if do_altaz:
+                altaz = control.to_altaz_asdeg(coord)
+            else:
+                altaz={'alt': None, 'az': None}
+            planets.append(
+                [body.title(), coord.icrs.ra.deg * 24.0 / 360.0, coord.icrs.dec.deg, altaz['alt'], altaz['az']])
     dso_search = search
     star_search = search
     if re.match(r'.*\d+$', search):
@@ -159,7 +188,29 @@ def search_object():
         cur.execute('SELECT * from stars where bf like ? or proper like ? limit 10', (star_search, star_search))
         stars = cur.fetchall()
         cur.close()
-    return jsonify({'dso': dso, 'stars': stars})
+    dso = to_list_of_lists(dso)
+    stars = to_list_of_lists(stars)
+    # Alt az
+    for ob in dso:
+        if do_altaz:
+            coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg,
+                                                 frame='icrs')
+            altaz = control.to_altaz_asdeg(coord)
+        else:
+            altaz = {'alt': None, 'az': None}
+        ob.append(altaz['alt'])
+        ob.append(altaz['az'])
+    for ob in stars:
+        if do_altaz:
+            coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg,
+                                                 frame='icrs')
+            altaz = control.to_altaz_asdeg(coord)
+        else:
+            altaz = {'alt': None, 'az': None}
+        ob.append(altaz['alt'])
+        ob.append(altaz['az'])
+
+    return jsonify({'dso': dso, 'stars': stars, 'planets': planets})
 
 
 @app.route('/search_location', methods=['GET'])

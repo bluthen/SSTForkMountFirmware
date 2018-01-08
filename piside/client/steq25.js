@@ -176,15 +176,19 @@ $(document).ready(function () {
             return parseInt(ra, 10) + 'h' + min + 'm' + sec.toFixed(1) + 's'
         },
         dec: function (dec) {
-            dec = parseFloat(dec);
-            var remain = Math.abs(dec - parseInt(dec, 10));
-            var arcmin = parseInt(remain * 60);
-            var arcsec = (remain - (arcmin / 60.0)) * 60 * 60;
-            return parseInt(dec, 10) + '&deg;' + arcmin + '\'' + arcsec.toFixed(1) + '"'
+            if (dec !== null) {
+                dec = parseFloat(dec);
+                var remain = Math.abs(dec - parseInt(dec, 10));
+                var arcmin = parseInt(remain * 60);
+                var arcsec = (remain - (arcmin / 60.0)) * 60 * 60;
+                return parseInt(dec, 10) + '&deg;' + arcmin + '\'' + arcsec.toFixed(1) + '"'
+            } else {
+                return '';
+            }
         }
     };
 
-    var search_object = _.throttle(function () {
+    var search_object = _.debounce(function () {
         var search = $('#search_txt').val();
         $('#search_info').empty();
         // TODO: Goto Action should only be there if we've synced once.
@@ -210,15 +214,22 @@ $(document).ready(function () {
                     };
                 };
                 tbody.empty();
+                for (i = 0; i < d.planets.length; i++) {
+                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/' + formating.dec(d.planets[i][2]) + '</td><td>'+formating.dec(d.planets[i][3])+'/'+formating.dec(d.planets[i][4])+'</td><td></td><td></td><td>' + action + '</td>');
+                    tbody.append(tr);
+                    $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
+                    $('a.slewto', tr).on('click',
+                        slewtoclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
+                }
                 for (i = 0; i < d.dso.length; i++) {
-                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/' + formating.dec(d.dso[i][1]) + '</td><td></td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/' + formating.dec(d.dso[i][1]) + '</td><td>'+formating.dec(d.dso[i][21])+'/'+formating.dec(d.dso[i][22])+'</td><td>'+d.dso[i][4]+'</td><td>'+d.dso[i][9]+'"x'+d.dso[i][10]+'"</td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                     $('a.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                 }
                 for (i = 0; i < d.stars.length; i++) {
-                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td></td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>'+formating.dec(d.stars[i][37])+'/'+formating.dec(d.stars[i][38])+'</td><td>'+d.stars[i][13]+'</td><td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
                     $('a.slewto', tr).on('click', slewtoclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
@@ -278,7 +289,7 @@ $(document).ready(function () {
                 }
             }
         })
-    }, 500);
+    }, 500, {leading: false, trailing: true});
 
     var convert_manual_coordinates = function () {
         var ra = $('#goto_manual_ra').val();
