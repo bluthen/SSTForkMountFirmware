@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>SSTEQ-25 Control Panel</title>
     <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">-->
+    <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.min.css"/>
     <link rel="stylesheet" type="text/css" href="main.css"/>
     <!--link rel="stylesheet" type="text/css" href="css/fontawesome-all.min.css"/-->
     <script src="jquery-3.2.1.min.js"></script>
     <script src="lodash.min.js"></script>
     <script src="fontawesome-all.js"></script>
+    <script src="bootstrap/js/bootstrap.min.js"></script>
     <script src="socket.io.2.0.4.js"></script>
     <script src="steq25.js"></script>
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>-->
@@ -19,14 +21,29 @@
     </script>
 </head>
 <body>
+<nav class="navbar fixed-bottom" style="background-color: black; border-top: 1px solid red;">
+    RADEC:<span id="status_radec"></span>|
+    AltAz:<span id="status_altaz"></span>|
+    R S/T: <span id="status_ra_ticks"></span>|
+    D S/T: <span id="status_dec_ticks"></span>|
+    Location: <span id="location"></span>
+</nav>
 <div class="direction-controls">
-    <h1>Manual Control</h1>
-    Speed: <input type="radio" id="direction-controls-speed-fast" name="direction-controls-speed" value="fast"
-                  checked><label for="direction-controls-speed-fast">Fast</label><input type="radio"
-                                                                                        id="direction-controls-speed-slow"
-                                                                                        name="direction-controls-speed"
-                                                                                        value="slow"><label
-        for="direction-controls-speed-slow">Slow</label>
+    <br/>
+    <div class="container-fluid">
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary active">
+                <input type="radio" id="direction-controls-speed-fast" name="direction-controls-speed" value="fast"
+                       autocomplete="off" checked> Speed Fast
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio"
+                       id="direction-controls-speed-slow"
+                       name="direction-controls-speed"
+                       value="slow" autocomplete="off">Speed Slow
+            </label>
+        </div>
+    </div>
     <table class="direction-controls">
         <tbody>
         <tr>
@@ -40,7 +57,9 @@
         <tr>
             <td><i id="direction-controls-left" class="fas fa-arrow-circle-left fa-5x"></i>
             </td>
-            <td>&nbsp;</td>
+            <td><img src="logo-dred.png">
+                &nbsp;
+            </td>
             <td><i id="direction-controls-right" class="fas fa-arrow-circle-right fa-5x"></i>
             </td>
         </tr>
@@ -55,136 +74,267 @@
         </tbody>
     </table>
 </div>
-<div class="status" style="position: relative;">
-    <h1>Status</h1>
-    <img src="logo-dred.png" id="large_logo">
-    RA/DEC:<span id="status_radec"></span><br/>
-    Alt/Az:<span id="status_altaz"></span><br/>
-    RA Speed/Ticks: <span id="status_ra_ticks"></span><br/>
-    Dec Speed/Ticks: <span id="status_dec_ticks"></span><br/>
-    Location: <span id="location"></span><br/>
-</div>
-<div class="goto">
-    <h1>Sync/Slew To</h1>
-    <h2>Object Search</h2>
-    <div>
-        Search for stars or objects. For example "Vega" or "M 100".
-    </div>
-    <div style="font-size: 80%">DSO and Star database based on <a href="http://www.astronexus.com/hyg">The HYG
-        Database</a></div>
-    Search: <input id="search_txt" type="text"/><br/>
-    <div>
-        <span id="search_info"></span>
-        <table id="search_results" style="">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>RA/Dec</th>
-                <th>Alt-Az</th>
-                <th>Mag</th>
-                <th>Size</th>
-                <th>Action</th>
-            </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-    <h2>Manual Coordinates</h2>
-    RA: <input type="text" id="goto_manual_ra" placeholder="hh mm ss.s"><br/>
-    DEC: <input type="text" id="goto_manual_dec" placeholder="±dd mm ss.s"><br/>
-    <button id="manual_sync"><i class="fas fa-sync" alt="Sync"></i>Sync</button>&nbsp;<button id="manual_slewto"><i
-        class="far fa-play-circle"></i>Slew To
-</button>
-</div>
+<div class="container-fluid">
+    <ul class="nav nav-tabs nav-justified" id="mainTab" role="tablist">
+        <li class="nav-item"><a class="nav-link active" id="goto-tab" data-toggle="tab" href="#goto" role="tab"
+                                aria-controls="goto" aria-selected="true">Goto/Sync</a></li>
+        <li class="nav-item"><a class="nav-link" id="locationt-tab" data-toggle="tab" href="#locationt" role="tab"
+                                aria-controls="locationt" aria-selected="false">Location</a></li>
+        <li class="nav-item"><a class="nav-link" id="othersettings-tab" data-toggle="tab"
+                                href="#othersettings" role="tab" aria-controls="othersettings" aria-selected="false">Other
+            Settings</a></li>
+    </ul>
+    <div class="tab-content" id="mainTabContent">
+        <div class="goto tab-pane fade show active" role="tabpanel" id="goto" aria-labelledby="goto-tab">
+            <h3>Object Search</h3>
+            <div class="form-group row">
+                <label for="search_txt" class="col-sm-2 col-form-label">Search</label>
+                <div class="col-sm-10">
+                    <input class="form-control" id="search_txt" type="text"/>
+                </div>
+            </div>
+            <div>
+                Search for stars or objects. For example "Vega" or "M 100".
+            </div>
+            <div style="font-size: 80%">DSO and Star database based on <a href="http://www.astronexus.com/hyg">The
+                HYG
+                Database</a></div>
+            <div>
+                <span id="search_info"></span>
+                <table id="search_results" style="" class="table">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>RA/Dec</th>
+                        <th>Alt-Az</th>
+                        <th>Mag</th>
+                        <th>Size</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <h4>Manual</h4>
+            <div class="form-group row">
+                <label for="goto_manual_ra" class="col-sm-2 col-form-label">
+                    RA
+                </label>
+                <div class="col-sm-10">
+                    <input class="form-control" type="text" id="goto_manual_ra" placeholder="hh mm ss.s"><br/>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="goto_manual_dec" class="col-sm-2 col-form-label">
+                    DEC
+                </label>
+                <div class="col-sm-10">
+                    <input class="form-control" type="text" id="goto_manual_dec" placeholder="±dd mm ss.s"><br/>
+                </div>
+            </div>
+            <button id="manual_sync" type="button" class="btn btn-primary"><i class="fas fa-sync" alt="Sync"></i>Sync
+            </button>&nbsp;<button id="manual_slewto" type="button" class="btn btn-primary"><i
+                class="far fa-play-circle"></i>Slew To
+        </button>
+        </div>
+        <div class="tab-pane fade" id="locationt" role="tabpanel" aria-labelledby="locationt-tab">
+            <h5>Search</h5>
+            <div>Search for a location by US Zip code or city name. For example "66044" or "Lawrence, KS".</div>
+            <div style="font-size: 80%">Zip code database from GeoNames (<a href="geonames.org">geonames.org</a>)</div>
+            <div class="form-group row">
+                <label for="location_search_txt" class="col-sm-2 col-form-label">Search</label>
+                <div class="col-sm-10">
+                    <input class="form-control" id="location_search_txt" type="text"/><br/>
+                </div>
+            </div>
 
-<div class="config-variables">
-    <h1>Settings</h1>
-    <h2>Location</h2>
-    <h3>Location Search</h3>
-    <div>Search for a location by US Zip code or city name. For example "66044" or "Lawrence, KS".</div>
-    <div style="font-size: 80%">Zip code database from GeoNames (<a href="geonames.org">geonames.org</a>)</div>
-    Search: <input id="location_search_txt" type="text"/><br/>
-    <div>
-        <span id="location_search_info"></span>
-        <table id="location_search_results" style="">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Lat/Long</th>
-                <th>Action</th>
-            </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+            <div>
+                <span id="location_search_info"></span>
+                <table id="location_search_results" style="" class="table">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Lat/Long</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <h5>Manual</h5>
+            <div>Or you can put in coordinates manually. For example, Lat: "N39 1' 44", Long: "W95 12' 31" or Lat:
+                "39.0289"
+                Long: "-95.2086"
+            </div>
+            <div class="form-group row">
+                <label for="manual_lat" class="col-sm-2 col-form-label">
+                    Lat
+                </label>
+                <div class="col-sm-10">
+                    <input class="form-control" id="manual_lat">
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="manual_long" class="col-sm-2 col-form-label">
+                    Long
+                </label>
+                <div class="col-sm-10">
+                    <input class="form-control" id="manual_long">
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="manual_name" class="col-sm-2 col-form-label">
+                    Name
+                </label>
+                <div class="col-sm-10">
+                    <input class="form-control" id="manual_name">
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-sm-10">
+                    <button id="location_manual_set" type="button" class="btn btn-primary"><i class="fas fa-globe"></i>Set
+                        Location
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="othersettings" role="tabpanel" aria-labelledby="othersettings-tab">
+            <br/>
+            <div class="form-group">
+                <button type="button" class="btn btn-primary">Park Scope</button>&nbsp;<button type="button"
+                                                                                               class="btn btn-primary">
+                Set
+                Park
+                Position
+            </button>
+            </div>
+
+            <div class="form-group">
+                <div class="col-md-1">
+                    <input id="showAdvancedSettings" class="form-check-input" type="checkbox" value=""
+                           data-toggle="collapse"
+                           data-target="#advancedSettings" aria-expanded="false"
+                           aria-controls="advancedSettings">
+                    <label class="form-check-label" for="showAdvancedSettings">Show Advanced Settings</label>
+                </div>
+            </div>
+
+            <div class="collapse" id="advancedSettings">
+                <div class="form-group">
+                    <label for="settings_ra_track_rate">
+                        RA Tracking Steps/Second
+                    </label>
+                    <input class="form-control" id="settings_ra_track_rate" type="text"/>
+                </div>
+
+                <div class="form-group">
+                    <label for="settings_dec_ticks_per_degree">
+                        DEC Steps/Degree
+                    </label>
+                    <input class="form-control" id="settings_dec_ticks_per_degree" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_max_accel_tpss">
+                        RA Max Acceleration (steps/Sec^2)
+                    </label>
+                    <input class="form-control" id="settings_ra_max_accel_tpss" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_max_accel_tpss">
+                        DEC Max Acceleration (steps/Sec^2)
+                    </label>
+                    <input class="form-control" id="settings_dec_max_accel_tpss" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_direction">
+                        RA Direction
+                    </label>
+                    <input class="form-control" id="settings_ra_direction" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_direction">
+                        DEC Direction
+                    </label>
+                    <input class="form-control" id="settings_dec_direction" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_guide_rate">
+                        RA Guide Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_ra_guide_rate" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_slew_fast">
+                        RA Slew-Fast Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_ra_slew_fast" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_slew_slow">
+                        RA Slew-Slow Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_ra_slew_slow" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_guide_rate">
+                        DEC Guide Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_dec_guide_rate" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_slew_fast">
+                        DEC Slew-Fast Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_dec_slew_fast" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_slew_slow">
+                        DEC Slew-Slow Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_dec_slew_slow" type="text"/>
+                </div>
+                <div class="form-group">
+                    <button id="settings_save" type="button" class="btn btn-primary">Save Advanced Settings</button>
+                    <span id="settings_save_status"></span><br/>
+                </div>
+            </div>
+        </div>
     </div>
-    <h3>Manual Location</h3>
-    <div>Or you can put in coordinates manually. For example, Lat: "N39 1' 44", Long: "W95 12' 31" or Lat: "39.0289"
-        Long: "-95.2086"
+</div>
+<div class="modal fade" id="errorInfoModal" tabindex="-1" role="dialog" aria-labeledby="errorInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorInfoModalTitle">Error</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="errorInfoModalBody">
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
-    <div>
-        Lat: <input id="manual_lat"><br/>
-        Long: <input id="manual_long"><br/>
-        Name: <input id="manual_name"><br/>
-        <button id="location_manual_set"><i class="fas fa-globe"></i>Set Location</button>
-    </div>
-    <h2>Movement settings</h2>
-    <button>Park Scope</button>&nbsp;<button>Set Park Position</button>
-    <br/><br/>
-    <div style="border: 1px solid red;">
-        <table>
-            <tbody>
-            <tr>
-                <td>RA Tracking Steps/Second:</td>
-                <td><input id="settings_ra_track_rate" type="text"/></td>
-            </tr>
-            <tr>
-                <td>DEC Steps/Degree:</td>
-                <td><input id="settings_dec_ticks_per_degree" type="text"/></td>
-            </tr>
-            <tr>
-                <td>RA Max Acceleration (steps/Sec^2):</td>
-                <td><input id="settings_ra_max_accel_tpss" type="text"/></td>
-            </tr>
-            <tr>
-                <td>DEC Max Acceleration (steps/Sec^2):</td>
-                <td><input id="settings_dec_max_accel_tpss" type="text"/></td>
-            </tr>
-            <tr>
-                <td>RA Direction:</td>
-                <td><input id="settings_ra_direction" type="text"/></td>
-            </tr>
-            <tr>
-                <td>DEC Direction:</td>
-                <td><input id="settings_dec_direction" type="text"/></td>
-            </tr>
-            <tr>
-                <td>RA Guide Steps/Sec:</td>
-                <td><input id="settings_ra_guide_rate" type="text"/></td>
-            </tr>
-            <tr>
-                <td>RA Slew-Fast Steps/Sec:</td>
-                <td><input id="settings_ra_slew_fast" type="text"/></td>
-            </tr>
-            <tr>
-                <td>RA Slew-Slow Steps/Sec:</td>
-                <td><input id="settings_ra_slew_slow" type="text"/></td>
-            </tr>
-            <tr>
-                <td>DEC Guide Steps/Sec:</td>
-                <td><input id="settings_dec_guide_rate" type="text"/></td>
-            </tr>
-            <tr>
-                <td>DEC Slew-Fast Steps/Sec:</td>
-                <td><input id="settings_dec_slew_fast" type="text"/></td>
-            </tr>
-            <tr>
-                <td>DEC Slew-Slow Steps/Sec:</td>
-                <td><input id="settings_dec_slew_slow" type="text"/></td>
-            </tr>
-            </tbody>
-        </table>
-        <button id="settings_save">Save</button>
-        <span id="settings_save_status"></span><br/>
+</div>
+<div class="modal fade" id="slewModal" tabindex="-1" role="dialog" aria-labeledby="slewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="slewModalTitle">Slewing</h5>
+            </div>
+            <div class="modal-body" id="slewModalBody">
+                Position: <span id="slewModalStatus"></span><br/>
+                Target: <span id="slewModalTarget"></span>
+                <br/>
+                Slewing...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="slewModalCancel">Cancel Slew</button>
+            </div>
+        </div>
     </div>
 </div>
 </body>

@@ -1,11 +1,8 @@
-h1, h2 {
-    text-decoration: underline;
-}
-
 body {
     background-color: black;
     color: red;
     -webkit-touch-callout: none !important;
+    padding-bottom: 10ex;
 }
 
 a {
@@ -69,6 +66,7 @@ table.direction-controls {
 
 table.direction-controls td {
     padding: 10px;
+    text-align: center;
 }
 
 .direction-button {

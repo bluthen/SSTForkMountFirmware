@@ -25,6 +25,7 @@ status_interval = None
 socketio = None
 inited = False
 runtime_settings = None
+slewing = False
 
 cancel_slew = False
 
@@ -97,6 +98,7 @@ def to_altaz_asdeg(coord):
 
 
 def send_status():
+    global slewing
     status = get_status()
     status['ra'] = None
     status['dec'] = None
@@ -113,6 +115,8 @@ def send_status():
         # print(altaz)
         status['alt'] = altaz['alt']
         status['az'] = altaz['az']
+    status['slewing'] = slewing
+
 
     socketio.emit('status', status)
 
@@ -204,8 +208,10 @@ def dec_set_speed(speed):
         microserial.write(('dec_set_speed %f\r' % speed).encode())
 
 def move_to_skycoord_threadf(sync_info, wanted_skycoord):
-    global cancel_slew
-    with slew_lock:
+    global cancel_slew, slewing
+    try:
+        slew_lock.acquire()
+        slewing = True
         cancel_slew = False
         need_step_position = skycoord_to_steps(sync_info, wanted_skycoord)
         status = get_status()
@@ -245,6 +251,9 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord):
             status = get_status()
         ra_set_speed(settings['ra_track_rate'])
         dec_set_speed(0.0)
+    finally:
+        slewing = False
+        slew_lock.release()
 
 
 def slew(ra, dec):

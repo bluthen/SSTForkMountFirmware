@@ -13,25 +13,32 @@ $(document).ready(function () {
         console.log('socket io connect.');
     });
     socket.on('status', function (msg) {
+        var radecstr, slewmodal;
         //console.log(msg);
         status = msg;
         var status_radec = $('#status_radec');
         var status_altaz = $('#status_altaz');
+        var status_radec2 = $('#slewModalStatus');
+        var slewmodal = $('#slewModal');
         status_radec.empty();
         status_altaz.empty();
-        if(status.ra) {
-            status_radec.html(formating.ra((24.0/360)*status.ra)+'/'+formating.dec(status.dec));
+        if (status.ra) {
+            radecstr=formating.ra((24.0 / 360) * status.ra) + '/' + formating.dec(status.dec);
+            status_radec.html(radecstr);
+            status_radec2.html(radecstr);
         }
         if (status.alt) {
-            status_altaz.html(formating.dec(status.alt)+'/'+formating.dec(status.az));
+            status_altaz.html(formating.dec(status.alt) + '/' + formating.dec(status.az));
         }
         $('#status_ra_ticks').text('' + msg.rs + '/' + msg.rp);
         $('#status_dec_ticks').text('' + msg.ds + '/' + msg.dp);
+        if(!status.slewing && slewmodal.hasClass('show')) {
+            slewmodal.modal('hide');
+        }
     });
     socket.on('controls_response', function (msg) {
         console.log(msg);
     });
-
 
     var bind_direction_controls = function () {
         var up = $('#direction-controls-up');
@@ -215,21 +222,21 @@ $(document).ready(function () {
                 };
                 tbody.empty();
                 for (i = 0; i < d.planets.length; i++) {
-                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/' + formating.dec(d.planets[i][2]) + '</td><td>'+formating.dec(d.planets[i][3])+'/'+formating.dec(d.planets[i][4])+'</td><td></td><td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                     $('a.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                 }
                 for (i = 0; i < d.dso.length; i++) {
-                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/' + formating.dec(d.dso[i][1]) + '</td><td>'+formating.dec(d.dso[i][21])+'/'+formating.dec(d.dso[i][22])+'</td><td>'+d.dso[i][4]+'</td><td>'+d.dso[i][9]+'"x'+d.dso[i][10]+'"</td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/' + formating.dec(d.dso[i][1]) + '</td><td>' + formating.dec(d.dso[i][21]) + '/' + formating.dec(d.dso[i][22]) + '</td><td>' + d.dso[i][4] + '</td><td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                     $('a.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                 }
                 for (i = 0; i < d.stars.length; i++) {
-                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>'+formating.dec(d.stars[i][37])+'/'+formating.dec(d.stars[i][38])+'</td><td>'+d.stars[i][13]+'</td><td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>' + formating.dec(d.stars[i][37]) + '/' + formating.dec(d.stars[i][38]) + '</td><td>' + d.stars[i][13] + '</td><td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
                     $('a.slewto', tr).on('click', slewtoclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
@@ -254,7 +261,9 @@ $(document).ready(function () {
                 //TODO: Confirm Dialog?
             },
             error: function (jqxhq, errortxt) {
-                console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModal').modal();
             }
         });
     };
@@ -269,8 +278,8 @@ $(document).ready(function () {
             data: {'search': search},
             success: function (d) {
                 var i;
-                var setclicked = function(lat, lon, name) {
-                    return function(e) {
+                var setclicked = function (lat, lon, name) {
+                    return function (e) {
                         set_location(lat, lon, name);
                         e.preventDefault();
                     }
@@ -297,7 +306,10 @@ $(document).ready(function () {
 
         var ras = ra.split(' ');
         if (ras.length !== 3) {
-            //TODO: Error
+            $('#errorInfoModalTitle').text('Error');
+            $('#errorInfoModalBody').text("Invalid RA Coordinates Entered.");
+            $('#errorInfoModal').modal();
+            return null;
         }
         ra = (360.0 / 24.0) * parseInt(ras[0], 10) + parseInt(ras[1], 10) / 60.0 + parseFloat(ras[2]) / (60 * 60);
 
@@ -313,9 +325,15 @@ $(document).ready(function () {
             data: {ra: ra, dec: dec},
             success: function (d) {
                 console.log('synced')
+                $('#errorInfoModalTitle').text('Info');
+                $('#errorInfoModalBody').text('The mount is now synced.');
+                $('#errorInfoModal').modal();
             },
             error: function (jq, errortxt) {
                 console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModal').modal();
             }
         });
     };
@@ -326,13 +344,35 @@ $(document).ready(function () {
             method: 'PUT',
             data: {ra: ra, dec: dec},
             success: function (d) {
+                var radecstr=formating.ra((24.0 / 360) * ra) + '/' + formating.dec(dec);
+                $('#slewModalTarget').html(radecstr);
                 //TODO: Dialog to abort?
+                $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
             },
             error: function (jq, errortxt) {
                 console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModal').modal();
             }
         });
     };
+
+    $('#slewModalCancel').click(function() {
+        $.ajax({
+            url: '/slewto',
+            method: 'DELETE',
+            success: function(d) {
+                $('#slewModal').modal('hide');
+            },
+            error: function(jq, errortxt) {
+                console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModal').modal();
+            }
+        })
+    });
 
     $('#location_manual_set').click(function () {
         var match, lat_deg, long_deg;
@@ -360,7 +400,11 @@ $(document).ready(function () {
                 lat_deg += parseFloat(match[4]) / (60.0 * 60.0);
             } else {
                 //Invalid
-                //TODO: Error message
+                console.error('Invalid Latitude entered.');
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text('Invalid latitude format entered.');
+                $('#errorInfoModal').modal();
+                return;
             }
         }
 
@@ -379,7 +423,11 @@ $(document).ready(function () {
                 long_deg += parseFloat(match[4]) / (60.0 * 60.0);
             } else {
                 //Invalid
-                //TODO: Error message
+                console.error('Invalid Longitude entered.');
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text('Invalid longitude format entered.');
+                $('#errorInfoModal').modal();
+                return;
             }
         }
         console.log(lat_deg, long_deg);
@@ -393,7 +441,9 @@ $(document).ready(function () {
     $('#search_txt').on('input', search_object);
     $('#manual_sync').on('click', function () {
         var coords = convert_manual_coordinates();
-        sync(coords.ra, coords.dec);
+        if(coords) {
+            sync(coords.ra, coords.dec);
+        }
     });
     $('#manual_slewto').on('click', function () {
         var coords = convert_manual_coordinates();
@@ -423,7 +473,11 @@ $(document).ready(function () {
                 $('#settings_save_status').text('Saved').show().fadeOut(1000);
             },
             error: function (jqXHR, textStatus) {
-                $('#settings_save_status').text(textStatus).show().fadeOut(1000);
+                console.error('Invalid Latitude entered.');
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(textStatus);
+                $('#errorInfoModal').modal();
+                return;
             }
         });
     });
@@ -437,7 +491,6 @@ $(document).ready(function () {
         },
         error: function (jqXHR, text) {
             console.error(text);
-
         }
     });
 });
