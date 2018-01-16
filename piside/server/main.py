@@ -27,7 +27,7 @@ settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
 
-runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info': None}
+runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info': None, 'tracking': True}
 
 
 @app.route('/')
@@ -77,12 +77,22 @@ def settings_put():
     return '', 204
 
 
+@app.route('/set_location', methods=['DELETE'])
+def unset_location():
+    settings['location'] = None
+    runtime_settings['earth_location'] = None
+    with settings_json_lock:
+        with open('settings.json', mode='w') as f:
+            json.dump(settings, f)
+    return 'Unset Location', 200
+
+
 @app.route('/set_location', methods=['PUT'])
 def set_location():
     location = request.form.get('location', None)
     location = json.loads(location)
     print(location)
-    if 'lat' not in location or 'long' not in location or 'name' not in location:
+    if 'lat' not in location or 'long' not in location or 'name' not in location and location['name'].strip() != '':
         return 'Missing arguments', 400
     location = {'lat': float(location['lat']), 'long': float(location['long']), 'name': str(location['name'])}
     old_location = settings['location']
@@ -107,12 +117,35 @@ def do_sync():
     return 'Synced', 200
 
 
+def slewtocheck(ra, dec):
+    if not ra or not dec:
+        return False
+    wanted_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+    altaz = control.to_altaz_asdeg(wanted_skycoord)
+    # TODO: Check if in keepout zone
+    # Check if above horizon
+    if altaz['alt'] < 0:
+        return False
+    else:
+        return True
+
+
 @app.route('/slewto', methods=['PUT'])
 def do_slewto():
     ra = float(request.form.get('ra', None))
     dec = float(request.form.get('dec', None))
-    control.slew(ra, dec)
-    return 'Slewing', 200
+    if not slewtocheck(ra, dec):
+        return 'Slew position is below horizon or in keep-out area.', 400
+    else:
+        control.slew(ra, dec)
+        return 'Slewing', 200
+
+
+@app.route('/slewto_check', methods=['PUT'])
+def do_slewtocheck():
+    ra = float(request.form.get('ra', None))
+    dec = float(request.form.get('dec', None))
+    return jsonify({'slewcheck': slewtocheck(ra, dec)})
 
 
 @app.route('/slewto', methods=['DELETE'])
@@ -143,6 +176,66 @@ def set_time():
     return 'NTP Set', 200
 
 
+@app.route('/set_park_position', methods=['PUT'])
+def set_park_position():
+    if runtime_settings['sync_info'] is None:
+        return 'You must have synced once before setting park position.', 400
+    if not runtime_settings['earth_location']:
+        return 'You must set location before setting park position.', 400
+    status = control.get_status()
+    coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
+                                      astropy.time.Time.now(), settings['ra_track_rate'],
+                                      settings['dec_ticks_per_degree'])
+    altaz = control.to_altaz_asdeg(coord)
+    settings['park_position'] = altaz
+    with settings_json_lock:
+        with open('settings.json', mode='w') as f:
+            json.dump(settings, f)
+    return 'Park Position Set', 200
+
+
+@app.route('/set_park_position', methods=['DELETE'])
+def unset_park_position():
+    settings['park_position'] = None
+    with settings_json_lock:
+        with open('settings.json', mode='w') as f:
+            json.dump(settings, f)
+    return 'Park Position Unset', 200
+
+
+@app.route('/park', methods=['PUT'])
+def do_park():
+    # TODO: If started parked we can use 0,0
+    if not runtime_settings['earth_location']:
+        return 'Location not set', 400
+    if not settings['park_position']:
+        return 'No park position has been set.', 400
+    if not runtime_settings['sync_info']:
+        return 'No sync info has been set.', 400
+    runtime_settings['tracking'] = False
+    control.ra_set_speed(0)
+    coord = astropy.coordinates.SkyCoord(alt=settings['park_position']['alt'] * u.deg,
+                                         az=settings['park_position']['az'] * u.deg, frame='altaz',
+                                         obstime=astropy.time.Time.now(), location=runtime_settings['earth_location'])
+    coord = astropy.coordinates.SkyCoord(ra=coord.icrs.ra, dec=coord.icrs.dec, frame='icrs')
+    control.move_to_skycoord(runtime_settings['sync_info'], coord.icrs, True)
+    return 'Parking.', 200
+
+
+@app.route('/start_tracking', methods=['PUT'])
+def start_tracking():
+    runtime_settings['tracking'] = True
+    control.ra_set_speed(settings['ra_track_rate'])
+    return 'Tracking', 200
+
+
+@app.route('/stop_tracking', methods=['PUT'])
+def stop_tracking():
+    runtime_settings['tracking'] = False
+    control.ra_set_speed(0)
+    return 'Stopped Tracking', 200
+
+
 def to_list_of_lists(tuple_of_tuples):
     b = [list(x) for x in tuple_of_tuples]
     return b
@@ -169,7 +262,7 @@ def search_object():
             if do_altaz:
                 altaz = control.to_altaz_asdeg(coord)
             else:
-                altaz={'alt': None, 'az': None}
+                altaz = {'alt': None, 'az': None}
             planets.append(
                 [body.title(), coord.icrs.ra.deg * 24.0 / 360.0, coord.icrs.dec.deg, altaz['alt'], altaz['az']])
     dso_search = search

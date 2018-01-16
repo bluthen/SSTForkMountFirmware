@@ -47,28 +47,28 @@
     <table class="direction-controls">
         <tbody>
         <tr>
-            <td><i id="direction-controls-up-left" class="fas fa-arrow-circle-left fa-5x cfa-rotate-45"></i>
+            <td><button type="button" id="direction-controls-up-left"><i class="fas fa-arrow-circle-left fa-5x cfa-rotate-45"></i></button>
             </td>
-            <td><i id="direction-controls-up" class="fas fa-arrow-circle-up fa-5x"></i>
+            <td><button type="button" id="direction-controls-up"><i class="fas fa-arrow-circle-up fa-5x"></i></button>
             </td>
-            <td><i id="direction-controls-up-right" class="fas fa-arrow-circle-up fa-5x cfa-rotate-45"></i>
+            <td><button type="button" id="direction-controls-up-right"><i class="fas fa-arrow-circle-up fa-5x cfa-rotate-45"></i></button>
             </td>
         </tr>
         <tr>
-            <td><i id="direction-controls-left" class="fas fa-arrow-circle-left fa-5x"></i>
+            <td><button type="button" id="direction-controls-left"><i class="fas fa-arrow-circle-left fa-5x"></i></button>
             </td>
             <td><img src="logo-dred.png">
                 &nbsp;
             </td>
-            <td><i id="direction-controls-right" class="fas fa-arrow-circle-right fa-5x"></i>
+            <td><button type="button" id="direction-controls-right"><i class="fas fa-arrow-circle-right fa-5x"></i></button>
             </td>
         </tr>
         <tr>
-            <td><i id="direction-controls-down-left" class="fas fa-arrow-circle-down fa-5x cfa-rotate-45"></i>
+            <td><button type="button" id="direction-controls-down-left"><i class="fas fa-arrow-circle-down fa-5x cfa-rotate-45"></i></button>
             </td>
-            <td><i id="direction-controls-down" class="fas fa-arrow-circle-down fa-5x"></i>
+            <td><button type="button" id="direction-controls-down"><i class="fas fa-arrow-circle-down fa-5x"></i></button>
             </td>
-            <td><i id="direction-controls-down-right" class="fas fa-arrow-circle-right fa-5x cfa-rotate-45"></i>
+            <td><button type="button" id="direction-controls-down-right"><i class="fas fa-arrow-circle-right fa-5x cfa-rotate-45"></i></button>
             </td>
         </tr>
         </tbody>
@@ -162,7 +162,7 @@
                 </table>
             </div>
             <h5>Manual</h5>
-            <div>Or you can put in coordinates manually. For example, Lat: "N39 1' 44", Long: "W95 12' 31" or Lat:
+            <div>Or you can put in coordinates manually. For example, Lat: N39 1' 44", Long: W95 12' 31" or Lat:
                 "39.0289"
                 Long: "-95.2086"
             </div>
@@ -195,18 +195,37 @@
                     <button id="location_manual_set" type="button" class="btn btn-primary"><i class="fas fa-globe"></i>Set
                         Location
                     </button>
+                    <button id="location_manual_unset" type="button" class="btn btn-primary"><i class="fas fa-globe"></i>Unset
+                        Location
+                    </button>
+
                 </div>
             </div>
         </div>
         <div class="tab-pane fade" id="othersettings" role="tabpanel" aria-labelledby="othersettings-tab">
             <br/>
+            Park Position (Alt-Az): <span id="settings_park_position"></span>
             <div class="form-group">
-                <button type="button" class="btn btn-primary">Park Scope</button>&nbsp;<button type="button"
-                                                                                               class="btn btn-primary">
+                <button id="settings_park" type="button" class="btn btn-primary">Park Scope</button>&nbsp;
+                <button id="settings_set_park_position" type="button" class="btn btn-primary">
                 Set
                 Park
-                Position
+                Position to Current Position
             </button>
+                <button id="settings_unset_park_position" type="button"
+                        class="btn btn-primary">
+                    Unset
+                    Park
+                    Position
+                </button><br/><br/>
+                <button id="settings_start_tracking" type="button"
+                        class="btn btn-primary">
+                    Start tracking
+                </button>
+                <button id="settings_stop_tracking" type="button"
+                        class="btn btn-primary">
+                    Stop tracking
+                </button>
             </div>
 
             <div class="form-group">

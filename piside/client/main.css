@@ -39,6 +39,13 @@ a {
     color: #4b4b4b;
 }
 
+.direction-controls button {
+    background-color: black;
+    color: red;
+    border: 1px solid black;
+    cursor: pointer;
+}
+
 button {
     background-color: red;
     color: black;

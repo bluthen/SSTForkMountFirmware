@@ -35,6 +35,13 @@ $(document).ready(function () {
         if(!status.slewing && slewmodal.hasClass('show')) {
             slewmodal.modal('hide');
         }
+        if(msg.tracking) {
+            $('#settings_stop_tracking').show();
+            $('#settings_start_tracking').hide();
+        } else {
+            $('#settings_start_tracking').show();
+            $('#settings_stop_tracking').hide();
+        }
     });
     socket.on('controls_response', function (msg) {
         console.log(msg);
@@ -86,10 +93,16 @@ $(document).ready(function () {
             sendUnpressed(direction);
         };
 
+        all.click(function(e) {
+           e.preventDefault();
+           return false;
+        });
+
 
         all.on('mousedown touchstart', function (e) {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
+            console.log('mousedown', id);
             var directions = id.split('direction-controls-')[1].split('-');
             var speed = $('#direction-controls-speed-fast').is(':checked');
             if (speed) {
@@ -103,7 +116,7 @@ $(document).ready(function () {
             }
             e.preventDefault();
         });
-        all.on('mouseup touchstop', function (e) {
+        all.on('mouseup touchend touchcancel', function (e) {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
             var directions = id.split('direction-controls-')[1].split('-');
@@ -135,6 +148,13 @@ $(document).ready(function () {
                 location.empty();
                 if (data.location.name) {
                     location.text(data.location.name);
+                }
+                if (data.park_position) {
+                    $('#settings_park_position').html(formating.dec(data.park_position.alt) + '/' + formating.dec(data.park_position.az));
+                    $('#settings_unset_park_position').show();
+                } else {
+                    $('#settings_park_position').html('None Set');
+                    $('#settings_unset_park_position').hide();
                 }
             }
         });
@@ -260,9 +280,9 @@ $(document).ready(function () {
                 update_settings();
                 //TODO: Confirm Dialog?
             },
-            error: function (jqxhq, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
-                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
             }
         });
@@ -329,10 +349,10 @@ $(document).ready(function () {
                 $('#errorInfoModalBody').text('The mount is now synced.');
                 $('#errorInfoModal').modal();
             },
-            error: function (jq, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 console.error(errortxt);
                 $('#errorInfoModalTitle').text('Error');
-                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
             }
         });
@@ -349,10 +369,10 @@ $(document).ready(function () {
                 //TODO: Dialog to abort?
                 $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
             },
-            error: function (jq, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 console.error(errortxt);
                 $('#errorInfoModalTitle').text('Error');
-                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
             }
         });
@@ -365,14 +385,29 @@ $(document).ready(function () {
             success: function(d) {
                 $('#slewModal').modal('hide');
             },
-            error: function(jq, errortxt) {
-                console.error(errortxt);
+            error: function (jq, errorstatus, errortxt) {
+                console.error(errorstatus, errortxt, jq.responseText);
                 $('#errorInfoModalTitle').text('Error');
-                $('#errorInfoModalBody').text(errortxt);
+                $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
             }
         })
     });
+
+    $('#location_manual_unset').click(function () {
+        $.ajax({
+            url: '/set_location',
+            method: 'DELETE',
+            success: function() {
+            },
+            error: function(jq, errorstatus, errortxt) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    });
+
 
     $('#location_manual_set').click(function () {
         var match, lat_deg, long_deg;
@@ -380,13 +415,17 @@ $(document).ready(function () {
         var long = $('#manual_long').val();
         var name = $('#manual_name').val().trim();
 
-        if (!name) {
-            //TODO: Show missing name
+        if (!name || name.trim() === '') {
+            console.error('Invalid name entered.');
+            $('#errorInfoModalTitle').text('Error');
+            $('#errorInfoModalBody').text('Invalid name for location entered.');
+            $('#errorInfoModal').modal();
+            return;
         }
 
         // lat has two formats
         lat = lat.toUpperCase();
-        if (lat.match(/^-?\d*(\.\d+)?$/)) {
+        if (lat.match(/^[-+]?\d*(\.\d+)?$/)) {
             //Degree mode
             lat_deg = parseFloat(lat)
         } else {
@@ -409,7 +448,7 @@ $(document).ready(function () {
         }
 
         long = long.toUpperCase();
-        if (long.match(/^-?\d*(\.\d+)?$/)) {
+        if (long.match(/^[-+]?\d*(\.\d+)?$/)) {
             //Degree mode
             long_deg = parseFloat(long)
         } else {
@@ -472,12 +511,89 @@ $(document).ready(function () {
             success: function () {
                 $('#settings_save_status').text('Saved').show().fadeOut(1000);
             },
-            error: function (jqXHR, textStatus) {
+            error: function (jq, errorstatus, errortxt) {
                 console.error('Invalid Latitude entered.');
                 $('#errorInfoModalTitle').text('Error');
-                $('#errorInfoModalBody').text(textStatus);
+                $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
                 return;
+            }
+        });
+    });
+
+    $('#settings_park').click(function() {
+        $.ajax({
+            url: '/park',
+            method: 'PUT',
+            success: function() {
+                $('#slewModalTarget').html('Parking...');
+                //TODO: Dialog to abort?
+                $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
+            },
+            error: function(jq, errorstatus, errortxt) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    });
+
+    $('#settings_set_park_position').click(function() {
+        console.log('Setting park position');
+        $.ajax({
+            url: '/set_park_position',
+            method: 'PUT',
+            success: function() {
+                update_settings();
+            },
+            error: function(jq, errorstatus, errortxt) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    });
+
+    $('#settings_unset_park_position').click(function() {
+        $.ajax({
+            url: '/set_park_position',
+            method: 'DELETE',
+            success: function() {
+                update_settings();
+            },
+            error: function(jq, errorstatus, errortxt) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+
+    });
+
+    $('#settings_start_tracking').click(function() {
+        $.ajax({
+            url: '/start_tracking',
+            method: 'PUT',
+            success: function() {
+            },
+            error: function(jq, errorstatus, errortxt) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    });
+
+    $('#settings_stop_tracking').click(function() {
+        $.ajax({
+            url: '/stop_tracking',
+            method: 'PUT',
+            success: function() {
+            },
+            error: function(jq, errorstatus, errortxt) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
             }
         });
     });
@@ -489,8 +605,8 @@ $(document).ready(function () {
         success: function (d) {
             console.log('Time synced:' + d);
         },
-        error: function (jqXHR, text) {
-            console.error(text);
+        error: function (jq, errorstatus, errortxt) {
+            console.error(errorstatus, errortxt, jq.responseText);
         }
     });
 });
