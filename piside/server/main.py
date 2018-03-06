@@ -16,12 +16,13 @@ import astropy.time
 import astropy.coordinates
 from astropy.coordinates import solar_system_ephemeris
 import astropy.units as u
+import stellarium_server
 
 monkey_patch()
 
 st_queue = None
 app = Flask(__name__, static_url_path='/static', static_folder='../client/')
-socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True)
+socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
 settings = None
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
@@ -46,8 +47,8 @@ def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "ra_slew_fast", "ra_slew_slow", "dec_slew_fast", "dec_slew_slow", "dec_ticks_per_degree",
-            "ra_max_accel_tpss", "dec_max_accel_tpss"]
+    keys = ["ra_track_rate", "ra_slew_fast", "ra_slew_medium", "ra_slew_slow", "dec_slew_fast", "dec_slew_medium",
+            "dec_slew_slow", "dec_ticks_per_degree", "ra_max_accel_tpss", "dec_max_accel_tpss"]
     for key in keys:
         if key in args:
             settings_buffer[key] = float(args[key])
@@ -58,8 +59,8 @@ def settings_put():
                 settings_buffer['micro'] = {}
             settings_buffer['micro'][key] = float(args[key])
 
-    keys = ["ra_track_rate", "ra_slew_fast", "ra_slew_slow", "dec_slew_fast", "dec_slew_slow", "dec_ticks_per_degree",
-            "ra_max_accel_tpss", "dec_max_accel_tpss"]
+    keys = ["ra_track_rate", "ra_slew_fast", "ra_slew_medium", "ra_slew_slow", "dec_slew_fast", "dec_slew_medium",
+            "dec_slew_slow", "dec_ticks_per_degree", "ra_max_accel_tpss", "dec_max_accel_tpss"]
     for key in keys:
         if key in args:
             settings[key] = float(settings_buffer[key])
@@ -111,33 +112,48 @@ def set_location():
 
 @app.route('/sync', methods=['PUT'])
 def do_sync():
-    ra = float(request.form.get('ra', None))
-    dec = float(request.form.get('dec', None))
+    ra = request.form.get('ra', None)
+    dec = request.form.get('dec', None)
+    alt = request.form.get('alt', None)
+    az = request.form.get('az', None)
+    if alt is not None and az is not None:
+        alt = float(alt)
+        az = float(az)
+        coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,
+                                             az=az * u.deg, frame='altaz',
+                                             obstime=astropy.time.Time.now(),
+                                             location=runtime_settings['earth_location'])
+        ra = coord.icrs.ra.deg
+        dec = coord.icrs.dec.deg
+    ra = float(ra)
+    dec = float(dec)
     control.sync(ra, dec)
     return 'Synced', 200
 
 
-def slewtocheck(ra, dec):
-    if not ra or not dec:
-        return False
-    wanted_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    altaz = control.to_altaz_asdeg(wanted_skycoord)
-    # TODO: Check if in keepout zone
-    # Check if above horizon
-    if altaz['alt'] < 0:
-        return False
-    else:
-        return True
-
-
 @app.route('/slewto', methods=['PUT'])
 def do_slewto():
-    ra = float(request.form.get('ra', None))
-    dec = float(request.form.get('dec', None))
-    if not slewtocheck(ra, dec):
+    ra = request.form.get('ra', None)
+    dec = request.form.get('dec', None)
+    alt = request.form.get('alt', None)
+    az = request.form.get('az', None)
+    parking = False
+    if alt is not None and az is not None:
+        alt = float(alt)
+        az = float(az)
+        coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,
+                                             az=az * u.deg, frame='altaz',
+                                             obstime=astropy.time.Time.now(),
+                                             location=runtime_settings['earth_location'])
+        ra = coord.icrs.ra.deg
+        dec = coord.icrs.dec.deg
+        parking = True
+    ra = float(ra)
+    dec = float(dec)
+    if not control.slewtocheck(ra, dec):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
-        control.slew(ra, dec)
+        control.slew(ra, dec, parking)
         return 'Slewing', 200
 
 
@@ -145,7 +161,7 @@ def do_slewto():
 def do_slewtocheck():
     ra = float(request.form.get('ra', None))
     dec = float(request.form.get('dec', None))
-    return jsonify({'slewcheck': slewtocheck(ra, dec)})
+    return jsonify({'slewcheck': control.slewtocheck(ra, dec)})
 
 
 @app.route('/slewto', methods=['DELETE'])
@@ -373,8 +389,16 @@ def main():
         with open('settings.json') as f:
             settings = json.load(f)
     st_queue = control.init(socketio, settings, runtime_settings)
+
+    # TODO: Config if start stellarium server.
+    stellarium_thread = threading.Thread(target=stellarium_server.run)
+    stellarium_thread.start()
+
+
     print('Running...')
-    socketio.run(app, host="0.0.0.0", debug=True, log_output=True, use_reloader=False)
+    socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)
+    stellarium_server.terminate()
+    stellarium_thread.join()
 
 
 if __name__ == '__main__':

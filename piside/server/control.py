@@ -29,6 +29,7 @@ runtime_settings = None
 slewing = False
 
 cancel_slew = False
+last_status = None
 
 
 class SimpleInterval:
@@ -74,8 +75,21 @@ def get_status():
         if len(line_status) == 2:
             status[line_status[0]] = float(line_status[1])
     # print(status)
-    print('status' + str(datetime.datetime.now()))
+    #print('status' + str(datetime.datetime.now()))
     return status
+
+
+def slewtocheck(ra, dec):
+    if not ra or not dec:
+        return False
+    wanted_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+    altaz = to_altaz_asdeg(wanted_skycoord)
+    # TODO: Check if in keepout zone
+    # Check if above horizon
+    if altaz['alt'] < 0:
+        return False
+    else:
+        return True
 
 
 def update_location():
@@ -101,7 +115,7 @@ def to_altaz_asdeg(coord):
 
 
 def send_status():
-    global slewing
+    global slewing, last_status
     status = get_status()
     status['ra'] = None
     status['dec'] = None
@@ -121,7 +135,7 @@ def send_status():
         status['az'] = altaz['az']
     status['slewing'] = slewing
     status['tracking'] = runtime_settings['tracking']
-
+    last_status = status
     socketio.emit('status', status)
 
 
@@ -197,14 +211,14 @@ def manual_control(direction, speed):
                 if OPPOSITE_MANUAL[direction] in timers:
                     return
                 if direction == 'left':
-                    microserial.write(('ra_set_speed %.1f\r' % settings['ra_slew_' + speed]).encode())
-                elif direction == 'right':
                     microserial.write(('ra_set_speed -%.1f\r' % settings['ra_slew_' + speed]).encode())
+                elif direction == 'right':
+                    microserial.write(('ra_set_speed %.1f\r' % settings['ra_slew_' + speed]).encode())
                 elif direction == 'up':
-                    print('--------------- dec up %.1f' % settings['dec_slew_' + speed])
+                    #print('--------------- dec up %.1f' % settings['dec_slew_' + speed])
                     microserial.write(('dec_set_speed %.1f\r' % settings['dec_slew_' + speed]).encode())
                 elif direction == 'down':
-                    print('--------------- dec down -%.1f' % settings['dec_slew_' + speed])
+                    #print('--------------- dec down -%.1f' % settings['dec_slew_' + speed])
                     microserial.write(('dec_set_speed -%.1f\r' % settings['dec_slew_' + speed]).encode())
                 timers[direction] = threading.Timer(0.75, partial(manual_control, direction, None))
                 timers[direction].start()
@@ -284,7 +298,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         slew_lock.release()
 
 
-def slew(ra, dec):
+def slew(ra, dec, parking=False):
     """
 
     :param ra: float as deg
@@ -293,7 +307,7 @@ def slew(ra, dec):
     """
     # TODO: Error conditions
     wanted_skycoord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord)
+    move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord, parking)
 
 
 def move_to_skycoord(sync_info, wanted_skycoord, parking=False):
@@ -301,7 +315,7 @@ def move_to_skycoord(sync_info, wanted_skycoord, parking=False):
     Slew to position
     :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord, 'steps': {'ra': int, 'dec': int}
     :param wanted_skycoord: astropy.coordinates.SkyCoord
-    :param parking: boolean if shouldn't recalculate because of earth location
+    :param parking: boolean if shouldn't recalculate because of earth location, parking or altaz
     :return:
     """
     global cancel_slew

@@ -35,6 +35,10 @@
                 <input type="radio" id="direction-controls-speed-fast" name="direction-controls-speed" value="fast"
                        autocomplete="off" checked> Speed Fast
             </label>
+            <label class="btn btn-primary active">
+                <input type="radio" id="direction-controls-speed-medium" name="direction-controls-speed" value="medium"
+                       autocomplete="off"> Speed Medium
+            </label>
             <label class="btn btn-primary">
                 <input type="radio"
                        id="direction-controls-speed-slow"
@@ -46,28 +50,43 @@
     <table class="direction-controls">
         <tbody>
         <tr>
-            <td><button type="button" id="direction-controls-up-left"><i class="fas fa-arrow-circle-left fa-5x cfa-rotate-45"></i></button>
+            <td>
+                <button type="button" id="direction-controls-up-left"><i
+                        class="fas fa-arrow-circle-left fa-5x cfa-rotate-45"></i></button>
             </td>
-            <td><button type="button" id="direction-controls-up"><i class="fas fa-arrow-circle-up fa-5x"></i></button>
+            <td>
+                <button type="button" id="direction-controls-up"><i class="fas fa-arrow-circle-up fa-5x"></i></button>
             </td>
-            <td><button type="button" id="direction-controls-up-right"><i class="fas fa-arrow-circle-up fa-5x cfa-rotate-45"></i></button>
+            <td>
+                <button type="button" id="direction-controls-up-right"><i
+                        class="fas fa-arrow-circle-up fa-5x cfa-rotate-45"></i></button>
             </td>
         </tr>
         <tr>
-            <td><button type="button" id="direction-controls-left"><i class="fas fa-arrow-circle-left fa-5x"></i></button>
+            <td>
+                <button type="button" id="direction-controls-left"><i class="fas fa-arrow-circle-left fa-5x"></i>
+                </button>
             </td>
             <td><img src="logo-dred.png">
                 &nbsp;
             </td>
-            <td><button type="button" id="direction-controls-right"><i class="fas fa-arrow-circle-right fa-5x"></i></button>
+            <td>
+                <button type="button" id="direction-controls-right"><i class="fas fa-arrow-circle-right fa-5x"></i>
+                </button>
             </td>
         </tr>
         <tr>
-            <td><button type="button" id="direction-controls-down-left"><i class="fas fa-arrow-circle-down fa-5x cfa-rotate-45"></i></button>
+            <td>
+                <button type="button" id="direction-controls-down-left"><i
+                        class="fas fa-arrow-circle-down fa-5x cfa-rotate-45"></i></button>
             </td>
-            <td><button type="button" id="direction-controls-down"><i class="fas fa-arrow-circle-down fa-5x"></i></button>
+            <td>
+                <button type="button" id="direction-controls-down"><i class="fas fa-arrow-circle-down fa-5x"></i>
+                </button>
             </td>
-            <td><button type="button" id="direction-controls-down-right"><i class="fas fa-arrow-circle-right fa-5x cfa-rotate-45"></i></button>
+            <td>
+                <button type="button" id="direction-controls-down-right"><i
+                        class="fas fa-arrow-circle-right fa-5x cfa-rotate-45"></i></button>
             </td>
         </tr>
         </tbody>
@@ -100,6 +119,8 @@
                 Database</a></div>
             <div>
                 <span id="search_info"></span>
+                <div id="search_spinner" class="fa-3x" style="display:none;"><i class="fas fa-spinner fa-pulse"></i>
+                </div>
                 <table id="search_results" style="" class="table">
                     <thead>
                     <tr>
@@ -115,20 +136,54 @@
                 </table>
             </div>
             <h4>Manual</h4>
-            <div class="form-group row">
-                <label for="goto_manual_ra" class="col-sm-2 col-form-label">
-                    RA
-                </label>
-                <div class="col-sm-10">
-                    <input class="form-control" type="text" id="goto_manual_ra" placeholder="hh mm ss.s"><br/>
+            <div class="container-fluid">
+                <div class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-primary active">
+                        <input type="radio" id="goto_manual_coord_select-radec" name="goto_manual_coord_select"
+                               value="radec"
+                               autocomplete="off" checked> RA/DEC
+                    </label>
+                    <label class="btn btn-primary active">
+                        <input type="radio" id="goto_manual_coord_select-altaz" name="goto_manual_coord_select"
+                               value="altaz"
+                               autocomplete="off"> Alt/Az
+                    </label>
                 </div>
             </div>
-            <div class="form-group row">
-                <label for="goto_manual_dec" class="col-sm-2 col-form-label">
-                    DEC
-                </label>
-                <div class="col-sm-10">
-                    <input class="form-control" type="text" id="goto_manual_dec" placeholder="±dd mm ss.s"><br/>
+            <div id="goto_manual_coord_radec">
+                <div class="form-group row">
+                    <label for="goto_manual_ra" class="col-sm-2 col-form-label">
+                        RA
+                    </label>
+                    <div class="col-sm-10">
+                        <input class="form-control" type="text" id="goto_manual_ra" placeholder="hh mm ss.s"><br/>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="goto_manual_dec" class="col-sm-2 col-form-label">
+                        DEC
+                    </label>
+                    <div class="col-sm-10">
+                        <input class="form-control" type="text" id="goto_manual_dec" placeholder="±dd mm ss.s"><br/>
+                    </div>
+                </div>
+            </div>
+            <div id="goto_manual_coord_altaz" style="display:none">
+                <div class="form-group row">
+                    <label for="goto_manual_alt" class="col-sm-2 col-form-label">
+                        Alt
+                    </label>
+                    <div class="col-sm-10">
+                        <input class="form-control" type="text" id="goto_manual_alt" placeholder="±dd mm ss.s"><br/>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="goto_manual_az" class="col-sm-2 col-form-label">
+                        Az
+                    </label>
+                    <div class="col-sm-10">
+                        <input class="form-control" type="text" id="goto_manual_az" placeholder="ddd mm ss.s"><br/>
+                    </div>
                 </div>
             </div>
             <button id="manual_sync" type="button" class="btn btn-primary"><i class="fas fa-sync" alt="Sync"></i>Sync
@@ -149,6 +204,8 @@
 
             <div>
                 <span id="location_search_info"></span>
+                <div id="location_search_spinner" class="fa-3x" style="display:none;"><i
+                        class="fas fa-spinner fa-pulse"></i></div>
                 <table id="location_search_results" style="" class="table">
                     <thead>
                     <tr>
@@ -194,7 +251,8 @@
                     <button id="location_manual_set" type="button" class="btn btn-primary"><i class="fas fa-globe"></i>Set
                         Location
                     </button>
-                    <button id="location_manual_unset" type="button" class="btn btn-primary"><i class="fas fa-globe"></i>Unset
+                    <button id="location_manual_unset" type="button" class="btn btn-primary"><i
+                            class="fas fa-globe"></i>Unset
                         Location
                     </button>
 
@@ -207,16 +265,17 @@
             <div class="form-group">
                 <button id="settings_park" type="button" class="btn btn-primary">Park Scope</button>&nbsp;
                 <button id="settings_set_park_position" type="button" class="btn btn-primary">
-                Set
-                Park
-                Position to Current Position
-            </button>
+                    Set
+                    Park
+                    Position to Current Position
+                </button>
                 <button id="settings_unset_park_position" type="button"
                         class="btn btn-primary">
                     Unset
                     Park
                     Position
-                </button><br/><br/>
+                </button>
+                <br/><br/>
                 <button id="settings_start_tracking" type="button"
                         class="btn btn-primary">
                     Start tracking
@@ -288,6 +347,12 @@
                     <input class="form-control" id="settings_ra_slew_fast" type="text"/>
                 </div>
                 <div class="form-group">
+                    <label for="settings_ra_slew_medium">
+                        RA Slew-Medium Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_ra_slew_medium" type="text"/>
+                </div>
+                <div class="form-group">
                     <label for="settings_ra_slew_slow">
                         RA Slew-Slow Steps/Sec
                     </label>
@@ -306,6 +371,12 @@
                     <input class="form-control" id="settings_dec_slew_fast" type="text"/>
                 </div>
                 <div class="form-group">
+                    <label for="settings_dec_slew_medium">
+                        DEC Slew-Medium Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_dec_slew_medium" type="text"/>
+                </div>
+                <div class="form-group">
                     <label for="settings_dec_slew_slow">
                         DEC Slew-Slow Steps/Sec
                     </label>
@@ -319,7 +390,8 @@
         </div>
     </div>
 </div>
-<div class="modal fade" id="errorInfoModal" tabindex="-1" role="dialog" aria-labeledby="errorInfoModalLabel" aria-hidden="true">
+<div class="modal fade" id="errorInfoModal" tabindex="-1" role="dialog" aria-labeledby="errorInfoModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -344,7 +416,7 @@
                 <h5 class="modal-title" id="slewModalTitle">Slewing</h5>
             </div>
             <div class="modal-body" id="slewModalBody">
-                Position: <span id="slewModalStatus"></span><br/>
+                Position: <span id="slewModalStatus"></span><span id="slewModalAltAzStatus"></span><br/>
                 Target: <span id="slewModalTarget"></span>
                 <br/>
                 Slewing...

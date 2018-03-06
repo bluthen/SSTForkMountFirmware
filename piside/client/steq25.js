@@ -19,23 +19,25 @@ $(document).ready(function () {
         var status_radec = $('#status_radec');
         var status_altaz = $('#status_altaz');
         var status_radec2 = $('#slewModalStatus');
+        var status_altaz2 = $('#slewModalAltAzStatus');
         var slewmodal = $('#slewModal');
         status_radec.empty();
         status_altaz.empty();
         if (status.ra) {
-            radecstr=formating.ra((24.0 / 360) * status.ra) + '/' + formating.dec(status.dec);
+            radecstr = formating.ra((24.0 / 360) * status.ra) + '/' + formating.dec(status.dec);
             status_radec.html(radecstr);
             status_radec2.html(radecstr);
         }
         if (status.alt) {
             status_altaz.html(formating.dec(status.alt) + '/' + formating.dec(status.az));
+            status_altaz2.html(formating.dec(status.alt) + '/' + formating.dec(status.az));
         }
         $('#status_ra_ticks').text('' + msg.rs + '/' + msg.rp);
         $('#status_dec_ticks').text('' + msg.ds + '/' + msg.dp);
-        if(!status.slewing && slewmodal.hasClass('show')) {
+        if (!status.slewing && slewmodal.hasClass('show')) {
             slewmodal.modal('hide');
         }
-        if(msg.tracking) {
+        if (msg.tracking) {
             $('#settings_stop_tracking').show();
             $('#settings_start_tracking').hide();
         } else {
@@ -93,9 +95,9 @@ $(document).ready(function () {
             sendUnpressed(direction);
         };
 
-        all.click(function(e) {
-           e.preventDefault();
-           return false;
+        all.click(function (e) {
+            e.preventDefault();
+            return false;
         });
 
 
@@ -140,9 +142,11 @@ $(document).ready(function () {
                 $('#settings_dec_direction').val(data.micro.dec_direction);
                 $('#settings_ra_guide_rate').val(data.micro.ra_guide_rate);
                 $('#settings_ra_slew_fast').val(data.ra_slew_fast);
+                $('#settings_ra_slew_medium').val(data.ra_slew_medium);
                 $('#settings_ra_slew_slow').val(data.ra_slew_slow);
                 $('#settings_dec_guide_rate').val(data.micro.dec_guide_rate);
                 $('#settings_dec_slew_fast').val(data.dec_slew_fast);
+                $('#settings_dec_slew_medium').val(data.dec_slew_medium);
                 $('#settings_dec_slew_slow').val(data.dec_slew_slow);
                 location = $('#location');
                 location.empty();
@@ -220,6 +224,8 @@ $(document).ready(function () {
         $('#search_info').empty();
         // TODO: Goto Action should only be there if we've synced once.
         var action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i></a>&nbsp; &nbsp;<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i></a>'
+        $('#search_spinner').show();
+        $('#search_results').hide();
         $.ajax({
             url: '/search_object',
             method: 'GET',
@@ -267,6 +273,8 @@ $(document).ready(function () {
                 if (d.dso.length >= 10 || d.stars.length >= 10) {
                     $('#search_info').text('Too many results. Results were cut.')
                 }
+                $('#search_spinner').hide();
+                $('#search_results').show();
             }
         })
     }, 500);
@@ -292,6 +300,8 @@ $(document).ready(function () {
         var search = $('#location_search_txt').val();
         $('#location_search_info').empty();
         var action = '<a href="#"><i class="fas fa-globe" title="set"></i>Set</a>';
+        $('#location_search_spinner').show();
+        $('#location_search_results').hide();
         $.ajax({
             url: '/search_location',
             method: 'GET',
@@ -316,11 +326,13 @@ $(document).ready(function () {
                 if (d.cities.length >= 20) {
                     $('#location_search_info').text('Too many results. Results were cut.');
                 }
+                $('#location_search_spinner').hide();
+                $('#location_search_results').show();
             }
         })
     }, 500, {leading: false, trailing: true});
 
-    var convert_manual_coordinates = function () {
+    var convert_manual_coordinates_radec = function () {
         var ra = $('#goto_manual_ra').val();
         var dec = $('#goto_manual_dec').val();
 
@@ -336,6 +348,24 @@ $(document).ready(function () {
         var decs = dec.split(' ');
         dec = parseInt(decs[0], 10) + parseInt(decs[1], 10) / 60.0 + parseFloat(decs[2]) / (60 * 60);
         return {ra: ra, dec: dec};
+    };
+
+    var convert_manual_coordinates_altaz = function () {
+        var alt = $('#goto_manual_alt').val();
+        var az = $('#goto_manual_az').val();
+
+        var alts = alt.split(' ');
+        if (alts.length !== 3) {
+            $('#errorInfoModalTitle').text('Error');
+            $('#errorInfoModalBody').text("Invalid ALT Coordinates Entered.");
+            $('#errorInfoModal').modal();
+            return null;
+        }
+        alt = parseInt(alts[0], 10) + parseInt(alts[1], 10) / 60.0 + parseFloat(alts[2]) / (60 * 60);
+
+        var azs = az.split(' ');
+        az = parseInt(azs[0], 10) + parseInt(azs[1], 10) / 60.0 + parseFloat(azs[2]) / (60 * 60);
+        return {alt: alt, az: az};
     };
 
     var sync = function (ra, dec) {
@@ -358,13 +388,37 @@ $(document).ready(function () {
         });
     };
 
+    var syncaltaz = function (alt, az) {
+        //TODO: Combine with sync
+        $.ajax({
+            url: '/sync',
+            method: 'PUT',
+            data: {alt: alt, az: az},
+            success: function (d) {
+                console.log('synced');
+                $('#errorInfoModalTitle').text('Info');
+                $('#errorInfoModalBody').text('The mount is now synced.');
+                $('#errorInfoModal').modal();
+            },
+            error: function (jq, errorstatus, errortxt) {
+                console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    };
+
+
     var slewto = function (ra, dec) {
+        $('#slewModalStatus').show();
+        $('#slewModalAltAzStatus').hide();
         $.ajax({
             url: '/slewto',
             method: 'PUT',
             data: {ra: ra, dec: dec},
             success: function (d) {
-                var radecstr=formating.ra((24.0 / 360) * ra) + '/' + formating.dec(dec);
+                var radecstr = formating.ra((24.0 / 360) * ra) + '/' + formating.dec(dec);
                 $('#slewModalTarget').html(radecstr);
                 //TODO: Dialog to abort?
                 $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
@@ -378,11 +432,34 @@ $(document).ready(function () {
         });
     };
 
-    $('#slewModalCancel').click(function() {
+    var slewtoaltaz = function (alt, az) {
+        //TODO: Combine with slewto
+        $('#slewModalStatus').hide();
+        $('#slewModalAltAzStatus').show();
+        $.ajax({
+            url: '/slewto',
+            method: 'PUT',
+            data: {alt: alt, az: az},
+            success: function (d) {
+                var altAzStr = formating.dec(alt) + '/' + formating.dec(az);
+                $('#slewModalTarget').html(altAzStr);
+                //TODO: Dialog to abort?
+                $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
+            },
+            error: function (jq, errorstatus, errortxt) {
+                console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    };
+
+    $('#slewModalCancel').click(function () {
         $.ajax({
             url: '/slewto',
             method: 'DELETE',
-            success: function(d) {
+            success: function (d) {
                 $('#slewModal').modal('hide');
             },
             error: function (jq, errorstatus, errortxt) {
@@ -398,9 +475,9 @@ $(document).ready(function () {
         $.ajax({
             url: '/set_location',
             method: 'DELETE',
-            success: function() {
+            success: function () {
             },
-            error: function(jq, errorstatus, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
                 $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
@@ -479,14 +556,26 @@ $(document).ready(function () {
     $('#location_search_txt').on('input', search_location);
     $('#search_txt').on('input', search_object);
     $('#manual_sync').on('click', function () {
-        var coords = convert_manual_coordinates();
-        if(coords) {
-            sync(coords.ra, coords.dec);
+        var coords;
+        if ($('#goto_manual_coord_select-radec').is(':checked')) {
+            coords = convert_manual_coordinates_radec();
+            if (coords) {
+                sync(coords.ra, coords.dec);
+            }
+        } else {
+            coords = convert_manual_coordinates_altaz();
+            syncaltaz(coords.alt, coords.az);
         }
     });
     $('#manual_slewto').on('click', function () {
-        var coords = convert_manual_coordinates();
-        slewto(coords.ra, coords.dec);
+        var coords;
+        if ($('#goto_manual_coord_select-radec').is(':checked')) {
+            coords = convert_manual_coordinates_radec();
+            slewto(coords.ra, coords.dec);
+        } else {
+            coords = convert_manual_coordinates_altaz();
+            slewtoaltaz(coords.alt, coords.az);
+        }
     });
 
     $('#settings_save').click(function () {
@@ -499,9 +588,11 @@ $(document).ready(function () {
             dec_max_accel_tpss: $('#settings_dec_max_accel_tpss').val(),
             ra_guide_rate: $('#settings_ra_guide_rate').val(),
             ra_slew_fast: $('#settings_ra_slew_fast').val(),
+            ra_slew_medium: $('#settings_ra_slew_medium').val(),
             ra_slew_slow: $('#settings_ra_slew_slow').val(),
             dec_guide_rate: $('#settings_dec_guide_rate').val(),
             dec_slew_fast: $('#settings_dec_slew_fast').val(),
+            dec_slew_medium: $('#settings_dec_slew_medium').val(),
             dec_slew_slow: $('#settings_dec_slew_slow').val()
         };
         $.ajax({
@@ -521,16 +612,16 @@ $(document).ready(function () {
         });
     });
 
-    $('#settings_park').click(function() {
+    $('#settings_park').click(function () {
         $.ajax({
             url: '/park',
             method: 'PUT',
-            success: function() {
+            success: function () {
                 $('#slewModalTarget').html('Parking...');
                 //TODO: Dialog to abort?
                 $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
             },
-            error: function(jq, errorstatus, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
                 $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
@@ -538,15 +629,15 @@ $(document).ready(function () {
         });
     });
 
-    $('#settings_set_park_position').click(function() {
+    $('#settings_set_park_position').click(function () {
         console.log('Setting park position');
         $.ajax({
             url: '/set_park_position',
             method: 'PUT',
-            success: function() {
+            success: function () {
                 update_settings();
             },
-            error: function(jq, errorstatus, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
                 $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
@@ -554,14 +645,14 @@ $(document).ready(function () {
         });
     });
 
-    $('#settings_unset_park_position').click(function() {
+    $('#settings_unset_park_position').click(function () {
         $.ajax({
             url: '/set_park_position',
             method: 'DELETE',
-            success: function() {
+            success: function () {
                 update_settings();
             },
-            error: function(jq, errorstatus, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
                 $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
@@ -570,13 +661,13 @@ $(document).ready(function () {
 
     });
 
-    $('#settings_start_tracking').click(function() {
+    $('#settings_start_tracking').click(function () {
         $.ajax({
             url: '/start_tracking',
             method: 'PUT',
-            success: function() {
+            success: function () {
             },
-            error: function(jq, errorstatus, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
                 $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
@@ -584,18 +675,28 @@ $(document).ready(function () {
         });
     });
 
-    $('#settings_stop_tracking').click(function() {
+    $('#settings_stop_tracking').click(function () {
         $.ajax({
             url: '/stop_tracking',
             method: 'PUT',
-            success: function() {
+            success: function () {
             },
-            error: function(jq, errorstatus, errortxt) {
+            error: function (jq, errorstatus, errortxt) {
                 $('#errorInfoModalTitle').text('Error');
                 $('#errorInfoModalBody').text(jq.responseText);
                 $('#errorInfoModal').modal();
             }
         });
+    });
+
+    $('#goto_manual_coord_select-radec, #goto_manual_coord_select-altaz').change(function () {
+        if ($('#goto_manual_coord_select-radec').is(':checked')) {
+            $('#goto_manual_coord_altaz').hide();
+            $('#goto_manual_coord_radec').show();
+        } else {
+            $('#goto_manual_coord_altaz').show();
+            $('#goto_manual_coord_radec').hide();
+        }
     });
 
     $.ajax({
