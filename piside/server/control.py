@@ -178,7 +178,8 @@ def init(osocketio, fsettings, fruntime_settings):
 
 
 def manual_control(direction, speed):
-    # TODO: Acceleration limit
+    # TODO: Acceleration
+    # TODO: Disabling autoguiding
     global microserial, microseriallock, slew_lock
     got_lock = slew_lock.acquire(blocking=False)
     if not got_lock:
@@ -226,6 +227,16 @@ def manual_control(direction, speed):
         slew_lock.release()
 
 
+def autoguide_disable():
+    with microseriallock:
+        microserial.write(('autoguide_disable\r' % speed).encode())
+
+
+def autoguide_enable():
+    with microseriallock:
+        microserial.write(('autoguide_enable\r' % speed).encode())
+
+
 def ra_set_speed(speed):
     with microseriallock:
         microserial.write(('ra_set_speed %f\r' % speed).encode())
@@ -240,6 +251,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
     global cancel_slew, slewing
     try:
         slew_lock.acquire()
+        autoguide_disable()
         slewing = True
         cancel_slew = False
         need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(), settings['ra_track_rate'],
@@ -294,6 +306,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             ra_set_speed(0)
         dec_set_speed(0.0)
     finally:
+        autoguide_enable()
         slewing = False
         slew_lock.release()
 

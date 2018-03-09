@@ -143,6 +143,16 @@ void command_help(const char* cmd) {
 
 void command_autoguide_disable() {
   configvars.autoguide_enabled = false;
+  if (ra_autoguiding) {
+    setRASpeed(prevRASpeed);
+    ra_autoguiding = false;
+    prevRASpeed = 0.0;
+  }
+  if (dec_autoguiding) {
+    setDECSpeed(prevDECSpeed);
+    dec_autoguiding = false;
+    prevDECSpeed = 0.0;
+  }
 }
 
 void command_autoguide_enable() {

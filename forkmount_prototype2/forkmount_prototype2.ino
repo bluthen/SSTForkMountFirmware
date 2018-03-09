@@ -16,8 +16,6 @@ const static int AUTOGUIDE_RA_NEGX_PIN = 7;
 const static int AUTOGUIDE_RA_POSX_PIN = 8;
 
 boolean sst_debug = false;
-boolean ra_autoguiding = false;
-boolean dec_autoguiding = false;
 CONFIGVARS configvars;
 
 void autoguide_init()
@@ -73,9 +71,6 @@ const uint8_t AG_POSX_MASK = 3;
 unsigned long lastDebounceTime = 0;
 unsigned long debounceDelay    = 50;
 
-float prevRASpeed  = 0;
-float prevDECSpeed = 0;
-
 void autoguide_read()
 {
   status = digitalRead(AUTOGUIDE_DEC_POSY_PIN) << AG_POSY_MASK;
@@ -86,19 +81,10 @@ void autoguide_read()
 
 void autoguide_run()
 {
-  //TODO: Autoguide probably shouldn't extra change the counts?
-  // Or there could be a extra guide counter.
   if(!configvars.autoguide_enabled) {
-    prevRASpeed = 0;
-    prevDECSpeed = 0;
-    status = 0;
-    debounce_status = 0;
-    prev_status = 0;
-    ra_autoguiding = false;
-    dec_autoguiding = false;
     return;
   }
-  
+
   autoguide_read();
   //If change
   if(status != debounce_status) {

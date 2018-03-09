@@ -14,9 +14,6 @@ struct CONFIGVARS {
   int dec_direction;
 };
 
-extern boolean ra_autoguiding;
-extern boolean dec_autoguiding;
-
 extern const char* fork_firmware_version;
 
 extern CONFIGVARS configvars;
