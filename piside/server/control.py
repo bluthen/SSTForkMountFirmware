@@ -229,12 +229,12 @@ def manual_control(direction, speed):
 
 def autoguide_disable():
     with microseriallock:
-        microserial.write(('autoguide_disable\r' % speed).encode())
+        microserial.write(('autoguide_disable\r').encode())
 
 
 def autoguide_enable():
     with microseriallock:
-        microserial.write(('autoguide_enable\r' % speed).encode())
+        microserial.write(('autoguide_enable\r').encode())
 
 
 def ra_set_speed(speed):
