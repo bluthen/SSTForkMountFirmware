@@ -166,7 +166,7 @@ void command_init(void) {
   cmd.addCommand("ra_set_speed", command_ra_set_speed);
   cmd.addCommand("dec_set_speed", command_dec_set_speed);
   cmd.addCommand("autoguide_disable", command_autoguide_disable);
-  cmd.addCommand("autoguide_disable", command_autoguide_enable);
+  cmd.addCommand("autoguide_enable", command_autoguide_enable);
   cmd.addCommand("status", command_status);
   cmd.addCommand("qs", command_qs);
   cmd.setDefaultHandler(command_help);
