@@ -118,7 +118,7 @@ $(document).ready(function () {
             }
             e.preventDefault();
         });
-        all.on('mouseup touchend touchcancel', function (e) {
+        all.on('mouseleave mouseup touchend touchcancel', function (e) {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
             var directions = id.split('direction-controls-')[1].split('-');
