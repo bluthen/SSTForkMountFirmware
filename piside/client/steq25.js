@@ -219,8 +219,16 @@ $(document).ready(function () {
         }
     };
 
+    var search_object_counter = 0;
+
     var search_object = _.debounce(function () {
+        var sc;
         var search = $('#search_txt').val();
+        if (search.trim() === '') {
+            return;
+        }
+        search_object_counter++;
+        sc = search_object_counter;
         $('#search_info').empty();
         // TODO: Goto Action should only be there if we've synced once.
         var action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i></a>&nbsp; &nbsp;<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i></a>'
@@ -231,6 +239,9 @@ $(document).ready(function () {
             method: 'GET',
             data: {'search': search},
             success: function (d) {
+                if (sc !== search_object_counter) {
+                    return;
+                }
                 var i = 0, tr;
                 var tbody = $('#search_results tbody');
                 var syncclick = function (ra, dec) {
@@ -296,8 +307,16 @@ $(document).ready(function () {
         });
     };
 
+
+    var search_location_counter = 0;
     var search_location = _.throttle(function () {
+        var sc;
         var search = $('#location_search_txt').val();
+        if (!search.trim()) {
+            return;
+        }
+        search_location_counter++;
+        sc = search_location_counter;
         $('#location_search_info').empty();
         var action = '<a href="#"><i class="fas fa-globe" title="set"></i>Set</a>';
         $('#location_search_spinner').show();
@@ -307,6 +326,10 @@ $(document).ready(function () {
             method: 'GET',
             data: {'search': search},
             success: function (d) {
+
+                if (sc !== search_location_counter) {
+                    return;
+                }
                 var i;
                 var setclicked = function (lat, lon, name) {
                     return function (e) {
