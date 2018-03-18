@@ -141,7 +141,7 @@ def setRASpeed(speed):
 
 
 def getRASpeed():
-    return sd['RACounts']
+    return sd['RASpeed']
 
 
 def getRAPosition():

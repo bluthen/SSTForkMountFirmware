@@ -7,6 +7,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/static/manifest.json">
     <title>SSTEQ-25 Control Panel</title>
+    <style>
+        body.redlights {
+            -webkit-filter: url('#redfilter');
+            -moz-filter: url('#redfilter');
+            filter: url('#redfilter');
+        }
+    </style>
     <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.min.css"/>
     <link rel="stylesheet" type="text/css" href="main.css"/>
     <script src="jquery-3.2.1.min.js"></script>
@@ -19,8 +26,8 @@
         //screen.orientation.lock('portrait');
     </script>
 </head>
-<body>
-<nav class="navbar fixed-bottom" style="background-color: black; border-top: 1px solid red;">
+<body class="redlights">
+<nav class="navbar fixed-bottom">
     RADEC:<span id="status_radec"></span>|
     AltAz:<span id="status_altaz"></span>|
     R S/T: <span id="status_ra_ticks"></span>|
@@ -32,18 +39,25 @@
     <div class="container-fluid">
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-primary active">
-                <input type="radio" id="direction-controls-speed-fast" name="direction-controls-speed" value="fast"
-                       autocomplete="off" checked> Speed Fast
-            </label>
-            <label class="btn btn-primary active">
-                <input type="radio" id="direction-controls-speed-medium" name="direction-controls-speed" value="medium"
-                       autocomplete="off"> Speed Medium
+                <input type="radio" id="direction-controls-speed-fastest" name="direction-controls-speed"
+                       value="fastest"
+                       autocomplete="off" checked> Speed Fastest
             </label>
             <label class="btn btn-primary">
-                <input type="radio"
-                       id="direction-controls-speed-slow"
-                       name="direction-controls-speed"
-                       value="slow" autocomplete="off">Speed Slow
+                <input type="radio" id="direction-controls-speed-faster" name="direction-controls-speed" value="faster"
+                       autocomplete="off"> Faster
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio" id="direction-controls-speed-medium" name="direction-controls-speed" value="medium"
+                       autocomplete="off"> Medium
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio" id="direction-controls-speed-slower" name="direction-controls-speed" value="slower"
+                       autocomplete="off"> Slower
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio" id="direction-controls-speed-slowest" name="direction-controls-speed"
+                       value="slowest" autocomplete="off">Speed Slowest
             </label>
         </div>
     </div>
@@ -143,7 +157,7 @@
                                value="radec"
                                autocomplete="off" checked> RA/DEC
                     </label>
-                    <label class="btn btn-primary active">
+                    <label class="btn btn-primary">
                         <input type="radio" id="goto_manual_coord_select-altaz" name="goto_manual_coord_select"
                                value="altaz"
                                autocomplete="off"> Alt/Az
@@ -311,18 +325,6 @@
                     <input class="form-control" id="settings_dec_ticks_per_degree" type="text"/>
                 </div>
                 <div class="form-group">
-                    <label for="settings_ra_max_accel_tpss">
-                        RA Max Acceleration (steps/Sec^2)
-                    </label>
-                    <input class="form-control" id="settings_ra_max_accel_tpss" type="text"/>
-                </div>
-                <div class="form-group">
-                    <label for="settings_dec_max_accel_tpss">
-                        DEC Max Acceleration (steps/Sec^2)
-                    </label>
-                    <input class="form-control" id="settings_dec_max_accel_tpss" type="text"/>
-                </div>
-                <div class="form-group">
                     <label for="settings_ra_direction">
                         RA Direction
                     </label>
@@ -336,15 +338,21 @@
                 </div>
                 <div class="form-group">
                     <label for="settings_ra_guide_rate">
-                        RA Guide Steps/Sec
+                        RA Guide Steps/Sec (Change from tracking, not absolute)
                     </label>
                     <input class="form-control" id="settings_ra_guide_rate" type="text"/>
                 </div>
                 <div class="form-group">
-                    <label for="settings_ra_slew_fast">
-                        RA Slew-Fast Steps/Sec
+                    <label for="settings_ra_slew_fastest">
+                        RA Slew-Fastest Steps/Sec
                     </label>
-                    <input class="form-control" id="settings_ra_slew_fast" type="text"/>
+                    <input class="form-control" id="settings_ra_slew_fastest" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_slew_faster">
+                        RA Slew-Faster Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_ra_slew_faster" type="text"/>
                 </div>
                 <div class="form-group">
                     <label for="settings_ra_slew_medium">
@@ -353,10 +361,16 @@
                     <input class="form-control" id="settings_ra_slew_medium" type="text"/>
                 </div>
                 <div class="form-group">
-                    <label for="settings_ra_slew_slow">
-                        RA Slew-Slow Steps/Sec
+                    <label for="settings_ra_slew_slower">
+                        RA Slew-Slower Steps/Sec
                     </label>
-                    <input class="form-control" id="settings_ra_slew_slow" type="text"/>
+                    <input class="form-control" id="settings_ra_slew_slower" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_ra_slew_slowest">
+                        RA Slew-Slowest Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_ra_slew_slowest" type="text"/>
                 </div>
                 <div class="form-group">
                     <label for="settings_dec_guide_rate">
@@ -365,10 +379,16 @@
                     <input class="form-control" id="settings_dec_guide_rate" type="text"/>
                 </div>
                 <div class="form-group">
-                    <label for="settings_dec_slew_fast">
-                        DEC Slew-Fast Steps/Sec
+                    <label for="settings_dec_slew_fastest">
+                        DEC Slew-Fastest Steps/Sec
                     </label>
-                    <input class="form-control" id="settings_dec_slew_fast" type="text"/>
+                    <input class="form-control" id="settings_dec_slew_fastest" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_slew_faster">
+                        DEC Slew-Faster Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_dec_slew_faster" type="text"/>
                 </div>
                 <div class="form-group">
                     <label for="settings_dec_slew_medium">
@@ -377,10 +397,16 @@
                     <input class="form-control" id="settings_dec_slew_medium" type="text"/>
                 </div>
                 <div class="form-group">
-                    <label for="settings_dec_slew_slow">
-                        DEC Slew-Slow Steps/Sec
+                    <label for="settings_dec_slew_slower">
+                        DEC Slew-Slower Steps/Sec
                     </label>
-                    <input class="form-control" id="settings_dec_slew_slow" type="text"/>
+                    <input class="form-control" id="settings_dec_slew_slower" type="text"/>
+                </div>
+                <div class="form-group">
+                    <label for="settings_dec_slew_slowest">
+                        DEC Slew-Slowest Steps/Sec
+                    </label>
+                    <input class="form-control" id="settings_dec_slew_slowest" type="text"/>
                 </div>
                 <div class="form-group">
                     <button id="settings_save" type="button" class="btn btn-primary">Save Advanced Settings</button>
@@ -427,5 +453,15 @@
         </div>
     </div>
 </div>
+<svg>
+    <filter id="redfilter">
+        <feColorMatrix in="SourceGraphic"
+                       type="matrix"
+                       values=".21 .72 0.07 0 0
+                               0 0 0 0 0
+                               0 0 0 0 0
+                               0 0 0 1 0"/>
+    </filter>
+</svg>
 </body>
 </html>

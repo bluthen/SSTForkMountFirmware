@@ -1,12 +1,22 @@
+/*html {
+    -webkit-filter: grayscale(100%) sepia(100%) hue-rotate(45deg);
+    -moz-filter: grayscale(100%) sepia(100%) hue-rotate(45deg);
+    filter: grayscale('#redfilter');
+}*/
+
+.modal-body, .modal-title {
+    color: #000000;
+}
+
 body {
     background-color: black;
-    color: red;
+    color: white;
     -webkit-touch-callout: none !important;
     padding-bottom: 10ex;
 }
 
 a {
-    color: red;
+    color: white;
 }
 
 #large_logo {
@@ -41,7 +51,7 @@ a {
 
 .direction-controls button {
     background-color: black;
-    color: red;
+    color: #007bff;
     border: 1px solid black;
     cursor: pointer;
 }
@@ -82,23 +92,23 @@ table.direction-controls td {
 }
 
 #search_results, #search_results td, #search_results th {
-    border: 1px solid red;
+    border: 1px solid white;
     border-Collapse: collapse
 }
 
 #location_search_results, #location_search_results td, #location_search_results th {
-    border: 1px solid red;
+    border: 1px solid white;
     border-Collapse: collapse
 }
 
 .fa-arrow-circle-up:hover, .fa-arrow-circle-down:hover, .fa-arrow-circle-right:hover, .fa-arrow-circle-left:hover {
     background-color: black;
-    color: #6d0000;
+    color: #0060c7;
     cursor: pointer;
 }
 
 .fa-arrow-circle-up:active, .fa-arrow-circle-down:active, .fa-arrow-circle-right:active, .fa-arrow-circle-left:active {
-    background-color: red;
+    background-color: #0060c7;
     color: black;
 }
 
@@ -123,6 +133,11 @@ table.direction-controls td {
     position: absolute;
     left: 8ex;
     top: 15ex;
+}
+
+.navbar {
+    background-color: black;
+    border-top: 1px solid white;
 }
 
 .cfa-rotate-45 {

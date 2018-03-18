@@ -100,18 +100,33 @@ $(document).ready(function () {
             return false;
         });
 
+        var get_manual_speed = function() {
+            var speed;
+            if ($('#direction-controls-speed-fastest').is(':checked')) {
+                speed = 'fastest';
+            }
+            if ($('#direction-controls-speed-faster').is(':checked')) {
+                speed = 'faster';
+            }
+            if ($('#direction-controls-speed-medium').is(':checked')) {
+                speed = 'medium';
+            }
+            if ($('#direction-controls-speed-slower').is(':checked')) {
+                speed = 'slower';
+            }
+            if ($('#direction-controls-speed-slowest').is(':checked')) {
+                speed = 'slowest';
+            }
+            return speed;
+        };
+
 
         all.on('mousedown touchstart', function (e) {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
             console.log('mousedown', id);
             var directions = id.split('direction-controls-')[1].split('-');
-            var speed = $('#direction-controls-speed-fast').is(':checked');
-            if (speed) {
-                speed = 'fast';
-            } else {
-                speed = 'slow';
-            }
+            var speed = get_manual_speed();
             for (i = 0; i < directions.length; i++) {
                 direction = directions[i];
                 pressed(direction, speed);
@@ -136,18 +151,20 @@ $(document).ready(function () {
                 var location;
                 $('#settings_ra_track_rate').val(data.ra_track_rate);
                 $('#settings_dec_ticks_per_degree').val(data.dec_ticks_per_degree);
-                $('#settings_ra_max_accel_tpss').val(data.ra_max_accel_tpss);
-                $('#settings_dec_max_accel_tpss').val(data.ra_max_accel_tpss);
                 $('#settings_ra_direction').val(data.micro.ra_direction);
                 $('#settings_dec_direction').val(data.micro.dec_direction);
                 $('#settings_ra_guide_rate').val(data.micro.ra_guide_rate);
-                $('#settings_ra_slew_fast').val(data.ra_slew_fast);
+                $('#settings_ra_slew_fastest').val(data.ra_slew_fastest);
+                $('#settings_ra_slew_faster').val(data.ra_slew_faster);
                 $('#settings_ra_slew_medium').val(data.ra_slew_medium);
-                $('#settings_ra_slew_slow').val(data.ra_slew_slow);
+                $('#settings_ra_slew_slower').val(data.ra_slew_slow);
+                $('#settings_ra_slew_slowest').val(data.ra_slew_slowest);
                 $('#settings_dec_guide_rate').val(data.micro.dec_guide_rate);
-                $('#settings_dec_slew_fast').val(data.dec_slew_fast);
+                $('#settings_dec_slew_fastest').val(data.dec_slew_fastest);
+                $('#settings_dec_slew_faster').val(data.dec_slew_faster);
                 $('#settings_dec_slew_medium').val(data.dec_slew_medium);
-                $('#settings_dec_slew_slow').val(data.dec_slew_slow);
+                $('#settings_dec_slew_slower').val(data.dec_slew_slower);
+                $('#settings_dec_slew_slowest').val(data.dec_slew_slowest);
                 location = $('#location');
                 location.empty();
                 if (data.location.name) {
@@ -231,7 +248,7 @@ $(document).ready(function () {
         sc = search_object_counter;
         $('#search_info').empty();
         // TODO: Goto Action should only be there if we've synced once.
-        var action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i></a>&nbsp; &nbsp;<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i></a>'
+        var action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i>Sync</a>&nbsp; &nbsp;<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i>Slew</a>'
         $('#search_spinner').show();
         $('#search_results').hide();
         $.ajax({
@@ -259,14 +276,14 @@ $(document).ready(function () {
                 };
                 tbody.empty();
                 for (i = 0; i < d.planets.length; i++) {
-                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                     $('a.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                 }
                 for (i = 0; i < d.dso.length; i++) {
-                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/' + formating.dec(d.dso[i][1]) + '</td><td>' + formating.dec(d.dso[i][21]) + '/' + formating.dec(d.dso[i][22]) + '</td><td>' + d.dso[i][4] + '</td><td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/ ' + formating.dec(d.dso[i][1]) + '</td><td>' + formating.dec(d.dso[i][21]) + '/ ' + formating.dec(d.dso[i][22]) + '</td><td>' + d.dso[i][4] + '</td><td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td></td><td>' + action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                     $('a.slewto', tr).on('click',
@@ -607,16 +624,18 @@ $(document).ready(function () {
             dec_ticks_per_degree: $('#settings_dec_ticks_per_degree').val(),
             ra_direction: $('#settings_ra_direction').val(),
             dec_direction: $('#settings_dec_direction').val(),
-            ra_max_accel_tpss: $('#settings_ra_max_accel_tpss').val(),
-            dec_max_accel_tpss: $('#settings_dec_max_accel_tpss').val(),
             ra_guide_rate: $('#settings_ra_guide_rate').val(),
-            ra_slew_fast: $('#settings_ra_slew_fast').val(),
+            ra_slew_fastest: $('#settings_ra_slew_fastest').val(),
+            ra_slew_faster: $('#settings_ra_slew_faster').val(),
             ra_slew_medium: $('#settings_ra_slew_medium').val(),
-            ra_slew_slow: $('#settings_ra_slew_slow').val(),
+            ra_slew_slower: $('#settings_ra_slew_slower').val(),
+            ra_slew_slowest: $('#settings_ra_slew_slowest').val(),
             dec_guide_rate: $('#settings_dec_guide_rate').val(),
-            dec_slew_fast: $('#settings_dec_slew_fast').val(),
+            dec_slew_fastest: $('#settings_dec_slew_fastest').val(),
+            dec_slew_faster: $('#settings_dec_slew_faster').val(),
             dec_slew_medium: $('#settings_dec_slew_medium').val(),
-            dec_slew_slow: $('#settings_dec_slew_slow').val()
+            dec_slew_slower: $('#settings_dec_slew_slower').val(),
+            dec_slew_slowest: $('#settings_dec_slew_slowest').val()
         };
         $.ajax({
             url: '/settings',

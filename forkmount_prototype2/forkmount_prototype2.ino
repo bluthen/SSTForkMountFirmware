@@ -123,7 +123,7 @@ void autoguide_run()
           dec_autoguiding = true;
           prevDECSpeed = getDECSpeed();        
         }
-        setDECSpeed(configvars.dec_guide_rate);
+        setDECSpeed(prevDECSpeed + configvars.dec_guide_rate);
         if(sst_debug) {
           Serial.print("DEC up ");
         }
@@ -132,7 +132,7 @@ void autoguide_run()
           dec_autoguiding = true;
           prevDECSpeed = getDECSpeed();
         }
-        setDECSpeed(-1.0 * configvars.dec_guide_rate);
+        setDECSpeed(prevDECSpeed - configvars.dec_guide_rate);
         if(sst_debug) {
           Serial.print("DEC down ");
         }
@@ -149,7 +149,7 @@ void autoguide_run()
           prevRASpeed = getRASpeed();
           ra_autoguiding = true;
         }
-        setRASpeed(configvars.ra_guide_rate);        
+        setRASpeed(prevRASpeed + configvars.ra_guide_rate);        
         if(sst_debug) {
           Serial.print("RA Right ");
         }
@@ -159,7 +159,7 @@ void autoguide_run()
           ra_autoguiding = true;
           prevRASpeed = getRASpeed();
         }
-        setRASpeed(-1.0*configvars.ra_guide_rate);
+        setRASpeed(prevRASpeed - configvars.ra_guide_rate);
         if(sst_debug) {
           Serial.print("RA Left");
         }

@@ -47,8 +47,9 @@ def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "ra_slew_fast", "ra_slew_medium", "ra_slew_slow", "dec_slew_fast", "dec_slew_medium",
-            "dec_slew_slow", "dec_ticks_per_degree", "ra_max_accel_tpss", "dec_max_accel_tpss"]
+    keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
+            "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
+            "dec_ticks_per_degree"]
     for key in keys:
         if key in args:
             settings_buffer[key] = float(args[key])
@@ -59,8 +60,9 @@ def settings_put():
                 settings_buffer['micro'] = {}
             settings_buffer['micro'][key] = float(args[key])
 
-    keys = ["ra_track_rate", "ra_slew_fast", "ra_slew_medium", "ra_slew_slow", "dec_slew_fast", "dec_slew_medium",
-            "dec_slew_slow", "dec_ticks_per_degree", "ra_max_accel_tpss", "dec_max_accel_tpss"]
+    keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
+            "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
+            "dec_ticks_per_degree"]
     for key in keys:
         if key in args:
             settings[key] = float(settings_buffer[key])
