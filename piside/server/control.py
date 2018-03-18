@@ -142,10 +142,10 @@ def send_status():
 
 def micro_update_settings():
     with microseriallock:
-        microserial.write(('set_var ra_max_tps %f\r' % settings['micro']['ra_slew_fastest']).encode())
+        microserial.write(('set_var ra_max_tps %f\r' % settings['ra_slew_fastest']).encode())
         microserial.write(('set_var ra_guide_rate %f\r' % settings['micro']['ra_guide_rate']).encode())
         microserial.write(('set_var ra_direction %f\r' % settings['micro']['ra_direction']).encode())
-        microserial.write(('set_var dec_max_tps %f\r' % settings['micro']['dec_slew_fastest']).encode())
+        microserial.write(('set_var dec_max_tps %f\r' % settings['dec_slew_fastest']).encode())
         microserial.write(('set_var dec_guide_rate %f\r' % settings['micro']['dec_guide_rate']).encode())
         microserial.write(('set_var dec_direction %f\r' % settings['micro']['dec_direction']).encode())
         if runtime_settings['tracking']:

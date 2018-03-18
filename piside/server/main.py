@@ -11,12 +11,13 @@ import subprocess
 import datetime
 import sys
 import traceback
-
+from astropy.utils import iers
 import astropy.time
 import astropy.coordinates
 from astropy.coordinates import solar_system_ephemeris
 import astropy.units as u
 import stellarium_server
+iers.conf.auto_download = False
 
 monkey_patch()
 
