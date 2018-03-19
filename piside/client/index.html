@@ -8,15 +8,15 @@
     <link rel="manifest" href="/static/manifest.json">
     <title>SSTEQ-25 Control Panel</title>
     <style>
-        /* Filter has some bugs
+        /* Filter has some bugs on firefox
         div.redlights {
             -webkit-filter: url('#redfilter');
             -moz-filter: url('#redfilter');
             filter: url('#redfilter');
         }*/
     </style>
-    <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.min.css"/>
-    <link rel="stylesheet" type="text/css" href="main.css"/>
+    <link rel="stylesheet" type="text/css" id='bootstrapcss' href="bootstrap/css/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" id='maincss' href="main.css"/>
     <script src="jquery-3.2.1.min.js"></script>
     <script src="lodash.min.js"></script>
     <script src="fontawesome-all.js"></script>
@@ -277,6 +277,20 @@
         </div>
         <div class="tab-pane fade" id="othersettings" role="tabpanel" aria-labelledby="othersettings-tab">
             <br/>
+            <div class="form-group">
+                <div class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-primary active">
+                        <input type="radio" id="settings-color-scheme-default" name="settings-color-scheme"
+                               value="default"
+                               autocomplete="off" checked> Default Color Scheme
+                    </label>
+                    <label class="btn btn-primary">
+                        <input type="radio" id="settings-color-scheme-nightvision" name="settings-color-scheme" value="redlights"
+                               autocomplete="off"> Night-Vision Color Scheme
+                    </label>
+                </div>
+            </div>
+            <br/>
             Park Position (Alt-Az): <span id="settings_park_position"></span>
             <div class="form-group">
                 <button id="settings_park" type="button" class="btn btn-primary">Park Scope</button>&nbsp;
@@ -308,7 +322,7 @@
                            data-toggle="collapse"
                            data-target="#advancedSettings" aria-expanded="false"
                            aria-controls="advancedSettings">
-                    <label class="form-check-label" for="showAdvancedSettings">Show Advanced Settings</label>
+                    <label class="form-check-label" for="showAdvancedSettings">Show&nbsp;Advanced&nbsp;Settings</label>
                 </div>
             </div>
 

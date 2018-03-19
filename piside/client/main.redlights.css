@@ -1,0 +1,155 @@
+/*html {
+    -webkit-filter: grayscale(100%) sepia(100%) hue-rotate(45deg);
+    -moz-filter: grayscale(100%) sepia(100%) hue-rotate(45deg);
+    filter: grayscale('#redfilter');
+}*/
+
+.modal-body, .modal-title {
+    color: #000000;
+}
+
+body {
+    background-color: black;
+    color: red;
+    -webkit-touch-callout: none !important;
+    padding-bottom: 10ex;
+}
+
+a {
+    color: red;
+}
+
+#large_logo {
+    float: right;
+    margin-right: 3ex;
+    top: 0px;
+}
+
+.direction {
+    font-size: 7ex;
+}
+
+::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+    color: #4b0000;
+}
+
+::-moz-placeholder { /* Firefox 19+ */
+    color: #4b0000;
+}
+
+:-ms-input-placeholder { /* IE 10+ */
+    color: #4b0000;
+}
+
+:-moz-placeholder { /* Firefox 18- */
+    color: #4b0000;
+}
+
+::placeholder {
+    color: #4b0000;
+}
+
+.direction-controls button {
+    background-color: black;
+    color: #6a0000;
+    border: 1px solid black;
+    cursor: pointer;
+}
+
+button {
+    background-color: red;
+    color: black;
+    border: 1px solid black;
+    cursor: pointer;
+}
+
+input {
+    background-color: red;
+    border: 1px solid black;
+    color: black;
+}
+
+div.direction-controls {
+    position: relative;
+    color: red;
+    width: 100%;
+}
+
+table.direction-controls {
+    width: 0;
+    margin: 0 auto;
+    -webkit-user-select: none !important;
+}
+
+table.direction-controls td {
+    padding: 10px;
+    text-align: center;
+}
+
+.direction-button {
+    background-color: red;
+    border: none;
+}
+
+#search_results, #search_results td, #search_results th {
+    border: 1px solid red;
+    border-Collapse: collapse
+}
+
+#location_search_results, #location_search_results td, #location_search_results th {
+    border: 1px solid red;
+    border-Collapse: collapse
+}
+
+.fa-arrow-circle-up:hover, .fa-arrow-circle-down:hover, .fa-arrow-circle-right:hover, .fa-arrow-circle-left:hover {
+    background-color: black;
+    color: #530000;
+    cursor: pointer;
+}
+
+.fa-arrow-circle-up:active, .fa-arrow-circle-down:active, .fa-arrow-circle-right:active, .fa-arrow-circle-left:active {
+    background-color: #530000;
+    color: black;
+}
+
+.btn-up {
+    position: absolute;
+    left: 8ex;
+}
+
+.btn-left {
+    position: absolute;
+    left: 0;
+    top: 8ex;
+}
+
+.btn-right {
+    position: absolute;
+    left: 17ex;
+    top: 8ex;
+}
+
+.btn-down {
+    position: absolute;
+    left: 8ex;
+    top: 15ex;
+}
+
+.navbar {
+    background-color: black;
+    border-top: 1px solid red;
+}
+
+.cfa-rotate-45 {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+input[type="radio"], input[type="checkbox"] {
+    -webkit-filter: url('#redfilter');
+	-moz-filter: url('#redfilter');
+	filter: url('#redfilter');
+}

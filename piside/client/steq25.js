@@ -731,6 +731,17 @@ $(document).ready(function () {
         });
     });
 
+    $('#settings-color-scheme-default, #settings-color-scheme-nightvision').change(function() {
+        if($('#settings-color-scheme-default').is(':checked')) {
+            $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.css');
+            $('#maincss').attr('href', 'main.css');
+        } else {
+            $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.redlights.css');
+            $('#maincss').attr('href', 'main.redlights.css');
+        }
+
+    });
+
     $('#goto_manual_coord_select-radec, #goto_manual_coord_select-altaz').change(function () {
         if ($('#goto_manual_coord_select-radec').is(':checked')) {
             $('#goto_manual_coord_altaz').hide();
