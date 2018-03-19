@@ -8,11 +8,12 @@
     <link rel="manifest" href="/static/manifest.json">
     <title>SSTEQ-25 Control Panel</title>
     <style>
-        body.redlights {
+        /* Filter has some bugs
+        div.redlights {
             -webkit-filter: url('#redfilter');
             -moz-filter: url('#redfilter');
             filter: url('#redfilter');
-        }
+        }*/
     </style>
     <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.min.css"/>
     <link rel="stylesheet" type="text/css" href="main.css"/>
@@ -26,7 +27,7 @@
         //screen.orientation.lock('portrait');
     </script>
 </head>
-<body class="redlights">
+<body>
 <nav class="navbar fixed-bottom">
     RADEC:<span id="status_radec"></span>|
     AltAz:<span id="status_altaz"></span>|
@@ -34,6 +35,7 @@
     D S/T: <span id="status_dec_ticks"></span>|
     Location: <span id="location"></span>
 </nav>
+<div class="redlights">
 <div class="direction-controls">
     <br/>
     <div class="container-fluid">
@@ -463,5 +465,6 @@
                                0 0 0 1 0"/>
     </filter>
 </svg>
+</div>
 </body>
 </html>

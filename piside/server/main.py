@@ -48,13 +48,13 @@ def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
+    keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "dec_ticks_per_degree"]
+            ]
     for key in keys:
         if key in args:
             settings_buffer[key] = float(args[key])
-    keys = ["ra_max_tps", "ra_guide_rate", "ra_direction", "dec_max_tps", "dec_guide_rate", "dec_direction"]
+    keys = ["ra_max_tps", "ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction"]
     for key in keys:
         if key in args:
             if 'micro' not in settings_buffer:
@@ -66,8 +66,8 @@ def settings_put():
             "dec_ticks_per_degree"]
     for key in keys:
         if key in args:
-            settings[key] = float(settings_buffer[key])
-    keys = ["ra_max_tps", "ra_guide_rate", "ra_direction", "dec_max_tps", "dec_guide_rate", "dec_direction"]
+            settings[key] = settings_buffer[key]
+    keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction"]
     for key in keys:
         if key in args:
             if 'micro' not in settings_buffer:

@@ -157,7 +157,7 @@ $(document).ready(function () {
                 $('#settings_ra_slew_fastest').val(data.ra_slew_fastest);
                 $('#settings_ra_slew_faster').val(data.ra_slew_faster);
                 $('#settings_ra_slew_medium').val(data.ra_slew_medium);
-                $('#settings_ra_slew_slower').val(data.ra_slew_slow);
+                $('#settings_ra_slew_slower').val(data.ra_slew_slower);
                 $('#settings_ra_slew_slowest').val(data.ra_slew_slowest);
                 $('#settings_dec_guide_rate').val(data.micro.dec_guide_rate);
                 $('#settings_dec_slew_fastest').val(data.dec_slew_fastest);
