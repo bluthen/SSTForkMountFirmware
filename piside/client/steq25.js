@@ -373,8 +373,8 @@ $(document).ready(function () {
     }, 500, {leading: false, trailing: true});
 
     var convert_manual_coordinates_radec = function () {
-        var ra = $('#goto_manual_ra').val();
-        var dec = $('#goto_manual_dec').val();
+        var ra = $('#goto_manual_ra').val().trim();
+        var dec = $('#goto_manual_dec').val().trim();
 
         var ras = ra.split(' ');
         if (ras.length !== 3) {
@@ -391,8 +391,8 @@ $(document).ready(function () {
     };
 
     var convert_manual_coordinates_altaz = function () {
-        var alt = $('#goto_manual_alt').val();
-        var az = $('#goto_manual_az').val();
+        var alt = $('#goto_manual_alt').val().trim();
+        var az = $('#goto_manual_az').val().trim();
 
         var alts = alt.split(' ');
         if (alts.length !== 3) {
