@@ -34,6 +34,7 @@ $(document).ready(function () {
         }
         $('#status_ra_ticks').text('' + msg.rs + '/' + msg.rp);
         $('#status_dec_ticks').text('' + msg.ds + '/' + msg.dp);
+        $('#status_time').text(msg.time);
         if (!status.slewing && slewmodal.hasClass('show')) {
             slewmodal.modal('hide');
         }
@@ -82,7 +83,7 @@ $(document).ready(function () {
             }
             intervals[direction] = setInterval(function () {
                 sendPressed(direction, speed);
-            }, 250);
+            }, 100);
             sendPressed(direction, speed);
         };
 
@@ -248,7 +249,8 @@ $(document).ready(function () {
         sc = search_object_counter;
         $('#search_info').empty();
         // TODO: Goto Action should only be there if we've synced once.
-        var action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i>Sync</a>&nbsp; &nbsp;<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i>Slew</a>'
+        var sync_action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i>Sync</a>';
+        var slew_action = '<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i>Slew</a>';
         $('#search_spinner').show();
         $('#search_results').hide();
         $.ajax({
@@ -276,7 +278,7 @@ $(document).ready(function () {
                 };
                 tbody.empty();
                 for (i = 0; i < d.planets.length; i++) {
-                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                     $('a.slewto', tr).on('click',
@@ -290,7 +292,7 @@ $(document).ready(function () {
                         slewtoclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                 }
                 for (i = 0; i < d.stars.length; i++) {
-                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>' + formating.dec(d.stars[i][37]) + '/' + formating.dec(d.stars[i][38]) + '</td><td>' + d.stars[i][13] + '</td><td></td><td>' + action + '</td>');
+                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>' + formating.dec(d.stars[i][37]) + '/' + formating.dec(d.stars[i][38]) + '</td><td>' + d.stars[i][13] + '</td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
                     $('a.slewto', tr).on('click', slewtoclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));

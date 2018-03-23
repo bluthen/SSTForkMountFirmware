@@ -35,7 +35,7 @@ last_status = None
 
 class SimpleInterval:
     def __init__(self, func, sec):
-        print('Simple Interval')
+        # print('Simple Interval')
         self._func = func
         self._sec = sec
         self._timer = threading.Timer(self._sec, self._run)
@@ -53,30 +53,37 @@ class SimpleInterval:
         self._func()
 
 
-def get_status():
+def read_serial_until_prompt():
+    s = ""
     with microseriallock:
-        microserial.reset_input_buffer()
-        microserial.write(b'qs\r')
-        s = ""
-        s += microserial.read(1).decode()
         while True:
             if microserial.in_waiting > 0:
                 s += microserial.read(microserial.in_waiting).decode()
             else:
                 s += microserial.read(1).decode()
             if '$' in s:
+                # print('BREAK', s, 'BREAK')
                 break
+    return s
+
+
+def get_status():
+    with microseriallock:
+        microserial.reset_input_buffer()
+        microserial.write(b'qs\r')
+        s = read_serial_until_prompt()
     # TODO: Might need to make a shorter status if transfer time longer than tracking tick interval
     # print(len(s))
     s = s.split()
     # print(s)
     status = {}
     for line in s:
+        # print('@@@', line)
         line_status = line.split(':')
         if len(line_status) == 2:
             status[line_status[0]] = float(line_status[1])
     # print(status)
-    #print('status' + str(datetime.datetime.now()))
+    # print('status' + str(datetime.datetime.now()))
     return status
 
 
@@ -94,7 +101,7 @@ def slewtocheck(ra, dec):
 
 
 def update_location():
-    print(settings['location'])
+    #print(settings['location'])
     if not settings['location']['lat']:
         return
     el = EarthLocation(lat=settings['location']['lat'] * u.deg,
@@ -122,6 +129,7 @@ def send_status():
     status['dec'] = None
     status['alt'] = None
     status['az'] = None
+    status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     status['time_been_set'] = runtime_settings['time_been_set']
     status['synced'] = runtime_settings['sync_info'] is not None
     if status['synced']:
@@ -142,17 +150,24 @@ def send_status():
 
 def micro_update_settings():
     with microseriallock:
+        microserial.reset_input_buffer()
         microserial.write(('set_var ra_max_tps %f\r' % settings['ra_slew_fastest']).encode())
+        read_serial_until_prompt()
         microserial.write(('set_var ra_guide_rate %f\r' % settings['micro']['ra_guide_rate']).encode())
+        read_serial_until_prompt()
         microserial.write(('set_var ra_direction %f\r' % settings['micro']['ra_direction']).encode())
+        read_serial_until_prompt()
         microserial.write(('set_var dec_max_tps %f\r' % settings['dec_slew_fastest']).encode())
+        read_serial_until_prompt()
         microserial.write(('set_var dec_guide_rate %f\r' % settings['micro']['dec_guide_rate']).encode())
+        read_serial_until_prompt()
         microserial.write(('set_var dec_direction %f\r' % settings['micro']['dec_direction']).encode())
+        read_serial_until_prompt()
         if runtime_settings['tracking']:
             ra_set_speed(settings['ra_track_rate'])
         else:
             ra_set_speed(0)
-        microserial.write(('dec_set_speed %f\r' % (0,)).encode())
+        dec_set_speed(0)
 
 
 def init(osocketio, fsettings, fruntime_settings):
@@ -160,7 +175,7 @@ def init(osocketio, fsettings, fruntime_settings):
     if inited:
         return
     inited = True
-    print('Inited')
+    #print('Inited')
     runtime_settings = fruntime_settings
     settings = fsettings
     socketio = osocketio
@@ -182,7 +197,7 @@ def manual_control(direction, speed):
     # TODO: Acceleration
     # TODO: Disabling autoguiding
     global microserial, microseriallock, slew_lock, manual_lock
-    print('manual_control', direction, speed)
+    #print('manual_control', direction, speed)
     with manual_lock:
         got_lock = slew_lock.acquire(blocking=False)
         if not got_lock:
@@ -204,75 +219,75 @@ def manual_control(direction, speed):
                     done = False
                     with microseriallock:
                         status = get_status()
-                        print(status)
+                        # print(status)
                         if (runtime_settings['tracking'] and status['rs'] != settings['ra_track_rate']) or status['rs'] != 0:
-                            sspeed = status['rs'] - math.copysign(settings['ra_slew_fastest']/6.0, status['rs'])
+                            sspeed = status['rs'] - math.copysign(settings['ra_slew_fastest']/10.0, status['rs'])
                             if status['rs'] == 0 or abs(sspeed) < settings['ra_track_rate'] or sspeed/status['rs'] < 0:
                                 if runtime_settings['tracking']:
                                     sspeed = settings['ra_track_rate']
                                 else:
                                     sspeed = 0
                                 done = True
-                            print(sspeed)
+                            # print(sspeed)
                             ra_set_speed(sspeed)
                         else:
                             done = True
                     if not done:
-                        print('timer')
-                        timers[direction] = threading.Timer(0.2, partial(manual_control, direction, None))
+                        # print('timer')
+                        timers[direction] = threading.Timer(0.1, partial(manual_control, direction, None))
                         timers[direction].start()
                 else:
                     done = False
                     with microseriallock:
                         status = get_status()
                         if status['ds'] != 0:
-                            print(status)
-                            sspeed = status['ds'] - math.copysign(settings['dec_slew_fastest'] / 6.0, status['ds'])
+                            # print(status)
+                            sspeed = status['ds'] - math.copysign(settings['dec_slew_fastest'] / 10.0, status['ds'])
                             if status['ds'] == 0 or sspeed / status['ds'] < 0:
                                 sspeed = 0
                                 done = True
-                            print(sspeed)
+                            # print(sspeed)
                             dec_set_speed(sspeed)
                         else:
                             done = True
                     if not done:
-                        timers[direction] = threading.Timer(0.2, partial(manual_control, direction, None))
+                        timers[direction] = threading.Timer(0.1, partial(manual_control, direction, None))
                         timers[direction].start()
             else:
                 # If not current manually going other direction
                 with microseriallock:
                     status = get_status()
-                    print(status)
+                    # print(status)
                     if OPPOSITE_MANUAL[direction] in timers:
                         return
                     if direction == 'left':
-                        sspeed = status['rs'] - settings['ra_slew_'+speed]/5.0
-                        print('ra_slew_'+speed, settings['ra_slew_'+speed]/5.0)
+                        sspeed = status['rs'] - settings['ra_slew_'+speed]/10.0
+                        # print('ra_slew_'+speed, settings['ra_slew_'+speed]/10.0)
                         if abs(sspeed) > settings['ra_slew_'+speed]:
                             sspeed = -settings['ra_slew_'+speed]
-                        print(sspeed)
+                        # print(sspeed)
                         ra_set_speed(sspeed)
                     elif direction == 'right':
-                        sspeed = status['rs'] + settings['ra_slew_'+speed]/5.0
+                        sspeed = status['rs'] + settings['ra_slew_'+speed]/10.0
                         if abs(sspeed) > settings['ra_slew_'+speed]:
                             sspeed = settings['ra_slew_'+speed]
-                        print(sspeed)
+                        # print(sspeed)
                         ra_set_speed(sspeed)
                     elif direction == 'up':
-                        #print('--------------- dec up %.1f' % settings['dec_slew_' + speed])
-                        sspeed = status['ds'] + settings['dec_slew_'+speed]/5.0
+                        # print('--------------- dec up %.1f' % settings['dec_slew_' + speed])
+                        sspeed = status['ds'] + settings['dec_slew_'+speed]/10.0
                         if abs(sspeed) > settings['dec_slew_'+speed]:
                             sspeed = settings['dec_slew_'+speed]
-                        print(sspeed)
+                        # print(sspeed)
                         dec_set_speed(sspeed)
                     elif direction == 'down':
-                        sspeed = status['ds'] - settings['dec_slew_'+speed]/5.0
+                        sspeed = status['ds'] - settings['dec_slew_'+speed]/10.0
                         if abs(sspeed) > settings['dec_slew_'+speed]:
                             sspeed = -settings['dec_slew_'+speed]
-                        #print('--------------- dec down -%.1f' % settings['dec_slew_' + speed])
-                        print(sspeed)
+                        # print('--------------- dec down -%.1f' % settings['dec_slew_' + speed])
+                        # print(sspeed)
                         dec_set_speed(sspeed)
-                    timers[direction] = threading.Timer(0.75, partial(manual_control, direction, None))
+                    timers[direction] = threading.Timer(0.5, partial(manual_control, direction, None))
                     timers[direction].start()
         finally:
             slew_lock.release()
@@ -280,26 +295,35 @@ def manual_control(direction, speed):
 
 def autoguide_disable():
     with microseriallock:
+        microserial.reset_input_buffer()
         microserial.write(('autoguide_disable\r').encode())
+        read_serial_until_prompt()
 
 
 def autoguide_enable():
     with microseriallock:
+        microserial.reset_input_buffer()
         microserial.write(('autoguide_enable\r').encode())
+        read_serial_until_prompt()
 
 
 def ra_set_speed(speed):
     with microseriallock:
+        microserial.reset_input_buffer()
         microserial.write(('ra_set_speed %f\r' % speed).encode())
+        read_serial_until_prompt()
 
 
 def dec_set_speed(speed):
     with microseriallock:
+        microserial.reset_input_buffer()
         microserial.write(('dec_set_speed %f\r' % speed).encode())
+        read_serial_until_prompt()
 
 
 def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
     global cancel_slew, slewing
+    sleep_time = 0.02
     try:
         slew_lock.acquire()
         autoguide_disable()
@@ -333,7 +357,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             elif first:
                 ra_set_speed(math.copysign(settings['ra_slew_slowest'], ra_delta))
             elif abs(ra_delta) > settings['ra_slew_slowest']:
-                speed = status['rs'] + math.copysign(settings['ra_slew_fastest']/5.0, ra_delta)
+                speed = status['rs'] + math.copysign(settings['ra_slew_fastest']/(1.0/sleep_time), ra_delta)
                 if abs(speed) > settings['ra_slew_fastest']:
                     speed = math.copysign(settings['ra_slew_fastest'], ra_delta)
                 ra_set_speed(speed)
@@ -345,12 +369,12 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             elif first:
                 dec_set_speed(math.copysign(settings['dec_slew_slowest'], dec_delta))
             else:
-                speed = status['ds'] + math.copysign(settings['dec_slew_fastest']/5.0, dec_delta)
+                speed = status['ds'] + math.copysign(settings['dec_slew_fastest']/(1.0/sleep_time), dec_delta)
                 if abs(speed) > settings['dec_slew_fastest']:
                     speed = math.copysign(settings['dec_slew_fastest'], dec_delta)
                 dec_set_speed(speed)
             first = False
-            time.sleep(0.2)
+            time.sleep(sleep_time)
             if not parking:
                 need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
                                                        settings['ra_track_rate'],
