@@ -180,10 +180,12 @@ def command_help(args):
 
 def command_autoguide_disable(args):
     configvars['autoguide_enabled'] = 0
+    print_prompt()
 
 
 def command_autoguide_enable(args):
     configvars['autoguide_enabled'] = 1
+    print_prompt()
 
 
 def run_steppers():
