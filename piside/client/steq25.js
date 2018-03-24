@@ -249,8 +249,8 @@ $(document).ready(function () {
         sc = search_object_counter;
         $('#search_info').empty();
         // TODO: Goto Action should only be there if we've synced once.
-        var sync_action = '<a href="#" class="sync"><i class="fas fa-sync" title="sync"></i>Sync</a>';
-        var slew_action = '<a href="#" class="slewto"><i class="far fa-play-circle" title="slew"></i>Slew</a>';
+        var sync_action = '<button type="button" class="sync btn btn-primary"><i class="fas fa-sync" title="sync"></i>Sync</button>';
+        var slew_action = '<button type="button" class="slewto btn btn-primary"><i class="far fa-play-circle" title="slew"></i>Slew</button>';
         $('#search_spinner').show();
         $('#search_results').hide();
         $.ajax({
@@ -280,22 +280,22 @@ $(document).ready(function () {
                 for (i = 0; i < d.planets.length; i++) {
                     tr = $('<tr><th scope="row">' + d.planets[i][0] + '</th><td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
-                    $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
-                    $('a.slewto', tr).on('click',
+                    $('button.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
+                    $('button.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                 }
                 for (i = 0; i < d.dso.length; i++) {
                     tr = $('<tr><th scope="row">' + d.dso[i][20] + '</th><td>' + formating.ra(d.dso[i][0]) + '/ ' + formating.dec(d.dso[i][1]) + '</td><td>' + formating.dec(d.dso[i][21]) + '/ ' + formating.dec(d.dso[i][22]) + '</td><td>' + d.dso[i][4] + '</td><td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
-                    $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
-                    $('a.slewto', tr).on('click',
+                    $('button.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
+                    $('button.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                 }
                 for (i = 0; i < d.stars.length; i++) {
                     tr = $('<tr><th scope="row">' + d.stars[i][6] + ', ' + d.stars[i][5] + '</th><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>' + formating.dec(d.stars[i][37]) + '/' + formating.dec(d.stars[i][38]) + '</td><td>' + d.stars[i][13] + '</td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
-                    $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
-                    $('a.slewto', tr).on('click', slewtoclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
+                    $('button.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
+                    $('button.slewto', tr).on('click', slewtoclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
                 }
 
                 console.log(d);
@@ -337,7 +337,7 @@ $(document).ready(function () {
         search_location_counter++;
         sc = search_location_counter;
         $('#location_search_info').empty();
-        var action = '<a href="#"><i class="fas fa-globe" title="set"></i>Set</a>';
+        var action = '<button type="button" class="btn btn-primary"><i class="fas fa-globe" title="set"></i>Set</button>';
         $('#location_search_spinner').show();
         $('#location_search_results').hide();
         $.ajax({
@@ -361,7 +361,7 @@ $(document).ready(function () {
                 for (i = 0; i < d.cities.length; i++) {
                     var tr = $('<tr><td>' + d.cities[i][2] + ', ' + d.cities[i][4] + ' ' + d.cities[i][1] + '</td><td>' + formating.lat(d.cities[i][9]) + ' ' + formating.long(d.cities[i][10]) + '</td><td>' + action + '</td>');
                     tbody.append(tr);
-                    $('a', tr).on('click', setclicked(parseFloat(d.cities[i][9]), parseFloat(d.cities[i][10]), d.cities[i][2] + ', ' + d.cities[i][4]));
+                    $('button', tr).on('click', setclicked(parseFloat(d.cities[i][9]), parseFloat(d.cities[i][10]), d.cities[i][2] + ', ' + d.cities[i][4]));
                 }
 
                 console.log(d);
