@@ -278,21 +278,21 @@ $(document).ready(function () {
                 };
                 tbody.empty();
                 for (i = 0; i < d.planets.length; i++) {
-                    tr = $('<tr><td>' + d.planets[i][0] + '</td><td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
+                    tr = $('<tr><th scope="row">' + d.planets[i][0] + '</th><td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td><td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td><td></td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                     $('a.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                 }
                 for (i = 0; i < d.dso.length; i++) {
-                    tr = $('<tr><td>' + d.dso[i][20] + '</td><td>' + formating.ra(d.dso[i][0]) + '/ ' + formating.dec(d.dso[i][1]) + '</td><td>' + formating.dec(d.dso[i][21]) + '/ ' + formating.dec(d.dso[i][22]) + '</td><td>' + d.dso[i][4] + '</td><td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td></td><td>' + action + '</td>');
+                    tr = $('<tr><th scope="row">' + d.dso[i][20] + '</th><td>' + formating.ra(d.dso[i][0]) + '/ ' + formating.dec(d.dso[i][1]) + '</td><td>' + formating.dec(d.dso[i][21]) + '/ ' + formating.dec(d.dso[i][22]) + '</td><td>' + d.dso[i][4] + '</td><td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                     $('a.slewto', tr).on('click',
                         slewtoclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                 }
                 for (i = 0; i < d.stars.length; i++) {
-                    tr = $('<tr><td>' + d.stars[i][6] + ', ' + d.stars[i][5] + '</td><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>' + formating.dec(d.stars[i][37]) + '/' + formating.dec(d.stars[i][38]) + '</td><td>' + d.stars[i][13] + '</td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
+                    tr = $('<tr><th scope="row">' + d.stars[i][6] + ', ' + d.stars[i][5] + '</th><td>' + formating.ra(d.stars[i][7]) + '/' + formating.dec(d.stars[i][8]) + '</td><td>' + formating.dec(d.stars[i][37]) + '/' + formating.dec(d.stars[i][38]) + '</td><td>' + d.stars[i][13] + '</td><td></td><td>' + sync_action + '</td><td>' + slew_action + '</td>');
                     tbody.append(tr);
                     $('a.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
                     $('a.slewto', tr).on('click', slewtoclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));

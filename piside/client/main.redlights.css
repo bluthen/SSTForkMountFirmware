@@ -91,15 +91,23 @@ table.direction-controls td {
     border: none;
 }
 
-#search_results, #search_results td, #search_results th {
-    border: 1px solid red;
-    border-Collapse: collapse
+.table-hover > tbody > tr:hover > td, .table-hover > tbody > tr:hover > th{
+    background-color: #4B0000 !important;
 }
 
-#location_search_results, #location_search_results td, #location_search_results th {
+.table-striped tbody > tr:nth-child(odd) > td,.table-striped tbody > tr:nth-child(odd) > th {
+    background-color: #2f0000;
+}
+
+/* #search_results, #search_results td, #search_results th {
     border: 1px solid red;
     border-Collapse: collapse
-}
+} */
+
+/* #location_search_results, #location_search_results td, #location_search_results th {
+    border: 1px solid red;
+    border-Collapse: collapse
+}*/
 
 .fa-arrow-circle-up:hover, .fa-arrow-circle-down:hover, .fa-arrow-circle-right:hover, .fa-arrow-circle-left:hover {
     background-color: black;
