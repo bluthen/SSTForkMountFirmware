@@ -22,11 +22,13 @@ void command_set_var() {
 
   if (argName == NULL) {
     WSERIAL.println("ERROR: Missing [variable_name] argument.");
+    print_prompt();
     return;
   }
 
   if (argVal == NULL) {
     WSERIAL.println("ERROR: Missing [value] argument.");
+    print_prompt();
     return;
   }
   value = atof(argVal);
@@ -101,6 +103,7 @@ void command_ra_set_speed() {
 
   if (argVal == NULL) {
     WSERIAL.println("ERROR: Missing [value] argument.");
+    print_prompt();
     return;
   }
   value = atof(argVal);
@@ -118,6 +121,7 @@ void command_dec_set_speed() {
 
   if (argVal == NULL) {
     WSERIAL.println("ERROR: Missing [value] argument.");
+    print_prompt();
     return;
   }
   value = atof(argVal);
@@ -153,10 +157,12 @@ void command_autoguide_disable() {
     dec_autoguiding = false;
     prevDECSpeed = 0.0;
   }
+  print_prompt();
 }
 
 void command_autoguide_enable() {
-  configvars.autoguide_enabled = true;  
+  configvars.autoguide_enabled = true;
+  print_prompt();
 }
 
 

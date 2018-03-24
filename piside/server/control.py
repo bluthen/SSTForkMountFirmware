@@ -578,6 +578,29 @@ def ra_deg_d(started_angle, end_angle):
     return min([d_1, d_2, d_3], key=abs)
 
 
+def two_sync_calc_error(last_sync, current_sync):
+    steps = skycoord_to_steps(last_sync, current_sync['coords'], current_sync['time'], settings['ra_track_rate'],
+                              settings['dec_ticks_per_degree'])
+    ra_ther = steps['ra'] - last_sync['steps']['ra']
+    ra_exp = current_sync['steps']['ra'] - last_sync['steps']['ra']
+    dec_ther = steps['dec'] - last_sync['steps']['dec']
+    dec_exp = current_sync['steps']['dec'] - last_sync['steps']['dec']
+    if ra_ther == 0:
+        ra_error = None
+    else:
+        ra_error = (ra_exp - ra_ther)/float(ra_ther)
+    if dec_ther == 0:
+        dec_error = None
+    else:
+        dec_error = (dec_exp - dec_ther)/float(dec_ther)
+
+    return {
+        'ra_error': ra_error,
+        'dec_error': dec_error
+    }
+
+
+
 def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree):
     """
     Gives steps needed to be at wanted_skycoord right now.

@@ -130,8 +130,14 @@ def do_sync():
         dec = coord.icrs.dec.deg
     ra = float(ra)
     dec = float(dec)
+    last_sync = None
+    if 'sync_info' in runtime_settings:
+        last_sync = runtime_settings['sync_info']
     control.sync(ra, dec)
-    return 'Synced', 200
+    err = {'ra_error': None, 'dec_error': None}
+    if last_sync:
+        err = control.two_sync_calc_error(last_sync, runtime_settings['sync_info'])
+    return jsonify(err)
 
 
 @app.route('/slewto', methods=['PUT'])

@@ -13,7 +13,7 @@ $(document).ready(function () {
         console.log('socket io connect.');
     });
     socket.on('status', function (msg) {
-        var radecstr, slewmodal;
+        var radecstr;
         //console.log(msg);
         status = msg;
         var status_radec = $('#status_radec');
@@ -414,11 +414,19 @@ $(document).ready(function () {
         $.ajax({
             url: '/sync',
             method: 'PUT',
+            dataType: 'json',
             data: {ra: ra, dec: dec},
             success: function (d) {
-                console.log('synced')
+                console.log('synced');
+                var errstr = '';
+                if (d.ra_error) {
+                    errstr += 'RAErr: ' + (d.ra_error*100.0).toFixed(2)+'%';
+                }
+                if (d.dec_error) {
+                    errstr += ' DECErr: ' + (d.dec_error*100.0).toFixed(2)+'%';
+                }
                 $('#errorInfoModalTitle').text('Info');
-                $('#errorInfoModalBody').text('The mount is now synced.');
+                $('#errorInfoModalBody').html('The mount is now synced.<br>'+errstr);
                 $('#errorInfoModal').modal();
             },
             error: function (jq, errorstatus, errortxt) {
