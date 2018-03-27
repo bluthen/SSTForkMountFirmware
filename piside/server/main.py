@@ -11,6 +11,8 @@ import subprocess
 import datetime
 import sys
 import traceback
+import tempfile
+import zipfile
 from astropy.utils import iers
 import astropy.time
 import astropy.coordinates
@@ -35,6 +37,11 @@ runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info':
 @app.route('/')
 def root():
     return redirect('/static/index.html')
+
+
+@app.route('/version')
+def version():
+    return jsonify({"version": "0.0.1"})
 
 
 @app.route('/settings')
@@ -329,6 +336,23 @@ def search_object():
         ob.append(altaz['az'])
 
     return jsonify({'dso': dso, 'stars': stars, 'planets': planets})
+
+
+def reboot():
+    return subprocess.run(['/usr/bin/sudo', '/sbin/reboot'])
+
+
+@app.route('/firmware_update', methods=['POST'])
+def firmware_update():
+    file = request.files['file']
+    with tempfile.TemporaryFile(suffix='.zip') as tfile:
+        file.save(tfile)
+        tfile.seek(0)
+        zip_ref = zipfile.ZipFile(tfile)
+        zip_ref.extractall('/home/pi/SSTForkMountFirmware/piside')
+    t = threading.Timer(5, reboot)
+    t.start()
+    return 'Updated'
 
 
 @app.route('/search_location', methods=['GET'])

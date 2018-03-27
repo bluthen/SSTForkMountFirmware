@@ -762,6 +762,41 @@ $(document).ready(function () {
         }
     });
 
+    $('#firmware_file_upload').click(function() {
+       var formData = new FormData();
+       var file = $('#firmware_file')[0].files[0];
+       if(file) {
+           formData.append('file', file);
+           $.ajax({
+               url: '/firmware_update',
+               type: 'POST',
+               data: formData,
+               processData: false,
+               contentType: false,
+               success: function(data) {
+                   $('#firmware_upload_div').html('Success. Rebooting, please wait 1min...');
+                   setTimeout(function() {
+                       location.reload();
+                   }, 50000);
+               },
+               error: function(jq){
+                   $('#firmware_upload_div').html('Error:' + jq.responseText);
+               }
+           });
+       }
+    });
+
+    $.ajax({
+        url: '/version',
+        method: 'GET',
+        success: function(d) {
+            $('#firmware_version').html('Current&nbsp;Version:&nbsp;' + d.version);
+        },
+        error: function(jq, errorstatus, errortxt) {
+            $('#firmware_version').html('Current&nbsp;Version:&nbsp;Unknown');
+        }
+    });
+
     $.ajax({
         url: '/set_time',
         method: 'PUT',
