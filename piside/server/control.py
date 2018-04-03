@@ -94,7 +94,7 @@ def slewtocheck(ra, dec):
     altaz = to_altaz_asdeg(wanted_skycoord)
     # TODO: Check if in keepout zone
     # Check if above horizon
-    if altaz['alt'] < 0:
+    if altaz and altaz['alt'] is not None and altaz['alt'] < 0:
         return False
     else:
         return True
@@ -102,7 +102,7 @@ def slewtocheck(ra, dec):
 
 def update_location():
     #print(settings['location'])
-    if not settings['location']['lat']:
+    if 'location' not in settings or not settings['location'] or not settings['location']['lat']:
         return
     el = EarthLocation(lat=settings['location']['lat'] * u.deg,
                        lon=settings['location']['long'] * u.deg,
@@ -391,6 +391,10 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         slew_lock.release()
 
 
+class NotSyncedException(Exception):
+    pass
+
+
 def slew(ra, dec, parking=False):
     """
 
@@ -399,6 +403,8 @@ def slew(ra, dec, parking=False):
     :return:
     """
     # TODO: Error conditions
+    if runtime_settings is None or 'sync_info' not in runtime_settings or runtime_settings['sync_info'] is None:
+        raise NotSyncedException('Not Synced')
     wanted_skycoord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord, parking)
 

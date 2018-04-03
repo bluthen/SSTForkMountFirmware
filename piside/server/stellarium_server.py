@@ -195,7 +195,7 @@ def run():
                 print('Sending scope coors to stellarium', len(stelClients))
                 # TODO: Last Status thread safety
                 ls = control.last_status
-                if ls is not None:
+                if ls is not None and 'ra' in ls and 'dec' in ls and ls['ra'] and ls['dec']:
                     stelClients[s].sendEqCoords('', ls['ra']*24.0/360.0, ls['dec'], status)
             if len(gotoQueue) > 0:
                 print('Sending goto (ra, dec)=' + str(gotoQueue[0]))
@@ -204,7 +204,10 @@ def run():
                 dec = gotoQueue[0][1]
                 gotoQueue = gotoQueue[1:]
                 if control.slewtocheck(ra, dec):
-                    control.slew(ra, dec)
+                    try:
+                        control.slew(ra, dec)
+                    except control.NotSyncedException as e:
+                        pass
             # logging.info('Perform step')
             # perform one step
             readers = [stelSocket] + [s for s in stelClients]

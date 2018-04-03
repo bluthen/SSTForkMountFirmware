@@ -44,19 +44,21 @@
             <label class="btn btn-primary active">
                 <input type="radio" id="direction-controls-speed-fastest" name="direction-controls-speed"
                        value="fastest"
-                       autocomplete="off" checked> Speed Fastest
+                       autocomplete="off" checked><i class="fas fa-angle-double-left"></i><i class="fas fa-angle-double-left" style="margin-left:-2px"></i>
+                Speed Fastest
             </label>
             <label class="btn btn-primary">
                 <input type="radio" id="direction-controls-speed-faster" name="direction-controls-speed" value="faster"
-                       autocomplete="off"> Faster
+                       autocomplete="off"><i class="fas fa-angle-double-left"></i><i class="fas fa-angle-left" style="margin-left:-2px"></i>
+                Faster
             </label>
             <label class="btn btn-primary">
                 <input type="radio" id="direction-controls-speed-medium" name="direction-controls-speed" value="medium"
-                       autocomplete="off"> Medium
+                       autocomplete="off"><i class="fas fa-angle-double-left"></i> Medium
             </label>
             <label class="btn btn-primary">
                 <input type="radio" id="direction-controls-speed-slower" name="direction-controls-speed" value="slower"
-                       autocomplete="off"> Slower
+                       autocomplete="off"><i class="fas fa-angle-left"></i> Slower
             </label>
             <label class="btn btn-primary">
                 <input type="radio" id="direction-controls-speed-slowest" name="direction-controls-speed"
@@ -142,12 +144,12 @@
                     <thead>
                     <tr>
                         <th scope="col">Name</th>
+                        <th scope="col">Slew</th>
+                        <th scope="col">Sync</th>
                         <th scope="col">RA/Dec</th>
                         <th scope="col">Alt-Az</th>
                         <th scope="col">Mag</th>
                         <th scope="col">Size</th>
-                        <th scope="col">Sync</th>
-                        <th scope="col">Slew</th>
                     </tr>
                     </thead>
                     <tbody></tbody>
@@ -204,10 +206,11 @@
                     </div>
                 </div>
             </div>
-            <button id="manual_sync" type="button" class="btn btn-primary"><i class="fas fa-sync" alt="Sync"></i>Sync
-            </button>&nbsp;<button id="manual_slewto" type="button" class="btn btn-primary"><i
-                class="far fa-play-circle"></i>Slew To
-        </button>
+            <button id="manual_slewto" type="button" class="btn btn-success"><i
+                    class="far fa-play-circle"></i>Slew
+            </button>
+            <button id="manual_sync" type="button" class="btn btn-warning"><i class="fas fa-sync" alt="Sync"></i>Sync
+            </button>&nbsp;
         </div>
         <div class="tab-pane fade" id="locationt" role="tabpanel" aria-labelledby="locationt-tab">
             <h5>Search</h5>
@@ -266,10 +269,10 @@
             </div>
             <div class="form-group row">
                 <div class="col-sm-10">
-                    <button id="location_manual_set" type="button" class="btn btn-primary"><i class="fas fa-globe"></i>Set
+                    <button id="location_manual_set" type="button" class="btn btn-success"><i class="fas fa-globe"></i>Set
                         Location
                     </button>
-                    <button id="location_manual_unset" type="button" class="btn btn-primary"><i
+                    <button id="location_manual_unset" type="button" class="btn btn-danger"><i
                             class="fas fa-globe"></i>Unset
                         Location
                     </button>
@@ -295,25 +298,26 @@
             <br/>
             Park Position (Alt-Az): <span id="settings_park_position"></span>
             <div class="form-group">
-                <button id="settings_park" type="button" class="btn btn-primary">Park Scope</button>&nbsp;
-                <button id="settings_set_park_position" type="button" class="btn btn-primary">
+                <button id="settings_park" type="button" class="btn btn-success"><i class="fas fa-home"></i>
+                    Park Scope</button>&nbsp;
+                <button id="settings_set_park_position" type="button" class="btn btn-warning"><i class="fas fa-home"></i>
                     Set
                     Park
                     Position to Current Position
                 </button>
                 <button id="settings_unset_park_position" type="button"
-                        class="btn btn-primary">
+                        class="btn btn-danger"><i class="fas fa-home"></i>
                     Unset
                     Park
                     Position
                 </button>
                 <br/><br/>
                 <button id="settings_start_tracking" type="button"
-                        class="btn btn-primary">
+                        class="btn btn-success"> <i class="fas fa-hourglass-start"></i>
                     Start tracking
                 </button>
                 <button id="settings_stop_tracking" type="button"
-                        class="btn btn-primary">
+                        class="btn btn-danger"><i class="fas fa-hourglass-end"></i>
                     Stop tracking
                 </button>
             </div>
@@ -322,7 +326,8 @@
                 <div class="col-md-1">
                     <span id="firmware_version">Current&nbsp;Version:</span>
                     <input id="firmware_file" type="file"/>
-                    <button id="firmware_file_upload" type="button" class="btn btn-primary">Upload New Firmware</button>
+                    <button id="firmware_file_upload" type="button" class="btn btn-primary"><i class="fas fa-upload"></i>
+                        Upload New Firmware</button>
                 </div>
             </div>
 
@@ -435,7 +440,7 @@
                     <input class="form-control" id="settings_dec_slew_slowest" type="text"/>
                 </div>
                 <div class="form-group">
-                    <button id="settings_save" type="button" class="btn btn-primary">Save Advanced Settings</button>
+                    <button id="settings_save" type="button" class="btn btn-warning"><i class="fas fa-cog"></i>Save Advanced Settings</button>
                     <span id="settings_save_status"></span><br/>
                 </div>
             </div>
