@@ -41,7 +41,7 @@ def root():
 
 @app.route('/version')
 def version():
-    return jsonify({"version": "0.0.2"})
+    return jsonify({"version": "0.0.3"})
 
 
 @app.route('/settings')
