@@ -409,10 +409,10 @@ $(document).ready(function () {
             $('#errorInfoModal').modal();
             return null;
         }
-        ra = (360.0 / 24.0) * parseInt(ras[0], 10) + parseInt(ras[1], 10) / 60.0 + parseFloat(ras[2]) / (60 * 60);
+        ra = (360.0 / 24.0) * (parseInt(ras[0], 10) + parseInt(ras[1], 10) / 60.0 + parseFloat(ras[2]) / (60 * 60));
 
         var decs = dec.split(' ');
-        dec = parseInt(decs[0], 10) + parseInt(decs[1], 10) / 60.0 + parseFloat(decs[2]) / (60 * 60);
+        dec = parseInt(decs[0], 10) + (parseInt(decs[1], 10) / 60.0) + (parseFloat(decs[2]) / (60 * 60));
         return {ra: ra, dec: dec};
     };
 
