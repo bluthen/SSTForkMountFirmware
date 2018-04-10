@@ -1,5 +1,6 @@
-from flask import Flask, redirect, jsonify, request
+from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
 from flask_socketio import SocketIO, emit
+from functools import wraps, update_wrapper
 import json
 import control
 import threading
@@ -19,12 +20,14 @@ import astropy.coordinates
 from astropy.coordinates import solar_system_ephemeris
 import astropy.units as u
 import stellarium_server
+import math
+import os
 iers.conf.auto_download = False
 
 monkey_patch()
 
 st_queue = None
-app = Flask(__name__, static_url_path='/static', static_folder='../client/')
+app = Flask(__name__, static_folder='../client/')
 socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
 settings = None
 settings_json_lock = threading.RLock()
@@ -34,22 +37,62 @@ conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
 runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info': None, 'tracking': True}
 
 
+@app.context_processor
+def override_url_for():
+    """
+    Generate a new token on every request to prevent the browser from
+    caching static files.
+    """
+    return dict(url_for=dated_url_for)
+
+
+def dated_url_for(endpoint, **values):
+    if endpoint == 'static':
+        filename = values.get('filename', None)
+        if filename:
+            file_path = os.path.join(app.root_path,
+                                     endpoint, filename)
+            values['q'] = int(os.stat(file_path).st_mtime)
+    return url_for(endpoint, **values)
+
+
+def nocache(view):
+    @wraps(view)
+    def no_cache(*args, **kwargs):
+        response = make_response(view(*args, **kwargs))
+        response.headers['Last-Modified'] = datetime.datetime.now()
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        return response
+
+    return update_wrapper(no_cache, view)
+
+@app.route('/static/<path:path>')
+@nocache
+def send_static(path):
+    return send_from_directory('../client', path)
+
 @app.route('/')
+@nocache
 def root():
     return redirect('/static/index.html')
 
 
 @app.route('/version')
+@nocache
 def version():
-    return jsonify({"version": "0.0.3"})
+    return jsonify({"version": "0.0.4"})
 
 
 @app.route('/settings')
+@nocache
 def settings_get():
     return jsonify(settings)
 
 
 @app.route('/settings', methods=['PUT'])
+@nocache
 def settings_put():
     global settings
     print('settings_put')
@@ -89,6 +132,7 @@ def settings_put():
 
 
 @app.route('/set_location', methods=['DELETE'])
+@nocache
 def unset_location():
     settings['location'] = None
     runtime_settings['earth_location'] = None
@@ -99,6 +143,7 @@ def unset_location():
 
 
 @app.route('/set_location', methods=['PUT'])
+@nocache
 def set_location():
     location = request.form.get('location', None)
     location = json.loads(location)
@@ -121,6 +166,7 @@ def set_location():
 
 
 @app.route('/sync', methods=['PUT'])
+@nocache
 def do_sync():
     ra = request.form.get('ra', None)
     dec = request.form.get('dec', None)
@@ -144,10 +190,15 @@ def do_sync():
     err = {'ra_error': None, 'dec_error': None}
     if last_sync:
         err = control.two_sync_calc_error(last_sync, runtime_settings['sync_info'])
+    if err['ra_error'] is not None and math.isnan(err['ra_error']):
+        err['ra_error'] = None
+    if err['dec_error'] is not None and math.isnan(err['dec_error']):
+        err['dec_error'] = None
     return jsonify(err)
 
 
 @app.route('/slewto', methods=['PUT'])
+@nocache
 def do_slewto():
     ra = request.form.get('ra', None)
     dec = request.form.get('dec', None)
@@ -174,6 +225,7 @@ def do_slewto():
 
 
 @app.route('/slewto_check', methods=['PUT'])
+@nocache
 def do_slewtocheck():
     ra = float(request.form.get('ra', None))
     dec = float(request.form.get('dec', None))
@@ -181,12 +233,14 @@ def do_slewtocheck():
 
 
 @app.route('/slewto', methods=['DELETE'])
+@nocache
 def stop_slewto():
     control.cancel_slews()
     return 'Stopping Slew', 200
 
 
 @app.route('/set_time', methods=['PUT'])
+@nocache
 def set_time():
     s = datetime.datetime.now()
     time = request.form.get('time', None)
@@ -209,6 +263,7 @@ def set_time():
 
 
 @app.route('/set_park_position', methods=['PUT'])
+@nocache
 def set_park_position():
     if runtime_settings['sync_info'] is None:
         return 'You must have synced once before setting park position.', 400
@@ -227,6 +282,7 @@ def set_park_position():
 
 
 @app.route('/set_park_position', methods=['DELETE'])
+@nocache
 def unset_park_position():
     settings['park_position'] = None
     with settings_json_lock:
@@ -236,6 +292,7 @@ def unset_park_position():
 
 
 @app.route('/park', methods=['PUT'])
+@nocache
 def do_park():
     # TODO: If started parked we can use 0,0
     if not runtime_settings['earth_location']:
@@ -255,6 +312,7 @@ def do_park():
 
 
 @app.route('/start_tracking', methods=['PUT'])
+@nocache
 def start_tracking():
     runtime_settings['tracking'] = True
     control.ra_set_speed(settings['ra_track_rate'])
@@ -262,6 +320,7 @@ def start_tracking():
 
 
 @app.route('/stop_tracking', methods=['PUT'])
+@nocache
 def stop_tracking():
     runtime_settings['tracking'] = False
     control.ra_set_speed(0)
@@ -274,6 +333,7 @@ def to_list_of_lists(tuple_of_tuples):
 
 
 @app.route('/search_object', methods=['GET'])
+@nocache
 def search_object():
     do_altaz = True
     search = request.args.get('search', None)
@@ -343,6 +403,7 @@ def reboot():
 
 
 @app.route('/firmware_update', methods=['POST'])
+@nocache
 def firmware_update():
     file = request.files['file']
     with tempfile.TemporaryFile(suffix='.zip') as tfile:
@@ -356,6 +417,7 @@ def firmware_update():
 
 
 @app.route('/search_location', methods=['GET'])
+@nocache
 def search_location():
     search = request.args.get('search', None)
     if not search:

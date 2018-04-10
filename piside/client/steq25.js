@@ -101,7 +101,7 @@ $(document).ready(function () {
             return false;
         });
 
-        var get_manual_speed = function() {
+        var get_manual_speed = function () {
             var speed;
             if ($('#direction-controls-speed-fastest').is(':checked')) {
                 speed = 'fastest';
@@ -280,12 +280,12 @@ $(document).ready(function () {
                 for (i = 0; i < d.planets.length; i++) {
                     tr = $('<tr>' +
                         '<th scope="row">' + d.planets[i][0] + '</th>' +
-                        '<td>' + slew_action + '</td>'+
-                        '<td>' + sync_action + '</td>'+
-                        '<td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td>'+
-                        '<td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td>'+
-                        '<td></td>'+
-                        '<td></td>'+
+                        '<td>' + slew_action + '</td>' +
+                        '<td>' + sync_action + '</td>' +
+                        '<td>' + formating.ra(d.planets[i][1]) + '/ ' + formating.dec(d.planets[i][2]) + '</td>' +
+                        '<td>' + formating.dec(d.planets[i][3]) + '/ ' + formating.dec(d.planets[i][4]) + '</td>' +
+                        '<td></td>' +
+                        '<td></td>' +
                         '</tr>');
                     tbody.append(tr);
                     $('button.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
@@ -293,14 +293,14 @@ $(document).ready(function () {
                         slewtoclick((360.0 / 24.0) * parseFloat(d.planets[i][1]), parseFloat(d.planets[i][2])));
                 }
                 for (i = 0; i < d.dso.length; i++) {
-                    tr = $('<tr>'+
-                        '<th scope="row">' + d.dso[i][20] + '</th>'+
-                        '<td>' + slew_action + '</td>'+
-                        '<td>' + sync_action + '</td>'+
-                        '<td>' + formating.ra(d.dso[i][0]) + '/ ' + formating.dec(d.dso[i][1]) + '</td>'+
-                        '<td>' + formating.dec(d.dso[i][21]) + '/ ' + formating.dec(d.dso[i][22]) + '</td>'+
-                        '<td>' + d.dso[i][4] + '</td>'+
-                        '<td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td>'+
+                    tr = $('<tr>' +
+                        '<th scope="row">' + d.dso[i][20] + '</th>' +
+                        '<td>' + slew_action + '</td>' +
+                        '<td>' + sync_action + '</td>' +
+                        '<td>' + formating.ra(d.dso[i][0]) + '/ ' + formating.dec(d.dso[i][1]) + '</td>' +
+                        '<td>' + formating.dec(d.dso[i][21]) + '/ ' + formating.dec(d.dso[i][22]) + '</td>' +
+                        '<td>' + d.dso[i][4] + '</td>' +
+                        '<td>' + d.dso[i][9] + '"x' + d.dso[i][10] + '"</td>' +
                         '</tr>');
                     tbody.append(tr);
                     $('button.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
@@ -308,14 +308,14 @@ $(document).ready(function () {
                         slewtoclick((360.0 / 24.0) * parseFloat(d.dso[i][0]), parseFloat(d.dso[i][1])));
                 }
                 for (i = 0; i < d.stars.length; i++) {
-                    tr = $('<tr>'+
-                        '<th scope="row">' + d.stars[i][6] + ', ' + d.stars[i][5] + '</th>'+
-                        '<td>' + slew_action + '</td>'+
-                        '<td>' + sync_action + '</td>'+
-                        '<td>' + formating.ra(d.stars[i][7]) + '/ ' + formating.dec(d.stars[i][8]) + '</td>'+
-                        '<td>' + formating.dec(d.stars[i][37]) + '/ ' + formating.dec(d.stars[i][38]) + '</td>'+
-                        '<td>' + d.stars[i][13] + '</td>'+
-                        '<td></td>'+
+                    tr = $('<tr>' +
+                        '<th scope="row">' + d.stars[i][6] + ', ' + d.stars[i][5] + '</th>' +
+                        '<td>' + slew_action + '</td>' +
+                        '<td>' + sync_action + '</td>' +
+                        '<td>' + formating.ra(d.stars[i][7]) + '/ ' + formating.dec(d.stars[i][8]) + '</td>' +
+                        '<td>' + formating.dec(d.stars[i][37]) + '/ ' + formating.dec(d.stars[i][38]) + '</td>' +
+                        '<td>' + d.stars[i][13] + '</td>' +
+                        '<td></td>' +
                         '</tr>');
                     tbody.append(tr);
                     $('button.sync', tr).on('click', syncclick((360.0 / 24.0) * parseFloat(d.stars[i][7]), parseFloat(d.stars[i][8])));
@@ -399,38 +399,81 @@ $(document).ready(function () {
     }, 500, {leading: false, trailing: true});
 
     var convert_manual_coordinates_radec = function () {
-        var ra = $('#goto_manual_ra').val().trim();
-        var dec = $('#goto_manual_dec').val().trim();
+        var i, ra, dec;
+        var ras = [
+            $('#goto_manual_ra_hh').val().trim(),
+            $('#goto_manual_ra_mm').val().trim(),
+            $('#goto_manual_ra_ss').val().trim()
+        ];
+        var decs = [
+            $('#goto_manual_dec_dd').val().trim(),
+            $('#goto_manual_dec_mm').val().trim(),
+            $('#goto_manual_dec_ss').val().trim()
+        ];
 
-        var ras = ra.split(' ');
-        if (ras.length !== 3) {
-            $('#errorInfoModalTitle').text('Error');
-            $('#errorInfoModalBody').text("Invalid RA Coordinates Entered.");
-            $('#errorInfoModal').modal();
-            return null;
+        for(i = 0; i < ras.length; i++) {
+            ras[i] = parseInt(ras[i], 10);
+            if (isNaN(ras[i])) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text("Invalid RA Coordinates Entered.");
+                $('#errorInfoModal').modal();
+                return null;
+            }
         }
-        ra = (360.0 / 24.0) * (parseInt(ras[0], 10) + parseInt(ras[1], 10) / 60.0 + parseFloat(ras[2]) / (60 * 60));
+        for(i = 0; i < decs.length; i++) {
+            decs[i] = parseInt(decs[i], 10);
+            if (isNaN(decs[i])) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text("Invalid DEC Coordinates Entered.");
+                $('#errorInfoModal').modal();
+                return null;
+            }
+        }
 
-        var decs = dec.split(' ');
-        dec = parseInt(decs[0], 10) + (parseInt(decs[1], 10) / 60.0) + (parseFloat(decs[2]) / (60 * 60));
+        ra = (360.0 / 24.0) * (ras[0] + (ras[1]/60.0) + (ras[2]/(60*60)));
+        var decsign = decs[0]/Math.abs(decs[0]);
+        if (decsign === 0) {
+            decsign = 1;
+        }
+        dec = decs[0] + decsign*(decs[1]/60.0) + decsign*(decs[2]/(60 * 60));
         return {ra: ra, dec: dec};
     };
 
     var convert_manual_coordinates_altaz = function () {
-        var alt = $('#goto_manual_alt').val().trim();
-        var az = $('#goto_manual_az').val().trim();
+        var i, alts, azs, alt, az;
+        alts = [
+            $('#goto_manual_alt_dd').val().trim(),
+            $('#goto_manual_alt_mm').val().trim(),
+            $('#goto_manual_alt_ss').val().trim()
+        ];
+        azs = [
+            $('#goto_manual_az_ddd').val().trim(),
+            $('#goto_manual_az_mm').val().trim(),
+            $('#goto_manual_az_ss').val().trim()
+        ];
 
-        var alts = alt.split(' ');
-        if (alts.length !== 3) {
-            $('#errorInfoModalTitle').text('Error');
-            $('#errorInfoModalBody').text("Invalid ALT Coordinates Entered.");
-            $('#errorInfoModal').modal();
-            return null;
+        for(i = 0; i < alts.length; i++) {
+            alts[i] = parseInt(alts[i], 10);
+            if (isNaN(alts[i])) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text("Invalid Alt Coordinates Entered.");
+                $('#errorInfoModal').modal();
+                return null;
+            }
         }
-        alt = parseInt(alts[0], 10) + parseInt(alts[1], 10) / 60.0 + parseFloat(alts[2]) / (60 * 60);
+        for(i = 0; i < azs.length; i++) {
+            azs[i] = parseInt(azs[i], 10);
+            if (isNaN(azs[i])) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text("Invalid Az Coordinates Entered.");
+                $('#errorInfoModal').modal();
+                return null;
+            }
+        }
 
-        var azs = az.split(' ');
-        az = parseInt(azs[0], 10) + parseInt(azs[1], 10) / 60.0 + parseFloat(azs[2]) / (60 * 60);
+        var altsign = alts[0]/Math.abs(alts[0]);
+        alt = alts[0] + altsign*(alts[1]/60.0) + altsign*(alts[2]/(60 * 60));
+        az = azs[0] + (azs[1]/60.0) + (azs[2]/(60*60));
         return {alt: alt, az: az};
     };
 
@@ -444,13 +487,13 @@ $(document).ready(function () {
                 console.log('synced');
                 var errstr = '';
                 if (d.ra_error) {
-                    errstr += 'RAErr: ' + (d.ra_error*100.0).toFixed(2)+'%';
+                    errstr += 'RAErr: ' + (d.ra_error * 100.0).toFixed(2) + '%';
                 }
                 if (d.dec_error) {
-                    errstr += ' DECErr: ' + (d.dec_error*100.0).toFixed(2)+'%';
+                    errstr += ' DECErr: ' + (d.dec_error * 100.0).toFixed(2) + '%';
                 }
                 $('#errorInfoModalTitle').text('Info');
-                $('#errorInfoModalBody').html('The mount is now synced.<br>'+errstr);
+                $('#errorInfoModalBody').html('The mount is now synced.<br>' + errstr);
                 $('#errorInfoModal').modal();
             },
             error: function (jq, errorstatus, errortxt) {
@@ -765,15 +808,14 @@ $(document).ready(function () {
         });
     });
 
-    $('#settings-color-scheme-default, #settings-color-scheme-nightvision').change(function() {
-        if($('#settings-color-scheme-default').is(':checked')) {
+    $('#settings-color-scheme-default, #settings-color-scheme-nightvision').change(function () {
+        if ($('#settings-color-scheme-default').is(':checked')) {
             $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.css');
             $('#maincss').attr('href', 'main.css');
         } else {
             $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.redlights.css');
             $('#maincss').attr('href', 'main.redlights.css');
         }
-
     });
 
     $('#goto_manual_coord_select-radec, #goto_manual_coord_select-altaz').change(function () {
@@ -786,37 +828,136 @@ $(document).ready(function () {
         }
     });
 
-    $('#firmware_file_upload').click(function() {
-       var formData = new FormData();
-       var file = $('#firmware_file')[0].files[0];
-       if(file) {
-           formData.append('file', file);
-           $.ajax({
-               url: '/firmware_update',
-               type: 'POST',
-               data: formData,
-               processData: false,
-               contentType: false,
-               success: function(data) {
-                   $('#firmware_upload_div').html('Success. Rebooting, please wait 1min...');
-                   setTimeout(function() {
-                       location.reload();
-                   }, 50000);
-               },
-               error: function(jq){
-                   $('#firmware_upload_div').html('Error:' + jq.responseText);
-               }
-           });
-       }
+    var numbericIntOnly = function(plusminus) {
+        return function(e) {
+            // https://weblog.west-wind.com/posts/2011/Apr/22/Restricting-Input-in-HTML-Textboxes-to-Numeric-Values
+            var key = e.which || e.keyCode;
+            console.log(key);
+
+            if (!e.shiftKey && !e.altKey && !e.ctrlKey &&
+                // numbers
+                key >= 48 && key <= 57 ||
+                // Numeric keypad
+                key >= 96 && key <= 105 ||
+                // comma, period and minus on keypad
+                (plusminus && (key === 187 || key === 189 || key === 109 || key === 107)) ||
+                // Backspace and Tab and Enter
+                key === 8 || key === 9 || key === 13 ||
+                // Home and End
+                key === 35 || key === 36 ||
+                // left and right arrows
+                key === 37 || key === 39 ||
+                // Del and Ins
+                key === 46 || key === 45)
+                return true;
+
+            return false;
+    }
+    };
+
+    $('#goto_manual_ra_hh, #goto_manual_ra_mm, #goto_manual_ra_ss, #goto_manual_dec_dd, #goto_manual_dec_mm, #goto_manual_dec_ss, #goto_manual_alt_dd, #goto_manual_alt_mm, #goto_manual_alt_ss, #goto_manual_az_ddd, #goto_manual_az_mm, #goto_manual_az_ss').focus(function() {
+       $(this).select();
+    });
+
+    $('#goto_manual_ra_hh, #goto_manual_ra_mm, #goto_manual_ra_ss, #goto_manual_dec_mm, #goto_manual_dec_ss, #goto_manual_alt_mm, #goto_manual_alt_ss, #goto_manual_az_ddd, #goto_manual_az_mm, #goto_manual_az_ss').keydown(numbericIntOnly(false));
+    $('#goto_manual_dec_dd, #goto_manual_alt_dd').keydown(numbericIntOnly(true));
+
+    $('#goto_manual_ra_hh').keyup(function (e) {
+        console.log(this);
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_ra_mm').focus();
+        }
+    });
+
+    $('#goto_manual_ra_mm').keyup(function (e) {
+        console.log(this);
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_ra_ss').focus();
+        }
+    });
+
+    $('#goto_manual_ra_ss').keyup(function (e) {
+        console.log(this);
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_dec_dd').focus();
+        }
+    });
+
+    $('#goto_manual_dec_dd').keyup(function (e) {
+        console.log(this);
+        if (this.selectionStart === this.selectionEnd && ((this.value[0] !== '-' && this.value[0] !== '+' && this.value.length === 2) || this.value.length === 3)) {
+            $('#goto_manual_dec_mm').focus();
+        }
+    });
+
+    $('#goto_manual_dec_mm').keyup(function (e) {
+        console.log(this);
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_dec_ss').focus();
+        }
+    });
+
+    $('#goto_manual_alt_dd').keyup(function (e) {
+        if (this.selectionStart === this.selectionEnd && ((this.value[0] !== '-' && this.value[0] !== '+' && this.value.length === 2) || this.value.length === 3)) {
+            $('#goto_manual_alt_mm').focus();
+        }
+    });
+
+    $('#goto_manual_alt_mm').keyup(function (e) {
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_alt_ss').focus();
+        }
+    });
+
+    $('#goto_manual_alt_ss').keyup(function (e) {
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_az_ddd').focus();
+        }
+    });
+
+    $('#goto_manual_az_ddd').keyup(function (e) {
+        if (this.selectionStart === this.selectionEnd && this.value.length === 3) {
+            $('#goto_manual_az_mm').focus();
+        }
+    });
+
+    $('#goto_manual_az_mm').keyup(function (e) {
+        if (this.selectionStart === this.selectionEnd && this.value.length === 2) {
+            $('#goto_manual_az_ss').focus();
+        }
+    });
+
+    $('#firmware_file_upload').click(function () {
+        var formData = new FormData();
+        var file = $('#firmware_file')[0].files[0];
+        if (file) {
+            formData.append('file', file);
+            $.ajax({
+                url: '/firmware_update',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (data) {
+                    $('#firmware_upload_div').html('Success. Rebooting, please wait 1min...');
+                    setTimeout(function () {
+                        location.reload(true);
+                    }, 50000);
+                },
+                error: function (jq) {
+                    $('#firmware_upload_div').html('Error:' + jq.responseText);
+                }
+            });
+        }
     });
 
     $.ajax({
         url: '/version',
         method: 'GET',
-        success: function(d) {
+        success: function (d) {
             $('#firmware_version').html('Current&nbsp;Version:&nbsp;' + d.version);
         },
-        error: function(jq, errorstatus, errortxt) {
+        error: function (jq, errorstatus, errortxt) {
             $('#firmware_version').html('Current&nbsp;Version:&nbsp;Unknown');
         }
     });
