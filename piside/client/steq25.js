@@ -399,7 +399,7 @@ $(document).ready(function () {
     }, 500, {leading: false, trailing: true});
 
     var convert_manual_coordinates_radec = function () {
-        var i, ra, dec;
+        var i, ra, dec, decsign;
         var ras = [
             $('#goto_manual_ra_hh').val().trim(),
             $('#goto_manual_ra_mm').val().trim(),
@@ -431,16 +431,17 @@ $(document).ready(function () {
         }
 
         ra = (360.0 / 24.0) * (ras[0] + (ras[1] / 60.0) + (ras[2] / (60 * 60)));
-        var decsign = decs[0] / Math.abs(decs[0]);
-        if (decsign === 0) {
+        if (decs[0] === 0) {
             decsign = 1;
+        } else {
+            decsign = decs[0] / Math.abs(decs[0]);
         }
         dec = decs[0] + decsign * (decs[1] / 60.0) + decsign * (decs[2] / (60 * 60));
         return {ra: ra, dec: dec};
     };
 
     var convert_manual_coordinates_altaz = function () {
-        var i, alts, azs, alt, az;
+        var i, alts, azs, alt, az, altsign;
         alts = [
             $('#goto_manual_alt_dd').val().trim(),
             $('#goto_manual_alt_mm').val().trim(),
@@ -470,8 +471,11 @@ $(document).ready(function () {
                 return null;
             }
         }
-
-        var altsign = alts[0] / Math.abs(alts[0]);
+        if (alts[0] === 0) {
+            altsign = 1;
+        } else {
+            altsign = alts[0] / Math.abs(alts[0]);
+        }
         alt = alts[0] + altsign * (alts[1] / 60.0) + altsign * (alts[2] / (60 * 60));
         az = azs[0] + (azs[1] / 60.0) + (azs[2] / (60 * 60));
         return {alt: alt, az: az};
