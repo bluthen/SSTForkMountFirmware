@@ -31,7 +31,7 @@
     </script>
 </head>
 <body>
-<nav class="navbar fixed-bottom">
+<nav id="status_footer" class="navbar fixed-bottom">
     RADEC:<span id="status_radec"></span>|
     AltAz:<span id="status_altaz"></span>|
     R S/T: <span id="status_ra_ticks"></span>|
@@ -182,22 +182,22 @@
                 </div>
                 <div id="goto_manual_coord_radec">
                     <div class="form-group row">
-                        <label for="goto_manual_ra_hh" class="col-form-label col-3">
+                        <label for="goto_manual_ra_hh" class="col-form-label col">
                             RA
                         </label>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_ra_hh" placeholder="hh">
                                 <span class="input-group-addon">&nbsp;h&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_ra_mm" placeholder="mm">
                                 <span class="input-group-addon">&nbsp;m&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_ra_ss" placeholder="ss">
                                 <span class="input-group-addon">&nbsp;s&nbsp;</span>
@@ -206,22 +206,22 @@
                         <br/>
                     </div>
                     <div class="row">
-                        <label for="goto_manual_dec_dd" class="col-3 col-form-label">
+                        <label for="goto_manual_dec_dd" class="col col-form-label">
                             DEC
                         </label>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_dec_dd" placeholder="±dd">
                                 <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_dec_mm" placeholder="mm">
                                 <span class="input-group-addon">&nbsp;'&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_dec_ss" placeholder="ss"><br/>
                                 <span class="input-group-addon">&nbsp;"&nbsp;</span>
@@ -231,22 +231,22 @@
                 </div>
                 <div id="goto_manual_coord_altaz" style="display:none">
                     <div class="form-group row">
-                        <label for="goto_manual_alt_dd" class="col-3 col-form-label">
+                        <label for="goto_manual_alt_dd" class="col col-form-label">
                             Alt
                         </label>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_alt_dd" placeholder="±dd">
                                 <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_alt_mm" placeholder="mm">
                                 <span class="input-group-addon">&nbsp;'&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_alt_ss" placeholder="ss"><br/>
                                 <span class="input-group-addon">&nbsp;"&nbsp;</span>
@@ -254,22 +254,22 @@
                         </div>
                     </div>
                     <div class="form-group row">
-                        <label for="goto_manual_az_ddd" class="col-3 col-form-label">
+                        <label for="goto_manual_az_ddd" class="col col-form-label">
                             Az
                         </label>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_az_ddd" placeholder="ddd">
                                 <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_az_mm" placeholder="mm">
                                 <span class="input-group-addon">&nbsp;'&nbsp;</span>
                             </div>
                         </div>
-                        <div class="col-1">
+                        <div class="col">
                             <div class="input-group">
                                 <input class="form-control" type="text" id="goto_manual_az_ss" placeholder="ss">
                                 <span class="input-group-addon">&nbsp;"&nbsp;</span>

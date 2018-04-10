@@ -411,7 +411,7 @@ $(document).ready(function () {
             $('#goto_manual_dec_ss').val().trim()
         ];
 
-        for(i = 0; i < ras.length; i++) {
+        for (i = 0; i < ras.length; i++) {
             ras[i] = parseInt(ras[i], 10);
             if (isNaN(ras[i])) {
                 $('#errorInfoModalTitle').text('Error');
@@ -420,7 +420,7 @@ $(document).ready(function () {
                 return null;
             }
         }
-        for(i = 0; i < decs.length; i++) {
+        for (i = 0; i < decs.length; i++) {
             decs[i] = parseInt(decs[i], 10);
             if (isNaN(decs[i])) {
                 $('#errorInfoModalTitle').text('Error');
@@ -430,12 +430,12 @@ $(document).ready(function () {
             }
         }
 
-        ra = (360.0 / 24.0) * (ras[0] + (ras[1]/60.0) + (ras[2]/(60*60)));
-        var decsign = decs[0]/Math.abs(decs[0]);
+        ra = (360.0 / 24.0) * (ras[0] + (ras[1] / 60.0) + (ras[2] / (60 * 60)));
+        var decsign = decs[0] / Math.abs(decs[0]);
         if (decsign === 0) {
             decsign = 1;
         }
-        dec = decs[0] + decsign*(decs[1]/60.0) + decsign*(decs[2]/(60 * 60));
+        dec = decs[0] + decsign * (decs[1] / 60.0) + decsign * (decs[2] / (60 * 60));
         return {ra: ra, dec: dec};
     };
 
@@ -452,7 +452,7 @@ $(document).ready(function () {
             $('#goto_manual_az_ss').val().trim()
         ];
 
-        for(i = 0; i < alts.length; i++) {
+        for (i = 0; i < alts.length; i++) {
             alts[i] = parseInt(alts[i], 10);
             if (isNaN(alts[i])) {
                 $('#errorInfoModalTitle').text('Error');
@@ -461,7 +461,7 @@ $(document).ready(function () {
                 return null;
             }
         }
-        for(i = 0; i < azs.length; i++) {
+        for (i = 0; i < azs.length; i++) {
             azs[i] = parseInt(azs[i], 10);
             if (isNaN(azs[i])) {
                 $('#errorInfoModalTitle').text('Error');
@@ -471,9 +471,9 @@ $(document).ready(function () {
             }
         }
 
-        var altsign = alts[0]/Math.abs(alts[0]);
-        alt = alts[0] + altsign*(alts[1]/60.0) + altsign*(alts[2]/(60 * 60));
-        az = azs[0] + (azs[1]/60.0) + (azs[2]/(60*60));
+        var altsign = alts[0] / Math.abs(alts[0]);
+        alt = alts[0] + altsign * (alts[1] / 60.0) + altsign * (alts[2] / (60 * 60));
+        az = azs[0] + (azs[1] / 60.0) + (azs[2] / (60 * 60));
         return {alt: alt, az: az};
     };
 
@@ -828,8 +828,8 @@ $(document).ready(function () {
         }
     });
 
-    var numbericIntOnly = function(plusminus) {
-        return function(e) {
+    var numbericIntOnly = function (plusminus) {
+        return function (e) {
             // https://weblog.west-wind.com/posts/2011/Apr/22/Restricting-Input-in-HTML-Textboxes-to-Numeric-Values
             var key = e.which || e.keyCode;
             console.log(key);
@@ -852,11 +852,11 @@ $(document).ready(function () {
                 return true;
 
             return false;
-    }
+        }
     };
 
-    $('#goto_manual_ra_hh, #goto_manual_ra_mm, #goto_manual_ra_ss, #goto_manual_dec_dd, #goto_manual_dec_mm, #goto_manual_dec_ss, #goto_manual_alt_dd, #goto_manual_alt_mm, #goto_manual_alt_ss, #goto_manual_az_ddd, #goto_manual_az_mm, #goto_manual_az_ss').focus(function() {
-       $(this).select();
+    $('#goto_manual_ra_hh, #goto_manual_ra_mm, #goto_manual_ra_ss, #goto_manual_dec_dd, #goto_manual_dec_mm, #goto_manual_dec_ss, #goto_manual_alt_dd, #goto_manual_alt_mm, #goto_manual_alt_ss, #goto_manual_az_ddd, #goto_manual_az_mm, #goto_manual_az_ss').focus(function () {
+        $(this).select();
     });
 
     $('#goto_manual_ra_hh, #goto_manual_ra_mm, #goto_manual_ra_ss, #goto_manual_dec_mm, #goto_manual_dec_ss, #goto_manual_alt_mm, #goto_manual_alt_ss, #goto_manual_az_ddd, #goto_manual_az_mm, #goto_manual_az_ss').keydown(numbericIntOnly(false));
@@ -948,6 +948,23 @@ $(document).ready(function () {
                     $('#firmware_upload_div').html('Error:' + jq.responseText);
                 }
             });
+        }
+    });
+
+    var isMobile = function () {
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            return true;
+        }
+        return false;
+    };
+
+    $('input').focus(function () {
+        if (isMobile()) {
+            $('#status_footer').hide();
+        }
+    }).blur(function () {
+        if (isMobile()) {
+            $('#status_footer').show();
         }
     });
 
