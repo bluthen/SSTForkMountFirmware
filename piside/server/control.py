@@ -101,7 +101,7 @@ def slewtocheck(ra, dec):
 
 
 def update_location():
-    #print(settings['location'])
+    # print(settings['location'])
     if 'location' not in settings or not settings['location'] or not settings['location']['lat']:
         return
     el = EarthLocation(lat=settings['location']['lat'] * u.deg,
@@ -175,7 +175,7 @@ def init(osocketio, fsettings, fruntime_settings):
     if inited:
         return
     inited = True
-    #print('Inited')
+    # print('Inited')
     runtime_settings = fruntime_settings
     settings = fsettings
     socketio = osocketio
@@ -197,7 +197,7 @@ def manual_control(direction, speed):
     # TODO: Acceleration
     # TODO: Disabling autoguiding
     global microserial, microseriallock, slew_lock, manual_lock
-    #print('manual_control', direction, speed)
+    # print('manual_control', direction, speed)
     with manual_lock:
         got_lock = slew_lock.acquire(blocking=False)
         if not got_lock:
@@ -221,8 +221,8 @@ def manual_control(direction, speed):
                         status = get_status()
                         # print(status)
                         if (runtime_settings['tracking'] and status['rs'] != settings['ra_track_rate']) or status['rs'] != 0:
-                            sspeed = status['rs'] - math.copysign(settings['ra_slew_fastest']/10.0, status['rs'])
-                            if status['rs'] == 0 or abs(sspeed) < settings['ra_track_rate'] or sspeed/status['rs'] < 0:
+                            sspeed = status['rs'] - math.copysign(settings['ra_slew_fastest'] / 10.0, status['rs'])
+                            if status['rs'] == 0 or abs(sspeed) < settings['ra_track_rate'] or sspeed / status['rs'] < 0:
                                 if runtime_settings['tracking']:
                                     sspeed = settings['ra_track_rate']
                                 else:
@@ -261,29 +261,29 @@ def manual_control(direction, speed):
                     if OPPOSITE_MANUAL[direction] in timers:
                         return
                     if direction == 'left':
-                        sspeed = status['rs'] - settings['ra_slew_'+speed]/10.0
+                        sspeed = status['rs'] - settings['ra_slew_' + speed] / 10.0
                         # print('ra_slew_'+speed, settings['ra_slew_'+speed]/10.0)
-                        if abs(sspeed) > settings['ra_slew_'+speed]:
-                            sspeed = -settings['ra_slew_'+speed]
+                        if abs(sspeed) > settings['ra_slew_' + speed]:
+                            sspeed = -settings['ra_slew_' + speed]
                         # print(sspeed)
                         ra_set_speed(sspeed)
                     elif direction == 'right':
-                        sspeed = status['rs'] + settings['ra_slew_'+speed]/10.0
-                        if abs(sspeed) > settings['ra_slew_'+speed]:
-                            sspeed = settings['ra_slew_'+speed]
+                        sspeed = status['rs'] + settings['ra_slew_' + speed] / 10.0
+                        if abs(sspeed) > settings['ra_slew_' + speed]:
+                            sspeed = settings['ra_slew_' + speed]
                         # print(sspeed)
                         ra_set_speed(sspeed)
                     elif direction == 'up':
                         # print('--------------- dec up %.1f' % settings['dec_slew_' + speed])
-                        sspeed = status['ds'] + settings['dec_slew_'+speed]/10.0
-                        if abs(sspeed) > settings['dec_slew_'+speed]:
-                            sspeed = settings['dec_slew_'+speed]
+                        sspeed = status['ds'] + settings['dec_slew_' + speed] / 10.0
+                        if abs(sspeed) > settings['dec_slew_' + speed]:
+                            sspeed = settings['dec_slew_' + speed]
                         # print(sspeed)
                         dec_set_speed(sspeed)
                     elif direction == 'down':
-                        sspeed = status['ds'] - settings['dec_slew_'+speed]/10.0
-                        if abs(sspeed) > settings['dec_slew_'+speed]:
-                            sspeed = -settings['dec_slew_'+speed]
+                        sspeed = status['ds'] - settings['dec_slew_' + speed] / 10.0
+                        if abs(sspeed) > settings['dec_slew_' + speed]:
+                            sspeed = -settings['dec_slew_' + speed]
                         # print('--------------- dec down -%.1f' % settings['dec_slew_' + speed])
                         # print(sspeed)
                         dec_set_speed(sspeed)
@@ -323,57 +323,60 @@ def dec_set_speed(speed):
 
 def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
     global cancel_slew, slewing
+    # sleep_time must be < 1
     sleep_time = 0.02
+
+    ra_close_enough = 0
+    dec_close_enough = 0
+
+    # TODO: Backlash
+
     try:
         slew_lock.acquire()
         autoguide_disable()
         slewing = True
         cancel_slew = False
-        need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(), settings['ra_track_rate'],
-                                               settings['dec_ticks_per_degree'])
+        if type(wanted_skycoord) is dict and 'ra_steps' in wanted_skycoord:
+            need_step_position = {'ra': wanted_skycoord['ra_steps'], 'dec': wanted_skycoord['dec_steps']}
+        else:
+            need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
+                                                   settings['ra_track_rate'],
+                                                   settings['dec_ticks_per_degree'])
         status = get_status()
-        first = True
         while not cancel_slew:
-            if abs(need_step_position['ra'] - status['rp']) <= math.ceil(settings['ra_track_rate']) and abs(
-                            need_step_position['dec'] - status['dp']) <= math.ceil(
-                                15 * settings['dec_ticks_per_degree'] / (60.0 * 60.0)):
-                break
-            # TODO Acceleration
             ra_delta = need_step_position['ra'] - status['rp']
-            if abs(ra_delta) < math.ceil(settings['ra_track_rate']) and not math.isclose(status['rs'],
-                                                                                         settings['ra_track_rate'],
-                                                                                         abs_tol=0.1):
+            dec_delta = need_step_position['dec'] - status['dp']
+            print(ra_delta, dec_delta)
+            if abs(round(ra_delta)) <= ra_close_enough and abs(round(dec_delta)) <= dec_close_enough:
+                break
+
+            if abs(ra_delta) < math.ceil(settings['ra_track_rate']):
                 if runtime_settings['tracking']:
-                    ra_set_speed(settings['ra_track_rate'])
+                    ra_set_speed(settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta)
                 else:
                     ra_set_speed(0)
-
-            elif abs(ra_delta) < settings['ra_slew_fastest'] / 3.0:
+            elif abs(ra_delta) < settings['ra_slew_fastest'] / (1.0/sleep_time):
                 # Need to go at least 2 * ra_track_rate
-                speed = 3.0 * ra_delta
-                if abs(speed) < settings['ra_track_rate']:
-                    speed = math.copysign(2 * settings['ra_track_rate'], speed)
+                speed = ((1.0-sleep_time)/sleep_time) * ra_delta
                 ra_set_speed(speed)
-            elif first:
-                ra_set_speed(math.copysign(settings['ra_slew_slowest'], ra_delta))
             elif abs(ra_delta) > settings['ra_slew_slowest']:
-                speed = status['rs'] + math.copysign(settings['ra_slew_fastest']/(1.0/sleep_time), ra_delta)
+                speed = status['rs'] + math.copysign(settings['ra_slew_fastest'] / (1.0 / sleep_time), ra_delta)
+                status['rs'] += speed/7.0
                 if abs(speed) > settings['ra_slew_fastest']:
                     speed = math.copysign(settings['ra_slew_fastest'], ra_delta)
                 ra_set_speed(speed)
-            dec_delta = need_step_position['dec'] - status['dp']
-            if abs(dec_delta) < 15 * settings['dec_ticks_per_degree'] / (60.0 * 60.0):
+
+            if abs(dec_delta) < dec_close_enough:
                 dec_set_speed(0.0)
-            elif abs(dec_delta) < settings['dec_slew_fastest'] / 3.0:
-                dec_set_speed(3.0 * dec_delta)
-            elif first:
-                dec_set_speed(math.copysign(settings['dec_slew_slowest'], dec_delta))
+            elif abs(dec_delta) < settings['dec_slew_fastest'] / (1.0/sleep_time):
+                dec_set_speed(((1.0-sleep_time)/sleep_time) * dec_delta)
             else:
-                speed = status['ds'] + math.copysign(settings['dec_slew_fastest']/(1.0/sleep_time), dec_delta)
+                speed = status['ds'] + math.copysign(settings['dec_slew_fastest'] / (1.0 / sleep_time), dec_delta)
+                status['ds'] += speed/7.0
                 if abs(speed) > settings['dec_slew_fastest']:
                     speed = math.copysign(settings['dec_slew_fastest'], dec_delta)
                 dec_set_speed(speed)
-            first = False
+
             time.sleep(sleep_time)
             if not parking:
                 need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
@@ -407,6 +410,18 @@ def slew(ra, dec, parking=False):
         raise NotSyncedException('Not Synced')
     wanted_skycoord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord, parking)
+
+
+def slew_to_steps(ra_steps, dec_steps):
+    """
+
+    :param ra: float as deg
+    :param dec: float as deg
+    :return:
+    """
+    # TODO: Error conditions
+    wanted_skycoord = {'ra_steps': ra_steps, 'dec_steps': dec_steps}
+    move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord, True)
 
 
 def move_to_skycoord(sync_info, wanted_skycoord, parking=False):
@@ -594,17 +609,16 @@ def two_sync_calc_error(last_sync, current_sync):
     if ra_ther == 0:
         ra_error = None
     else:
-        ra_error = (ra_exp - ra_ther)/float(ra_ther)
+        ra_error = (ra_exp - ra_ther) / float(ra_ther)
     if dec_ther == 0:
         dec_error = None
     else:
-        dec_error = (dec_exp - dec_ther)/float(dec_ther)
+        dec_error = (dec_exp - dec_ther) / float(dec_ther)
 
     return {
         'ra_error': ra_error,
         'dec_error': dec_error
     }
-
 
 
 def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree):
@@ -694,25 +708,25 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
     ra_deg = clean_deg(ra_deg)
 
     dec_deg, pole_count = clean_deg(sync_info['coords'].icrs.dec.deg + d_dec, True)
-    #TODO: Fix RA if dec went across pole
+    # TODO: Fix RA if dec went across pole
     if pole_count % 2 > 0:
-        ra_deg = clean_deg(ra_deg+180.0)
+        ra_deg = clean_deg(ra_deg + 180.0)
 
     # print(ra_deg, dec_deg)
     coord = SkyCoord(ra=ra_deg * u.degree,
-                    dec=dec_deg * u.degree,
-                    frame='icrs')
+                     dec=dec_deg * u.degree,
+                     frame='icrs')
 
     # astropy way
-    #adj_sync_coord = SkyCoord(ra=ra_deg_time2(sync_info['coords'].icrs.ra.deg, sync_info['time'], stime) * u.deg,
+    # adj_sync_coord = SkyCoord(ra=ra_deg_time2(sync_info['coords'].icrs.ra.deg, sync_info['time'], stime) * u.deg,
     #                          dec=sync_info['coords'].icrs.dec.deg * u.deg, frame='icrs')
 
-    #d_ra = (steps['ra'] - sync_info['steps']['ra']) / (ra_track_rate / SIDEREAL_RATE)
-    #d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_ticks_per_degree
-    #d_dec = clean_deg(d_dec, True)
-    #offset_base = SkyCoord(d_ra * u.deg, d_dec * u.deg, frame='icrs')
-    #offset = adj_sync_coord.transform_to(offset_base.skyoffset_frame())
-    #offset_lon = offset.lon
-    #offset_lon.wrap_angle = Angle(360.0 * u.deg)
-    #coord = SkyCoord(ra=offset_lon, dec=offset.lat, frame='icrs')
+    # d_ra = (steps['ra'] - sync_info['steps']['ra']) / (ra_track_rate / SIDEREAL_RATE)
+    # d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_ticks_per_degree
+    # d_dec = clean_deg(d_dec, True)
+    # offset_base = SkyCoord(d_ra * u.deg, d_dec * u.deg, frame='icrs')
+    # offset = adj_sync_coord.transform_to(offset_base.skyoffset_frame())
+    # offset_lon = offset.lon
+    # offset_lon.wrap_angle = Angle(360.0 * u.deg)
+    # coord = SkyCoord(ra=offset_lon, dec=offset.lat, frame='icrs')
     return coord

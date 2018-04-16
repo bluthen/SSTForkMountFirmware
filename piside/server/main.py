@@ -82,7 +82,7 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.5"})
+    return jsonify({"version": "0.0.6"})
 
 
 @app.route('/settings')
@@ -204,8 +204,13 @@ def do_slewto():
     dec = request.form.get('dec', None)
     alt = request.form.get('alt', None)
     az = request.form.get('az', None)
+    ra_steps = request.form.get('ra_steps', None)
+    dec_steps = request.form.get('dec_steps', None)
     parking = False
-    if alt is not None and az is not None:
+    if ra_steps is not None and dec_steps is not None:
+        control.slew_to_steps(int(ra_steps), int(dec_steps))
+        return 'Slewing', 200
+    elif alt is not None and az is not None:
         alt = float(alt)
         az = float(az)
         coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,

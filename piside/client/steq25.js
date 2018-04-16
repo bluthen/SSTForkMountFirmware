@@ -20,6 +20,7 @@ $(document).ready(function () {
         var status_altaz = $('#status_altaz');
         var status_radec2 = $('#slewModalStatus');
         var status_altaz2 = $('#slewModalAltAzStatus');
+        var status_steps2 = $('#slewModalStepsStatus');
         var slewmodal = $('#slewModal');
         status_radec.empty();
         status_altaz.empty();
@@ -34,6 +35,7 @@ $(document).ready(function () {
         }
         $('#status_ra_ticks').text('' + msg.rs + '/' + msg.rp);
         $('#status_dec_ticks').text('' + msg.ds + '/' + msg.dp);
+        status_steps2.text(msg.rp+'/'+msg.dp);
         $('#status_time').text(msg.time);
         if (!status.slewing && slewmodal.hasClass('show')) {
             slewmodal.modal('hide');
@@ -481,6 +483,19 @@ $(document).ready(function () {
         return {alt: alt, az: az};
     };
 
+    var convert_manual_coordinates_steps = function() {
+        var ra, dec;
+        ra = parseInt($('#goto_manual_steps_ra').val().trim(), 10);
+        dec = parseInt($('#goto_manual_steps_dec').val().trim(), 10);
+        if (isNaN(ra) || isNaN(dec)) {
+            $('#errorInfoModalTitle').text('Error');
+            $('#errorInfoModalBody').text("Invalid Step values Entered.");
+            $('#errorInfoModal').modal();
+            return null;
+        }
+        return {ra: ra, dec: dec};
+    };
+
     var sync = function (ra, dec) {
         $.ajax({
             url: '/sync',
@@ -533,6 +548,7 @@ $(document).ready(function () {
 
     var slewto = function (ra, dec) {
         $('#slewModalStatus').show();
+        $('#slewModalStepsStatus').hide();
         $('#slewModalAltAzStatus').hide();
         $.ajax({
             url: '/slewto',
@@ -556,6 +572,7 @@ $(document).ready(function () {
     var slewtoaltaz = function (alt, az) {
         //TODO: Combine with slewto
         $('#slewModalStatus').hide();
+        $('#slewModalStepsStatus').hide();
         $('#slewModalAltAzStatus').show();
         $.ajax({
             url: '/slewto',
@@ -575,6 +592,31 @@ $(document).ready(function () {
             }
         });
     };
+
+
+    var slewtosteps = function (ra, dec) {
+        $('#slewModalStepsStatus').show();
+        $('#slewModalStatus').hide();
+        $('#slewModalAltAzStatus').hide();
+        $.ajax({
+            url: '/slewto',
+            method: 'PUT',
+            data: {ra_steps: ra, dec_steps: dec},
+            success: function (d) {
+                var radecstr = ra + '/' + dec;
+                $('#slewModalTarget').html(radecstr);
+                //TODO: Dialog to abort?
+                $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
+            },
+            error: function (jq, errorstatus, errortxt) {
+                console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    };
+
 
     $('#slewModalCancel').click(function () {
         $.ajax({
@@ -683,9 +725,10 @@ $(document).ready(function () {
             if (coords) {
                 sync(coords.ra, coords.dec);
             }
-        } else {
+        } else if($('#goto_manual_coord_select-altaz').is(':checked')) {
             coords = convert_manual_coordinates_altaz();
             syncaltaz(coords.alt, coords.az);
+        } else {
         }
     });
     $('#manual_slewto').on('click', function () {
@@ -693,9 +736,14 @@ $(document).ready(function () {
         if ($('#goto_manual_coord_select-radec').is(':checked')) {
             coords = convert_manual_coordinates_radec();
             slewto(coords.ra, coords.dec);
-        } else {
+        } else if($('#goto_manual_coord_select-altaz').is(':checked')) {
             coords = convert_manual_coordinates_altaz();
             slewtoaltaz(coords.alt, coords.az);
+        } else {
+            coords = convert_manual_coordinates_steps();
+            if (coords !== null) {
+                slewtosteps(coords.ra, coords.dec);
+            }
         }
     });
 
@@ -822,13 +870,22 @@ $(document).ready(function () {
         }
     });
 
-    $('#goto_manual_coord_select-radec, #goto_manual_coord_select-altaz').change(function () {
+    $('#goto_manual_coord_select-radec, #goto_manual_coord_select-altaz, #goto_manual_coord_select-steps').change(function () {
         if ($('#goto_manual_coord_select-radec').is(':checked')) {
             $('#goto_manual_coord_altaz').hide();
+            $('#goto_manual_coord_steps').hide();
             $('#goto_manual_coord_radec').show();
-        } else {
-            $('#goto_manual_coord_altaz').show();
+            $('#manual_sync').show();
+        } else if ($('#goto_manual_coord_select-altaz').is(':checked')) {
             $('#goto_manual_coord_radec').hide();
+            $('#goto_manual_coord_steps').hide();
+            $('#goto_manual_coord_altaz').show();
+            $('#manual_sync').show();
+        } else {
+            $('#goto_manual_coord_radec').hide();
+            $('#goto_manual_coord_altaz').hide();
+            $('#goto_manual_coord_steps').show();
+            $('#manual_sync').hide();
         }
     });
 
@@ -864,7 +921,7 @@ $(document).ready(function () {
     });
 
     $('#goto_manual_ra_hh, #goto_manual_ra_mm, #goto_manual_ra_ss, #goto_manual_dec_mm, #goto_manual_dec_ss, #goto_manual_alt_mm, #goto_manual_alt_ss, #goto_manual_az_ddd, #goto_manual_az_mm, #goto_manual_az_ss').keydown(numbericIntOnly(false));
-    $('#goto_manual_dec_dd, #goto_manual_alt_dd').keydown(numbericIntOnly(true));
+    $('#goto_manual_dec_dd, #goto_manual_alt_dd, #goto_manual_steps_ra, #goto_manual_steps_ra').keydown(numbericIntOnly(true));
 
     $('#goto_manual_ra_hh').keyup(function (e) {
         console.log(this);

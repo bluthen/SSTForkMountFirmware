@@ -70,9 +70,9 @@ def command_qs(args):
     swrite("ds:")
     swrite("%.7f\r" % getDECSpeed())
     swrite("rp:")
-    swrite("%.7f\r" % getRAPosition())
+    swrite("%d\r" % round(getRAPosition()))
     swrite("dp:")
-    swrite("%.7f\r" % getDECPosition())
+    swrite("%d\r" % round(getDECPosition()))
     print_prompt()
 
 
@@ -98,9 +98,9 @@ def command_status(args):
     swrite("dec_speed:")
     swrite("%.7f\r" % getDECSpeed())
     swrite("ra_pos:")
-    swrite("%.7f\r" % getRAPosition())
+    swrite("%d\r" % round(getRAPosition()))
     swrite("dec_pos:")
-    swrite("%.7f\r" % getDECPosition())
+    swrite("%d\r" % round(getDECPosition()))
     print_prompt()
 
 
