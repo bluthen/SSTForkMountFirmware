@@ -354,12 +354,15 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                 if runtime_settings['tracking']:
                     ra_set_speed(settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta)
                 else:
-                    ra_set_speed(0)
-            elif abs(ra_delta) < settings['ra_slew_fastest'] / (1.0/sleep_time):
+                    ra_set_speed(((1.0-sleep_time)/sleep_time) * ra_delta)
+            elif abs(ra_delta) < 2.0*settings['ra_slew_fastest']:
                 # Need to go at least 2 * ra_track_rate
                 speed = ((1.0-sleep_time)/sleep_time) * ra_delta
+                speed2 = math.copysign(settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
+                if abs(speed2) < abs(speed):
+                    speed = speed2
                 ra_set_speed(speed)
-            elif abs(ra_delta) > settings['ra_slew_slowest']:
+            else:
                 speed = status['rs'] + math.copysign(settings['ra_slew_fastest'] / (1.0 / sleep_time), ra_delta)
                 status['rs'] += speed/7.0
                 if abs(speed) > settings['ra_slew_fastest']:
@@ -368,8 +371,12 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
 
             if abs(dec_delta) < dec_close_enough:
                 dec_set_speed(0.0)
-            elif abs(dec_delta) < settings['dec_slew_fastest'] / (1.0/sleep_time):
-                dec_set_speed(((1.0-sleep_time)/sleep_time) * dec_delta)
+            elif abs(dec_delta) < 2.0*settings['dec_slew_fastest']:
+                speed = ((1.0-sleep_time)/sleep_time) * dec_delta
+                speed2 = math.copysign(settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
+                if abs(speed2) < abs(speed):
+                    speed = speed2
+                dec_set_speed(speed)
             else:
                 speed = status['ds'] + math.copysign(settings['dec_slew_fastest'] / (1.0 / sleep_time), dec_delta)
                 status['ds'] += speed/7.0
