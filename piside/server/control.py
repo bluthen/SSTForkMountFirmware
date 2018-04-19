@@ -2,6 +2,7 @@ import threading
 import serial
 from functools import partial
 import time
+import json
 
 import datetime
 import astropy
@@ -324,12 +325,15 @@ def dec_set_speed(speed):
 def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
     global cancel_slew, slewing
     # sleep_time must be < 1
-    sleep_time = 0.02
+    sleep_time = 0.1
+    loops_to_full_speed = 10.0
 
-    ra_close_enough = 0
-    dec_close_enough = 0
+    ra_close_enough = 3.0
+    dec_close_enough = 3.0
 
     # TODO: Backlash
+
+    data = {'time': [], 'rpv': [], 'dpv': [], 'rsp': [], 'dsp': [], 'rv': [], 'dv': [], 'era': [], 'edec': []}
 
     try:
         slew_lock.acquire()
@@ -338,12 +342,31 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         cancel_slew = False
         if type(wanted_skycoord) is dict and 'ra_steps' in wanted_skycoord:
             need_step_position = {'ra': wanted_skycoord['ra_steps'], 'dec': wanted_skycoord['dec_steps']}
+            ra_close_enough = 0
+            dec_close_enough = 0
         else:
             need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
                                                    settings['ra_track_rate'],
                                                    settings['dec_ticks_per_degree'])
-        status = get_status()
+        last_datetime = datetime.datetime.now()
+        started_slewing = last_datetime
+        total_time = 0.0
+        first = True
         while not cancel_slew:
+            if not parking:
+                need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
+                                                       settings['ra_track_rate'],
+                                                       settings['dec_ticks_per_degree'])
+            now = datetime.datetime.now()
+            status = get_status()
+            if first:
+                dt = sleep_time
+                first = False
+            else:
+                dt = (now - last_datetime).total_seconds()
+            last_datetime = now
+            total_time += dt
+
             ra_delta = need_step_position['ra'] - status['rp']
             dec_delta = need_step_position['dec'] - status['dp']
             print(ra_delta, dec_delta)
@@ -351,50 +374,75 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                 break
 
             if abs(ra_delta) < math.ceil(settings['ra_track_rate']):
-                if runtime_settings['tracking']:
-                    ra_set_speed(settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta)
+                if not parking and runtime_settings['tracking']:
+                    # ra_speed = settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
+                    ra_speed = settings['ra_track_rate'] + ra_delta/dt
                 else:
-                    ra_set_speed(((1.0-sleep_time)/sleep_time) * ra_delta)
-            elif abs(ra_delta) < 2.0*settings['ra_slew_fastest']:
-                # Need to go at least 2 * ra_track_rate
-                speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                speed2 = math.copysign(settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
-                if abs(speed2) < abs(speed):
-                    speed = speed2
-                ra_set_speed(speed)
+                    # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
+                    ra_speed = ra_delta/dt
+            elif abs(ra_delta) < settings['ra_slew_fastest']/2.0:
+                if not parking and runtime_settings['tracking']:
+                    ra_speed = settings['ra_track_rate'] + 2.0*ra_delta
+                else:
+                    ra_speed = 2.0*ra_delta
+                # Short slew otherwise we are slowing down
+                if abs(ra_speed) > abs(status['rs']):
+                    ra_speed = status['rs'] + ra_speed/loops_to_full_speed
+                    if abs(ra_speed) > abs(status['rs']):
+                        ra_speed = ra_delta
+                # speed = ((1.0-sleep_time)/sleep_time) * ra_delta
+                # speed2 = math.copysign(settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
+                # if abs(speed2) < abs(speed):
+                #     speed = speed2
+                # ra_speed = speed
             else:
-                speed = status['rs'] + math.copysign(settings['ra_slew_fastest'] / (1.0 / sleep_time), ra_delta)
-                status['rs'] += speed/7.0
+                speed = (total_time**2.0)*math.copysign(settings['ra_slew_fastest']/9.0, ra_delta)
                 if abs(speed) > settings['ra_slew_fastest']:
                     speed = math.copysign(settings['ra_slew_fastest'], ra_delta)
-                ra_set_speed(speed)
+                ra_speed = speed
 
             if abs(dec_delta) < dec_close_enough:
-                dec_set_speed(0.0)
-            elif abs(dec_delta) < 2.0*settings['dec_slew_fastest']:
-                speed = ((1.0-sleep_time)/sleep_time) * dec_delta
-                speed2 = math.copysign(settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
-                if abs(speed2) < abs(speed):
-                    speed = speed2
-                dec_set_speed(speed)
+                dec_speed = 0.0
+            elif abs(dec_delta) < settings['dec_slew_fastest']/2.0:
+                dec_speed = dec_delta*2.0
+                if abs(dec_speed) > abs(status['ds']):
+                    dec_speed = status['ds'] + dec_speed/loops_to_full_speed
+                    if abs(dec_speed) > abs(status['ds']):
+                        dec_speed = dec_delta
+
+                #speed = ((1.0-sleep_time)/sleep_time) * dec_delta
+                #speed2 = math.copysign(settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
+                #if abs(speed2) < abs(speed):
+                #    speed = speed2
+                #dec_speed = speed
             else:
-                speed = status['ds'] + math.copysign(settings['dec_slew_fastest'] / (1.0 / sleep_time), dec_delta)
-                status['ds'] += speed/7.0
+                speed = status['ds'] + math.copysign(settings['dec_slew_fastest'] / loops_to_full_speed, dec_delta)
                 if abs(speed) > settings['dec_slew_fastest']:
                     speed = math.copysign(settings['dec_slew_fastest'], dec_delta)
-                dec_set_speed(speed)
+                dec_speed = speed
+
+            ra_set_speed(ra_speed)
+            dec_set_speed(dec_speed)
+
+            data['time'].append((now-started_slewing).total_seconds())
+            data['rpv'].append(status['rp'])
+            data['dpv'].append(status['dp'])
+            data['rsp'].append(need_step_position['ra'])
+            data['dsp'].append(need_step_position['dec'])
+            data['rv'].append(ra_speed)
+            data['dv'].append(dec_speed)
+            data['era'].append(need_step_position['ra'] - status['rp'])
+            data['edec'].append(need_step_position['dec'] - status['dp'])
 
             time.sleep(sleep_time)
-            if not parking:
-                need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
-                                                       settings['ra_track_rate'],
-                                                       settings['dec_ticks_per_degree'])
-            status = get_status()
+
         if runtime_settings['tracking']:
             ra_set_speed(settings['ra_track_rate'])
         else:
             ra_set_speed(0)
         dec_set_speed(0.0)
+        with open('slew.json', 'w') as f:
+            json.dump(data, f)
     finally:
         autoguide_enable()
         slewing = False
