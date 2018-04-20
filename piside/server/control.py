@@ -369,7 +369,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
 
             ra_delta = need_step_position['ra'] - status['rp']
             dec_delta = need_step_position['dec'] - status['dp']
-            print(ra_delta, dec_delta)
+            #print(ra_delta, dec_delta)
             if abs(round(ra_delta)) <= ra_close_enough and abs(round(dec_delta)) <= dec_close_enough:
                 break
 
@@ -421,8 +421,10 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                     speed = math.copysign(settings['dec_slew_fastest'], dec_delta)
                 dec_speed = speed
 
-            ra_set_speed(ra_speed)
-            dec_set_speed(dec_speed)
+            if not math.isclose(status['rs'], ra_speed, rel_tol=0.001):
+                ra_set_speed(ra_speed)
+            if not math.isclose(status['rs'], dec_speed, rel_tol=0.001):
+                dec_set_speed(dec_speed)
 
             data['time'].append((now-started_slewing).total_seconds())
             data['rpv'].append(status['rp'])
@@ -441,8 +443,8 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         else:
             ra_set_speed(0)
         dec_set_speed(0.0)
-        with open('slew.json', 'w') as f:
-            json.dump(data, f)
+        #with open('slew.json', 'w') as f:
+        #    json.dump(data, f)
     finally:
         autoguide_enable()
         slewing = False

@@ -266,6 +266,11 @@ void setRASpeed(float speed) {
   RACounts = 0;
   RACountsAG = 0;
   RAClock = millis();  
+  // For if speed gets set more often than it can do a step
+  if(speed == 0.0 || (millis() - RAClock) > 1000.0* (1.0/speed)) {
+    RAClock = millis();
+  }
+
 }
 
 float getRASpeed() {
@@ -284,7 +289,10 @@ void setDECSpeed(float speed) {
   }
   DECCounts = 0;
   DECCountsAG = 0;
-  DECClock = millis();
+  // For if speed gets set more often than it can do a step
+  if(speed == 0.0 || (millis() - DECClock) > 1000.0* (1.0/speed)) {
+    DECClock = millis();
+  }
   
 }
 
@@ -295,6 +303,9 @@ float getDECSpeed() {
 long getDECPosition() {
   return DECPosition;
 }
+
+
+int serialLimit = 0;
 
 void runSteppers() {
   // When we are autoguiding we want the position to be as if we were not, so continue at previous speeds.
@@ -360,6 +371,20 @@ void runSteppers() {
   count = DECCounts - (DECSpeed*((float)(millis() - DECClock))/1000.0);
   if (dec_autoguiding) {
     count_ag = DECCountsAG - (prevDECSpeed*((float)(millis() - DECClock))/1000.0);
+  }
+  serialLimit++;
+  if(serialLimit > 10000) {
+    serialLimit = 0;
+    //Serial.print("dc=");
+    //Serial.print(DECCounts);
+    //Serial.print(",ds=");
+    //Serial.print(DECSpeed);
+    //Serial.print(",ms=");
+    //Serial.print(millis());
+    //Serial.print(",dc=");
+    //Serial.print(DECClock);
+    //Serial.print(",c=");
+    //Serial.println(count);
   }
 
 
