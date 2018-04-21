@@ -22,6 +22,7 @@ import astropy.units as u
 import stellarium_server
 import math
 import os
+import sstchuck
 iers.conf.auto_download = False
 
 monkey_patch()
@@ -494,11 +495,16 @@ def main():
     stellarium_thread = threading.Thread(target=stellarium_server.run)
     stellarium_thread.start()
 
+    sstchuck_thread = threading.Thread(target=sstchuck.run, args=[settings])
+    sstchuck_thread.start()
+
 
     print('Running...')
     socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)
     stellarium_server.terminate()
+    sstchuck.terminate()
     stellarium_thread.join()
+    sstchuck_thread.join()
 
 
 if __name__ == '__main__':
