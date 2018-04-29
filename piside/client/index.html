@@ -23,6 +23,7 @@
     <script src="jquery-3.2.1.min.js"></script>
     <script src="lodash.min.js"></script>
     <script src="fontawesome-all.js"></script>
+    <script src="bootstrap/js/popper.min.js"></script>
     <script src="bootstrap/js/bootstrap.min.js"></script>
     <script src="socket.io.2.0.4.js"></script>
     <script src="steq25.js"></script>
@@ -120,445 +121,668 @@
             </tbody>
         </table>
     </div>
-    <div class="container-fluid">
-        <ul class="nav nav-tabs nav-justified" id="mainTab" role="tablist">
-            <li class="nav-item"><a class="nav-link active" id="goto-tab" data-toggle="tab" href="#goto" role="tab"
-                                    aria-controls="goto" aria-selected="true">Goto/Sync</a></li>
-            <li class="nav-item"><a class="nav-link" id="locationt-tab" data-toggle="tab" href="#locationt" role="tab"
-                                    aria-controls="locationt" aria-selected="false">Location</a></li>
-            <li class="nav-item"><a class="nav-link" id="othersettings-tab" data-toggle="tab"
-                                    href="#othersettings" role="tab" aria-controls="othersettings"
-                                    aria-selected="false">Other
-                Settings</a></li>
+    <div id="settings_button_group" class="btn-group">
+        <button type="button" class="btn btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false"><i class="fas fa-cog"></i>Settings<span class="caret"></span></button>
+        <ul class="dropdown-menu">
+            <li>&nbsp;<a href="#" id="settings_menu_general"><i class="fas fa-cogs"></i>&nbsp;General</a></li>
+            <li>&nbsp;<a href="#" id="settings_menu_location"><i class="fas fa-globe"></i>&nbsp;Geo Location</a></li>
+            <li>&nbsp;<a href="#" id="settings_menu_network"><i class="fas fa-wifi"></i>&nbsp;Network</a></li>
+            <li>&nbsp;<a href="#" id="settings_menu_horizon"><i class="fas fa-adjust"></i>&nbsp;Horizon Limits</a></li>
         </ul>
-        <div class="tab-content" id="mainTabContent">
-            <div class="goto tab-pane fade show active" role="tabpanel" id="goto" aria-labelledby="goto-tab">
-                <h3>Object Search</h3>
-                <div class="form-group row">
-                    <label for="search_txt" class="col-sm-2 col-form-label">Search</label>
-                    <div class="col-sm-10">
-                        <input class="form-control" id="search_txt" type="text"/>
-                    </div>
-                </div>
-                <div>
-                    Search for stars or objects. For example "Vega" or "M 100".
-                </div>
-                <div style="font-size: 80%">DSO and Star database based on <a href="http://www.astronexus.com/hyg">The
-                    HYG
-                    Database</a></div>
-                <div>
-                    <span id="search_info"></span>
-                    <div id="search_spinner" class="fa-3x" style="display:none;"><i class="fas fa-spinner fa-pulse"></i>
-                    </div>
-                    <table id="search_results" style="" class="table table-striped table-hover">
-                        <thead>
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Slew</th>
-                            <th scope="col">Sync</th>
-                            <th scope="col">RA/Dec</th>
-                            <th scope="col">Alt-Az</th>
-                            <th scope="col">Mag</th>
-                            <th scope="col">Size</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <h4>Manual</h4>
-                <div class="container-fluid">
-                    <div class="btn-group" data-toggle="buttons">
-                        <label class="btn btn-primary active">
-                            <input type="radio" id="goto_manual_coord_select-radec" name="goto_manual_coord_select"
-                                   value="radec"
-                                   autocomplete="off" checked> RA/DEC
-                        </label>
-                        <label class="btn btn-primary">
-                            <input type="radio" id="goto_manual_coord_select-altaz" name="goto_manual_coord_select"
-                                   value="altaz"
-                                   autocomplete="off"> Alt/Az
-                        </label>
-                        <label class="btn btn-primary">
-                            <input type="radio" id="goto_manual_coord_select-steps" name="goto_manual_coord_select"
-                                   value="steps"
-                                   autocomplete="off"> Steps
-                        </label>
-                    </div>
-                </div>
-                <div id="goto_manual_coord_radec">
-                    <div class="form-group row">
-                        <label for="goto_manual_ra_hh" class="col-form-label col">
-                            RA
-                        </label>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_ra_hh" placeholder="hh">
-                                <span class="input-group-addon">&nbsp;h&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_ra_mm" placeholder="mm">
-                                <span class="input-group-addon">&nbsp;m&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_ra_ss" placeholder="ss">
-                                <span class="input-group-addon">&nbsp;s&nbsp;</span>
-                            </div>
-                        </div>
-                        <br/>
-                    </div>
-                    <div class="row">
-                        <label for="goto_manual_dec_dd" class="col col-form-label">
-                            DEC
-                        </label>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_dec_dd" placeholder="±dd">
-                                <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_dec_mm" placeholder="mm">
-                                <span class="input-group-addon">&nbsp;'&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_dec_ss" placeholder="ss"><br/>
-                                <span class="input-group-addon">&nbsp;"&nbsp;</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="goto_manual_coord_altaz" style="display:none">
-                    <div class="form-group row">
-                        <label for="goto_manual_alt_dd" class="col col-form-label">
-                            Alt
-                        </label>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_alt_dd" placeholder="±dd">
-                                <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_alt_mm" placeholder="mm">
-                                <span class="input-group-addon">&nbsp;'&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_alt_ss" placeholder="ss"><br/>
-                                <span class="input-group-addon">&nbsp;"&nbsp;</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label for="goto_manual_az_ddd" class="col col-form-label">
-                            Az
-                        </label>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_az_ddd" placeholder="ddd">
-                                <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_az_mm" placeholder="mm">
-                                <span class="input-group-addon">&nbsp;'&nbsp;</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_az_ss" placeholder="ss">
-                                <span class="input-group-addon">&nbsp;"&nbsp;</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="goto_manual_coord_steps" style="display:none">
-                    <div class="form-group row">
-                        <label for="goto_manual_steps_ra" class="col col-form-label">
-                            RA
-                        </label>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_steps_ra" placeholder="±TOTAL_RA_STEPS">
-                                <span class="input-group-addon">&nbsp;Steps&nbsp;</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label for="goto_manual_steps_dec" class="col col-form-label">
-                            Dec
-                        </label>
-                        <div class="col">
-                            <div class="input-group">
-                                <input class="form-control" type="text" id="goto_manual_steps_dec" placeholder="±TOTAL_DEC_STEPS">
-                                <span class="input-group-addon">&nbsp;Steps&nbsp;</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <button id="manual_slewto" type="button" class="btn btn-success"><i
-                        class="far fa-play-circle"></i>Slew
-                </button>
-                <button id="manual_sync" type="button" class="btn btn-warning"><i class="fas fa-sync" alt="Sync"></i>Sync
-                </button>&nbsp;
+    </div>
+    <div class="container-fluid" id="slewing">
+        <h3>Object Search</h3>
+        <div class="form-group row">
+            <label for="search_txt" class="col-sm-2 col-form-label">Search</label>
+            <div class="col-sm-10">
+                <input class="form-control" id="search_txt" type="text"/>
             </div>
-            <div class="tab-pane fade" id="locationt" role="tabpanel" aria-labelledby="locationt-tab">
-                <h5>Search</h5>
-                <div>Search for a location by US Zip code or city name. For example "66044" or "Lawrence, KS".</div>
-                <div style="font-size: 80%">Zip code database from GeoNames (<a href="geonames.org">geonames.org</a>)
-                </div>
-                <div class="form-group row">
-                    <label for="location_search_txt" class="col-sm-2 col-form-label">Search</label>
-                    <div class="col-sm-10">
-                        <input class="form-control" id="location_search_txt" type="text"/><br/>
-                    </div>
-                </div>
-
-                <div>
-                    <span id="location_search_info"></span>
-                    <div id="location_search_spinner" class="fa-3x" style="display:none;"><i
-                            class="fas fa-spinner fa-pulse"></i></div>
-                    <table id="location_search_results" style="" class="table table-hover table-striped">
-                        <thead>
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Lat/Long</th>
-                            <th scope="col">Action</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <h5>Manual</h5>
-                <div>Or you can put in coordinates manually. For example, Lat: N39 1' 44", Long: W95 12' 31" or Lat:
-                    "39.0289"
-                    Long: "-95.2086"
-                </div>
-                <div class="form-group row">
-                    <label for="manual_lat" class="col-sm-2 col-form-label">
-                        Lat
-                    </label>
-                    <div class="col-sm-10">
-                        <input class="form-control" id="manual_lat">
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <label for="manual_long" class="col-sm-2 col-form-label">
-                        Long
-                    </label>
-                    <div class="col-sm-10">
-                        <input class="form-control" id="manual_long">
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <label for="manual_name" class="col-sm-2 col-form-label">
-                        Name
-                    </label>
-                    <div class="col-sm-10">
-                        <input class="form-control" id="manual_name">
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-sm-10">
-                        <button id="location_manual_set" type="button" class="btn btn-success"><i
-                                class="fas fa-globe"></i>Set
-                            Location
-                        </button>
-                        <button id="location_manual_unset" type="button" class="btn btn-danger"><i
-                                class="fas fa-globe"></i>Unset
-                            Location
-                        </button>
-
-                    </div>
-                </div>
+        </div>
+        <div>
+            Search for stars or objects. For example "Vega" or "M 100".
+        </div>
+        <div style="font-size: 80%">DSO and Star database based on <a href="http://www.astronexus.com/hyg">The
+            HYG
+            Database</a></div>
+        <div>
+            <span id="search_info"></span>
+            <div id="search_spinner" class="fa-3x" style="display:none;"><i class="fas fa-spinner fa-pulse"></i>
             </div>
-            <div class="tab-pane fade" id="othersettings" role="tabpanel" aria-labelledby="othersettings-tab">
-                <br/>
-                <div class="form-group">
-                    <div class="btn-group" data-toggle="buttons">
-                        <label class="btn btn-primary active">
-                            <input type="radio" id="settings-color-scheme-default" name="settings-color-scheme"
-                                   value="default"
-                                   autocomplete="off" checked> Default Color Scheme
-                        </label>
-                        <label class="btn btn-primary">
-                            <input type="radio" id="settings-color-scheme-nightvision" name="settings-color-scheme"
-                                   value="redlights"
-                                   autocomplete="off"> Night-Vision Color Scheme
-                        </label>
+            <table id="search_results" style="" class="table table-striped table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Slew</th>
+                    <th scope="col">Sync</th>
+                    <th scope="col">RA/Dec</th>
+                    <th scope="col">Alt-Az</th>
+                    <th scope="col">Mag</th>
+                    <th scope="col">Size</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <h4>Manual</h4>
+        <div class="container-fluid">
+            <div class="btn-group" data-toggle="buttons">
+                <label class="btn btn-primary active">
+                    <input type="radio" id="goto_manual_coord_select-radec" name="goto_manual_coord_select"
+                           value="radec"
+                           autocomplete="off" checked> RA/DEC
+                </label>
+                <label class="btn btn-primary">
+                    <input type="radio" id="goto_manual_coord_select-altaz" name="goto_manual_coord_select"
+                           value="altaz"
+                           autocomplete="off"> Alt/Az
+                </label>
+                <label class="btn btn-primary">
+                    <input type="radio" id="goto_manual_coord_select-steps" name="goto_manual_coord_select"
+                           value="steps"
+                           autocomplete="off"> Steps
+                </label>
+            </div>
+        </div>
+        <div id="goto_manual_coord_radec">
+            <div class="form-group row">
+                <label for="goto_manual_ra_hh" class="col-form-label col">
+                    RA
+                </label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_ra_hh" placeholder="hh">
+                        <span class="input-group-addon">&nbsp;h&nbsp;</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_ra_mm" placeholder="mm">
+                        <span class="input-group-addon">&nbsp;m&nbsp;</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_ra_ss" placeholder="ss">
+                        <span class="input-group-addon">&nbsp;s&nbsp;</span>
                     </div>
                 </div>
                 <br/>
-                Park Position (Alt-Az): <span id="settings_park_position"></span>
-                <div class="form-group">
-                    <button id="settings_park" type="button" class="btn btn-success"><i class="fas fa-home"></i>
-                        Park Scope
-                    </button>&nbsp;
-                    <button id="settings_set_park_position" type="button" class="btn btn-warning"><i
-                            class="fas fa-home"></i>
-                        Set
-                        Park
-                        Position to Current Position
-                    </button>
-                    <button id="settings_unset_park_position" type="button"
-                            class="btn btn-danger"><i class="fas fa-home"></i>
-                        Unset
-                        Park
-                        Position
-                    </button>
-                    <br/><br/>
-                    <button id="settings_start_tracking" type="button"
-                            class="btn btn-success"><i class="fas fa-hourglass-start"></i>
-                        Start tracking
-                    </button>
-                    <button id="settings_stop_tracking" type="button"
-                            class="btn btn-danger"><i class="fas fa-hourglass-end"></i>
-                        Stop tracking
-                    </button>
-                </div>
-
-                <div class="form-group" id="firmware_upload_div">
-                    <div class="col-md-1">
-                        <span id="firmware_version">Current&nbsp;Version:</span>
-                        <input id="firmware_file" type="file"/>
-                        <button id="firmware_file_upload" type="button" class="btn btn-primary"><i
-                                class="fas fa-upload"></i>
-                            Upload New Firmware
-                        </button>
+            </div>
+            <div class="row">
+                <label for="goto_manual_dec_dd" class="col col-form-label">
+                    DEC
+                </label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_dec_dd" placeholder="±dd">
+                        <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <div class="col-md-1">
-                        <input id="showAdvancedSettings" class="form-check-input" type="checkbox" value=""
-                               data-toggle="collapse"
-                               data-target="#advancedSettings" aria-expanded="false"
-                               aria-controls="advancedSettings">
-                        <label class="form-check-label"
-                               for="showAdvancedSettings">Show&nbsp;Advanced&nbsp;Settings</label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_dec_mm" placeholder="mm">
+                        <span class="input-group-addon">&nbsp;'&nbsp;</span>
                     </div>
                 </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_dec_ss" placeholder="ss"><br/>
+                        <span class="input-group-addon">&nbsp;"&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="goto_manual_coord_altaz" style="display:none">
+            <div class="form-group row">
+                <label for="goto_manual_alt_dd" class="col col-form-label">
+                    Alt
+                </label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_alt_dd" placeholder="±dd">
+                        <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_alt_mm" placeholder="mm">
+                        <span class="input-group-addon">&nbsp;'&nbsp;</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_alt_ss" placeholder="ss"><br/>
+                        <span class="input-group-addon">&nbsp;"&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="goto_manual_az_ddd" class="col col-form-label">
+                    Az
+                </label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_az_ddd" placeholder="ddd">
+                        <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_az_mm" placeholder="mm">
+                        <span class="input-group-addon">&nbsp;'&nbsp;</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_az_ss" placeholder="ss">
+                        <span class="input-group-addon">&nbsp;"&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="goto_manual_coord_steps" style="display:none">
+            <div class="form-group row">
+                <label for="goto_manual_steps_ra" class="col col-form-label">
+                    RA
+                </label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_steps_ra" placeholder="±TOTAL_RA_STEPS">
+                        <span class="input-group-addon">&nbsp;Steps&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="goto_manual_steps_dec" class="col col-form-label">
+                    Dec
+                </label>
+                <div class="col">
+                    <div class="input-group">
+                        <input class="form-control" type="text" id="goto_manual_steps_dec"
+                               placeholder="±TOTAL_DEC_STEPS">
+                        <span class="input-group-addon">&nbsp;Steps&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <div class="collapse" id="advancedSettings">
-                    <div class="form-group">
-                        <label for="settings_ra_track_rate">
-                            RA Tracking Steps/Second
-                        </label>
-                        <input class="form-control" id="settings_ra_track_rate" type="text"/>
+        <button id="manual_slewto" type="button" class="btn btn-success"><i
+                class="far fa-play-circle"></i>Slew
+        </button>
+        <button id="manual_sync" type="button" class="btn btn-warning"><i class="fas fa-sync" alt="Sync"></i>Sync
+        </button>&nbsp;
+    </div>
+    <div class="modal fade" id="locationSettings" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Location Settings</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+
+                    <h5>Search</h5>
+                    <div>Search for a location by US Zip code or city name. For example "66044" or "Lawrence, KS".</div>
+                    <div style="font-size: 80%">Zip code database from GeoNames (<a href="http://geonames.org">geonames.org</a>)
+                    </div>
+                    <div class="form-group row">
+                        <label for="location_search_txt" class="col-sm-2 col-form-label">Search</label>
+                        <div class="col-sm-10">
+                            <input class="form-control" id="location_search_txt" type="text"/><br/>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="settings_dec_ticks_per_degree">
-                            DEC Steps/Degree
-                        </label>
-                        <input class="form-control" id="settings_dec_ticks_per_degree" type="text"/>
+                    <div>
+                        <span id="location_search_info"></span>
+                        <div id="location_search_spinner" class="fa-3x" style="display:none;"><i
+                                class="fas fa-spinner fa-pulse"></i></div>
+                        <table id="location_search_results" style="" class="table table-hover table-striped">
+                            <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Lat/Long</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
                     </div>
-                    <div class="form-group">
-                        <label for="settings_ra_direction">
-                            RA Direction
-                        </label>
-                        <input class="form-control" id="settings_ra_direction" type="text"/>
+                    <h5>Manual</h5>
+                    <div>Or you can put in coordinates manually. For example, Lat: N39 1' 44", Long: W95 12' 31" or Lat:
+                        "39.0289"
+                        Long: "-95.2086"
                     </div>
-                    <div class="form-group">
-                        <label for="settings_dec_direction">
-                            DEC Direction
+                    <div class="form-group row">
+                        <label for="manual_lat" class="col-sm-2 col-form-label">
+                            Lat
                         </label>
-                        <input class="form-control" id="settings_dec_direction" type="text"/>
+                        <div class="col-sm-10">
+                            <input class="form-control" id="manual_lat">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="settings_ra_guide_rate">
-                            RA Guide Steps/Sec (Change from tracking, not absolute)
+                    <div class="form-group row">
+                        <label for="manual_long" class="col-sm-2 col-form-label">
+                            Long
                         </label>
-                        <input class="form-control" id="settings_ra_guide_rate" type="text"/>
+                        <div class="col-sm-10">
+                            <input class="form-control" id="manual_long">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="settings_ra_slew_fastest">
-                            RA Slew-Fastest Steps/Sec
+                    <div class="form-group row">
+                        <label for="manual_name" class="col-sm-2 col-form-label">
+                            Name
                         </label>
-                        <input class="form-control" id="settings_ra_slew_fastest" type="text"/>
+                        <div class="col-sm-10">
+                            <input class="form-control" id="manual_name">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="settings_ra_slew_faster">
-                            RA Slew-Faster Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_ra_slew_faster" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_ra_slew_medium">
-                            RA Slew-Medium Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_ra_slew_medium" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_ra_slew_slower">
-                            RA Slew-Slower Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_ra_slew_slower" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_ra_slew_slowest">
-                            RA Slew-Slowest Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_ra_slew_slowest" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_dec_guide_rate">
-                            DEC Guide Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_dec_guide_rate" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_dec_slew_fastest">
-                            DEC Slew-Fastest Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_dec_slew_fastest" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_dec_slew_faster">
-                            DEC Slew-Faster Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_dec_slew_faster" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_dec_slew_medium">
-                            DEC Slew-Medium Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_dec_slew_medium" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_dec_slew_slower">
-                            DEC Slew-Slower Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_dec_slew_slower" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="settings_dec_slew_slowest">
-                            DEC Slew-Slowest Steps/Sec
-                        </label>
-                        <input class="form-control" id="settings_dec_slew_slowest" type="text"/>
-                    </div>
-                    <div class="form-group">
-                        <button id="settings_save" type="button" class="btn btn-warning"><i class="fas fa-cog"></i>Save
-                            Advanced Settings
-                        </button>
-                        <span id="settings_save_status"></span><br/>
+                    <div class="form-group row">
+                        <div class="col-sm-10">
+                            <button id="location_manual_set" type="button" class="btn btn-success"><i
+                                    class="fas fa-globe"></i>Set
+                                Location
+                            </button>
+                            <button id="location_manual_unset" type="button" class="btn btn-danger"><i
+                                    class="fas fa-globe"></i>Unset
+                                Location
+                            </button>
+
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="modal fade" id="errorInfoModal" tabindex="-1" role="dialog" aria-labeledby="errorInfoModalLabel"
+    <div class="modal fade" id="generalSettings" role="dialog" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">General Settings</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <div class="btn-group" data-toggle="buttons">
+                            <label class="btn btn-primary active">
+                                <input type="radio" id="settings-color-scheme-default" name="settings-color-scheme"
+                                       value="default"
+                                       autocomplete="off" checked> Default Color Scheme
+                            </label>
+                            <label class="btn btn-primary">
+                                <input type="radio" id="settings-color-scheme-nightvision"
+                                       name="settings-color-scheme"
+                                       value="redlights"
+                                       autocomplete="off"> Night-Vision Color Scheme
+                            </label>
+                        </div>
+                    </div>
+                    <br/>
+                    Park Position (Alt-Az): <span id="settings_park_position"></span>
+                    <div class="form-group">
+                        <button id="settings_park" type="button" class="btn btn-success"><i class="fas fa-home"></i>
+                            Park Scope
+                        </button>&nbsp;
+                        <button id="settings_set_park_position" type="button" class="btn btn-warning"><i
+                                class="fas fa-home"></i>
+                            Set
+                            Park
+                            Position to Current Position
+                        </button>
+                        <button id="settings_unset_park_position" type="button"
+                                class="btn btn-danger"><i class="fas fa-home"></i>
+                            Unset
+                            Park
+                            Position
+                        </button>
+                        <br/><br/>
+                        <button id="settings_start_tracking" type="button"
+                                class="btn btn-success"><i class="fas fa-hourglass-start"></i>
+                            Start tracking
+                        </button>
+                        <button id="settings_stop_tracking" type="button"
+                                class="btn btn-danger"><i class="fas fa-hourglass-end"></i>
+                            Stop tracking
+                        </button>
+                    </div>
+
+                    <div class="form-group" id="firmware_upload_div">
+                        <div class="col-md-1">
+                            <span id="firmware_version">Current&nbsp;Version:</span>
+                            <input id="firmware_file" type="file"/>
+                            <button id="firmware_file_upload" type="button" class="btn btn-primary"><i
+                                    class="fas fa-upload"></i>
+                                Upload New Firmware
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-1">
+                            <input id="showAdvancedSettings" class="form-check-input" type="checkbox" value=""
+                                   data-toggle="collapse"
+                                   data-target="#advancedSettings" aria-expanded="false"
+                                   aria-controls="advancedSettings">
+                            <label class="form-check-label"
+                                   for="showAdvancedSettings">Show&nbsp;Advanced&nbsp;Settings</label>
+                        </div>
+                    </div>
+
+                    <div class="collapse" id="advancedSettings">
+                        <div class="form-group">
+                            <label for="settings_ra_track_rate">
+                                RA Tracking Steps/Second
+                            </label>
+                            <input class="form-control" id="settings_ra_track_rate" type="text"/>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settings_dec_ticks_per_degree">
+                                DEC Steps/Degree
+                            </label>
+                            <input class="form-control" id="settings_dec_ticks_per_degree" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_direction">
+                                RA Direction
+                            </label>
+                            <input class="form-control" id="settings_ra_direction" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_direction">
+                                DEC Direction
+                            </label>
+                            <input class="form-control" id="settings_dec_direction" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_guide_rate">
+                                RA Guide Steps/Sec (Change from tracking, not absolute)
+                            </label>
+                            <input class="form-control" id="settings_ra_guide_rate" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_slew_fastest">
+                                RA Slew-Fastest Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_ra_slew_fastest" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_slew_faster">
+                                RA Slew-Faster Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_ra_slew_faster" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_slew_medium">
+                                RA Slew-Medium Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_ra_slew_medium" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_slew_slower">
+                                RA Slew-Slower Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_ra_slew_slower" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_slew_slowest">
+                                RA Slew-Slowest Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_ra_slew_slowest" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_guide_rate">
+                                DEC Guide Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_dec_guide_rate" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_slew_fastest">
+                                DEC Slew-Fastest Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_dec_slew_fastest" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_slew_faster">
+                                DEC Slew-Faster Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_dec_slew_faster" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_slew_medium">
+                                DEC Slew-Medium Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_dec_slew_medium" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_slew_slower">
+                                DEC Slew-Slower Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_dec_slew_slower" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_slew_slowest">
+                                DEC Slew-Slowest Steps/Sec
+                            </label>
+                            <input class="form-control" id="settings_dec_slew_slowest" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_orthogonal_error">
+                                Orthogonal Error Degrees
+                            </label>
+                            <input class="form-control" id="settings_orthogonal_error" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_ra_backlash">
+                                RA Backlash Steps
+                            </label>
+                            <input class="form-control" id="settings_ra_backlash" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="settings_dec_backlash">
+                                DEC Backlash Steps
+                            </label>
+                            <input class="form-control" id="settings_dec_backlash" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <button id="settings_save" type="button" class="btn btn-warning"><i
+                                    class="fas fa-cog"></i>Save
+                                Advanced Settings
+                            </button>
+                            <span id="settings_save_status"></span><br/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="networkSettings" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Network Settings</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#networkSettingsWifiTab" data-toggle="tab" role="tab">Wifi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#networkSettingsEthernetTab" data-toggle="tab" role="tab">Ethernet</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link disabled" href="#">Misc</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="networkTabContent">
+                        <div class="tab-pane fade show active" id="networkSettingsWifiTab" role="tabpanel">
+                            <br/>
+                            <h3>AP Mode</h3>
+                            <div class="btn-group" data-toggle="buttons">
+                                <label class="btn btn-primary active">
+                                    <input type="radio" id="networkSettingsWifiAPModeAutoAp" name="networkSettingsWifiAPMode"
+                                           value="autoap"
+                                           autocomplete="off" checked> Auto AP
+                                </label>
+                                <label class="btn btn-primary">
+                                    <input type="radio" id="networkSettingsWifiAPModeAlways" name="networkSettingsWifiAPMode"
+                                           value="always"
+                                           autocomplete="off"> Always
+                                </label>
+                                <label class="btn btn-primary">
+                                    <input type="radio" id="networkSettingsWifiAPModeClientOnly" name="networkSettingsWifiAPMode"
+                                           value="clientonly"
+                                           autocomplete="off"> Client Only
+                                </label>
+                            </div>
+                            <div class="form-group row">
+                                <label for="networkSettingsWifiAPSSID" class="col-form-label col">
+                                    SSID
+                                </label>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <input class="form-control" type="text" id="networkSettingsWifiAPSSID" placeholder="SSID">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="networkSettingsWifiAPKey" class="col-form-label col">
+                                    WPA2 Key
+                                </label>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <input class="form-control" type="text" id="networkSettingsWifiAPKey" placeholder="Key">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="networkSettingsWifiAPChannel" class="col-form-label col">
+                                    Channel
+                                </label>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" id="networkSettingsWifiAPChannel" min="0" max="" placeholder="Channel">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col">
+                                    <button id="networkSettingsWifiAPSave" class="btn btn-warning">Save AP Settings</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="networkSettingsWifiAPChannel" class="col-form-label col">
+                                    <h3>Wifi Client</h3>
+                                </label>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <button id="networkSettingsWifiClientRescan" class="btn btn-success">Rescan...</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div id="networkSettingsWifiClientListSpinner" class="fa-3x" style="display:none;"><i class="fas fa-spinner fa-pulse"></i></div>
+                                <table id="networkSettingsWifiClientList" class="table table-hover table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">SSID</th>
+                                        <th scope="col">Signal</th>
+                                        <th scope="col">Security</th>
+                                        <th scope="col">Connect</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div>
+
+                            <h3>Known Access Points</h3>
+                                <table id="networkSettingsClientKnownList" class="table table-hover table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">SSID</th>
+                                        <th scope="col">Forget</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+
+                            </div>
+
+                        </div>
+                        <div class="tab-pane fade" id="networkSettingsEthernetTab" role="tabpanel">
+                            <br/>
+                            <h3>Ethernet Mode</h3>
+                            <div class="btn-group d-flex" role="group" data-toggle="buttons">
+                                <div>
+                                <label class="btn btn-primary disabled">
+                                    <input type="radio" id="networkSettingsEthernetModeAutoDHCP" name="networkSettingsEthernetMode"
+                                           value="autodhcp"
+                                           autocomplete="off" disabled> Auto DHCP Client/Server
+                                </label>
+                                <label class="btn btn-primary active">
+                                    <input type="radio" id="networkSettingsEthernetModeClientDHCP" name="networkSettingsEthernetMode"
+                                           value="dhcpclient"
+                                           autocomplete="off" checked>DHCP Client Only
+                                </label>
+                                </div>
+                                <div>
+                                <label class="btn btn-primary disabled">
+                                    <input type="radio" id="networkSettingsEthernetModeAlwaysDHCP" name="networkSettingsEthernetMode"
+                                           value="dhcpserver"
+                                           autocomplete="off" disabled>DHCP Server Only
+                                </label>
+                                <label class="btn btn-primary disabled">
+                                    <input type="radio" id="networkSettingsEthernetModeStatic" name="networkSettingsEthernetMode"
+                                           value="static"
+                                           autocomplete="off" disabled> Static IP
+                                </label>
+                                </div>
+                            </div>
+                            <h3>Static IP</h3>
+                            <div class="form-group row">
+                                <label for="networkSettingsEthernetStaticIP" class="col-form-label col">
+                                    IP
+                                </label>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <input class="form-control" type="text" id="networkSettingsEthernetStaticIP" placeholder="xxx.xxx.xxx.xxx" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="networkSettingsEthernetStaticNetmask" class="col-form-label col">
+                                    Netmask
+                                </label>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <input class="form-control" type="text" id="networkSettingsEthernetStaticNetmask" placeholder="xxx.xxx.xxx.xxx" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col">
+                                    <button id="networkSettingsEthernetSave" class="btn btn-warning" disabled>Save Ethernet Settings</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="errorInfoModal" tabindex="-1" role="dialog"
+         aria-labeledby="errorInfoModalLabel"
          aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -585,7 +809,8 @@
                     <h5 class="modal-title" id="slewModalTitle">Slewing</h5>
                 </div>
                 <div class="modal-body" id="slewModalBody">
-                    Position: <span id="slewModalStatus"></span><span id="slewModalAltAzStatus"></span><span id="slewModalStepsStatus"></span><br/>
+                    Position: <span id="slewModalStatus"></span><span id="slewModalAltAzStatus"></span><span
+                        id="slewModalStepsStatus"></span><br/>
                     Target: <span id="slewModalTarget"></span>
                     <br/>
                     Slewing...

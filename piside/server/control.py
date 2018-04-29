@@ -421,9 +421,9 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                     speed = math.copysign(settings['dec_slew_fastest'], dec_delta)
                 dec_speed = speed
 
-            if not math.isclose(status['rs'], ra_speed, rel_tol=0.001):
+            if not math.isclose(status['rs'], ra_speed, rel_tol=0.02):
                 ra_set_speed(ra_speed)
-            if not math.isclose(status['rs'], dec_speed, rel_tol=0.001):
+            if not math.isclose(status['ds'], dec_speed, rel_tol=0.02):
                 dec_set_speed(dec_speed)
 
             data['time'].append((now-started_slewing).total_seconds())

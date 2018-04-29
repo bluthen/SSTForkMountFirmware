@@ -747,6 +747,59 @@ $(document).ready(function () {
         }
     });
 
+    var escapeHTML = function(text, limit) {
+        return $('<div>').text(text.substring(0, limit)).html();
+    };
+
+    var wifiClientScan = function() {
+        $('#networkSettingsWifiClientList').hide();
+        $('#networkSettingsWifiClientListSpinner').show();
+        $.ajax({
+            url: '/wifi_scan',
+            dataType: 'json',
+            success: function(data) {
+                var i, tr;
+                var list = $('#networkSettingsWifiClientList tbody').empty();
+                for(i = 0; i < data.aps.length; i++) {
+                    var ap = data.aps[i];
+                    var connectButton = '<button type="button" class="btn btn-success"><i class="fas fa-globe" title="set"></i>Connect</button>';
+                    var connect_td = connectButton;
+                    if (ap.ssid === data.connected.ssid && ap.mac === data.connected.mac) {
+                        connect_td = 'Connected';
+                    }
+                    tr = $('<tr>'+
+                        '<th scope="row">'+escapeHTML(ap.ssid, 20)+'<br/>'+ap.mac+'</th>'+
+                        '<td>'+ap.signal+'</td>'+
+                        '<td>'+ap.flags+'</td>'+
+                        '<td>'+connect_td+'</td>'
+                    );
+                    list.append(tr);
+                }
+                $('#networkSettingsWifiClientListSpinner').hide();
+                $('#networkSettingsWifiClientList').show();
+            }
+        })
+    };
+
+    // Settings menu
+    $('#settings_menu_general').click(function() {
+        $('#generalSettings').data('bs.modal', null).modal({backdrop: true, keyboard: true});
+    });
+
+    $('#settings_menu_location').click(function() {
+        $('#locationSettings').data('bs.modal', null).modal({backdrop: true, keyboard: true});
+    });
+
+    $('#networkSettingsWifiClientRescan').click(function() {
+       wifiClientScan();
+    });
+
+    $('#settings_menu_network').click(function() {
+        $('#networkSettings').data('bs.modal', null).modal({backdrop: true, keyboard: true});
+        //Update wifi client list.
+        wifiClientScan();
+    });
+
     $('#settings_save').click(function () {
         var settings = {
             ra_track_rate: $('#settings_ra_track_rate').val(),

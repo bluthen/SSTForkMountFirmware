@@ -23,6 +23,8 @@ import stellarium_server
 import math
 import os
 import sstchuck
+import network
+
 iers.conf.auto_download = False
 
 monkey_patch()
@@ -69,10 +71,12 @@ def nocache(view):
 
     return update_wrapper(no_cache, view)
 
+
 @app.route('/static/<path:path>')
 @nocache
 def send_static(path):
     return send_from_directory('../client', path)
+
 
 @app.route('/')
 @nocache
@@ -99,7 +103,8 @@ def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
+    keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
+            "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
             ]
     for key in keys:
@@ -130,6 +135,130 @@ def settings_put():
     control.micro_update_settings()
     print('return')
     return '', 204
+
+
+@app.route('/settings_network_wifi', methods=['PUT'])
+@nocache
+def settings_network_wifi():
+    mode = request.form.get('mode', None)
+    ssid = request.form.get('ssid', None)
+    wpa2key = request.form.get('wpa2key', None)
+    channel = request.form.get('channel', None)
+
+    if None in [mode, ssid, wpa2key, channel]:
+        return 'Invalid parameters', 400
+
+    if mode not in ['autoap', 'always', 'clientonly']:
+        return 'Invalid AP Mode', 400
+    if mode != 'clientonly':
+        if len(wpa2key) < 8 or len(wpa2key) > 63:
+            return 'Invalid WPA2Key, must be between eight and 63 characters', 400
+        try:
+            channel = int(channel)
+        except ValueError:
+            return 'Invalid channel', 400
+        if channel < 1 or channel > 14:
+            return 'Invalid channel', 400
+        if len(ssid) > 31:
+            return 'SSID must be less than 32 characters', 400
+    if mode == 'autoap' or mode == 'always':
+        network.hostapd_write(ssid, channel, wpa2key)
+    network.set_wifi_startup_mode(mode)
+    # TODO: Save to settings?
+    settings['network']['mode'] = mode
+    settings['network']['ssid'] = ssid
+    settings['network']['wpa2key'] = wpa2key
+    settings['network']['channel'] = channel
+    with settings_json_lock:
+        with open('settings.json', mode='w') as f:
+            json.dump(settings, f)
+
+
+@app.route('/wifi_connect', methods=['DELETE'])
+@nocache
+def wifi_connect_delete():
+    ssid = request.form.get('ssid', None)
+    mac = request.form.get('mac', None)
+    if None in [ssid, mac]:
+        return 'Missing ssid or mac', 400
+    stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
+    wpasup = network.wpa_supplicant_read(stemp[0])
+    network.wpa_supplicant_remove(wpasup['networks'], ssid, mac)
+    network.wpa_supplicant_write(stemp[0], wpasup['other'], wpasup['networks'])
+    network.root_file_close(stemp)
+    # If we are currently connected
+    wificon = network.current_wifi_connect()
+    if wificon['ssid'] == ssid and wificon['mac'] == mac:
+        if settings['network']['wifimode'] in ['autoap', 'clientonly']:
+            subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
+        if settings['network']['wifimode'] == 'autoap':
+            subprocess.run(['sudo', '/root/autohotspotcron'])
+    return 'Removed', 200
+
+
+@app.route('/wifi_connect', methods=['POST'])
+@nocache
+def wifi_connect():
+    ssid = request.form.get('ssid', None)
+    mac = request.form.get('mac', None)
+    psk = request.form.get('psk', None)
+    open = request.form.get('open', None)
+    known = request.form.get('known', None)
+    if settings['network']['wifimode'] == 'always':
+        return "Can not connect as client when mode is Always AP", 400
+
+    if None in [ssid, mac]:
+        return 'Missing ssid or mac', 400
+    if not known and not open and psk is None:
+        return 'You must given passphrase', 400
+
+    stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
+    wpasup = network.wpa_supplicant_read(stemp[0])
+
+    found = False
+    for n in wpasup['networks']:
+        if n['ssid'] == ssid and n['bssid'] == mac:
+            if psk:
+                n['psk'] = psk
+            n['priority'] = 5
+        elif 'priority' in n:
+            del n['priority']
+
+    if not found:
+        n = {'bssid': mac, 'ssid': "\"%s\"" % ssid}
+        if psk:
+            n['psk'] = psk
+        else:
+            n['key_mgmt'] = 'None'
+        wpasup['networks'].append(n)
+
+    network.wpa_supplicant_write(stemp[0], wpasup['other'], wpasup['networks'])
+    network.root_file_close(stemp)
+    # TODO: Maybe we do this after responding for user feedback?
+    if settings['network']['wifimode'] == 'autoap':
+        subprocess.run(['sudo', '/root/autohotspotcron'])
+    else:
+        subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
+
+
+@app.route('/settings_network_ethernet', methods=['PUT'])
+@nocache
+def settings_network_ethernet():
+    mode = request.form.get('mode', None)
+    ip = request.form.get('ip', None)
+    netmask = request.form.get('netmask', None)
+
+    if mode not in ['static', 'dhcpserver', 'dhcpclient', 'autodhcp']:
+        return 'Invalid Ethernet mode', 400
+    if mode == 'static' and not ip or not netmask:
+        return 'Missing IP or Netmask'
+    if mode == 'static':
+        if not network.valid_ip(ip):
+            return 'Invalid IP Address.', 400
+        if not network.valid_ip(netmask):
+            return 'Invalid netmask', 400
+    # TODO: Save settings
+    # TODO: Restart network settings
 
 
 @app.route('/set_location', methods=['DELETE'])
@@ -422,6 +551,14 @@ def firmware_update():
     return 'Updated'
 
 
+@app.route('/wifi_scan', methods=['GET'])
+@nocache
+def wifi_scan():
+    aps = network.wifi_client_scan()
+    connected = network.current_wifi_connect()
+    return jsonify({'aps': aps, 'connected': connected})
+
+
 @app.route('/search_location', methods=['GET'])
 @nocache
 def search_location():
@@ -490,6 +627,7 @@ def main():
         with open('settings.json') as f:
             settings = json.load(f)
     st_queue = control.init(socketio, settings, runtime_settings)
+    network.init(settings)
 
     # TODO: Config if start stellarium server.
     stellarium_thread = threading.Thread(target=stellarium_server.run)
@@ -497,7 +635,6 @@ def main():
 
     sstchuck_thread = threading.Thread(target=sstchuck.run, args=[settings])
     sstchuck_thread.start()
-
 
     print('Running...')
     socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)

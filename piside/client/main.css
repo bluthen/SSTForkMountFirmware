@@ -19,6 +19,10 @@ a {
     color: white;
 }
 
+.modal-content a {
+    color: blue;
+}
+
 #large_logo {
     float: right;
     margin-right: 3ex;
@@ -98,6 +102,42 @@ table.direction-controls td {
 .table-striped tbody > tr:nth-child(odd) > td,.table-striped tbody > tr:nth-child(odd) > th {
     background-color: #2f2f2f;
 }
+
+.modal-content .table-hover > tbody > tr:hover > td, .table-hover > tbody > tr:hover > th{
+    background-color: #E4E4E4 !important;
+}
+
+.modal-content .table-striped tbody > tr:nth-child(odd) > td,.table-striped tbody > tr:nth-child(odd) > th {
+    background-color: #afafaf;
+}
+
+
+#settings_button_group {
+    position: fixed;
+    right: 0px;
+    top: 0px;
+}
+#settings_button_group > ul > li > a {
+    color: black;
+}
+
+#status_radec {
+    width: 21ex;
+}
+#status_altaz {
+    width: 21ex;
+}
+#status_ra_ticks {
+    width: 16ex;
+}
+#status_dec_ticks {
+    width: 16ex;
+}
+#status_time {
+    width: 34ex;
+}
+
+
 
 /*#search_results, #search_results td, #search_results th {
     border: 1px solid white;

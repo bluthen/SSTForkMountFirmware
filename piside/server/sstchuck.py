@@ -95,7 +95,7 @@ def runchuck(port):
                         control.manual_control('up', 'medium')
                         control.manual_control('left', None)
                         control.manual_control('right', None)
-                elif abs(controls['x']) > 5 and abs(controls['y']) > 5:
+                elif abs(controls['x']) > 10 and abs(controls['y']) > 10:
                     moving = True
                     if controls['x'] < 0:
                         control.manual_control('left', 'slowest')
@@ -105,7 +105,7 @@ def runchuck(port):
                         control.manual_control('down', 'slowest')
                     else:
                         control.manual_control('up', 'slowest')
-                elif abs(controls['x']) > 5:
+                elif abs(controls['x']) > 10:
                     moving = True
                     if controls['x'] < 0:
                         control.manual_control('left', 'slowest')
@@ -115,7 +115,7 @@ def runchuck(port):
                         control.manual_control('right', 'slowest')
                         control.manual_control('up', None)
                         control.manual_control('down', None)
-                elif abs(controls['y']) > 5:
+                elif abs(controls['y']) > 10:
                     moving = True
                     if controls['y'] < 0:
                         control.manual_control('down', 'slowest')
