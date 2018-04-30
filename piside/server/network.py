@@ -24,13 +24,14 @@ def valid_ip(address):
 def root_file_open(path):
     results = subprocess.run(['/usr/bin/sudo', '/bin/cat', path], stdout=subprocess.PIPE)
     stemp = tempfile.mkstemp(suffix='sstneworktmp')
-    stemp[0].write(results.stdout)
+    stemp = [os.fdopen(stemp[0], 'a+'), stemp[1], path]
+    stemp[0].write(results.stdout.decode())
     stemp[0].seek(0)
-    return (stemp[0], stemp[1], path)
+    return stemp
 
 
 def root_file_close(stemp, mode=755):
-    os.close(stemp[0])
+    stemp[0].close()
     subprocess.run(['/usr/bin/sudo', '/bin/cp', stemp[1], stemp[2]])
     subprocess.run(['/usr/bin/sudo', '/bin/chown', 'root', stemp[2]])
     subprocess.run(['/usr/bin/sudo', '/bin/chmod', mode, stemp[2]])
@@ -46,7 +47,7 @@ def set_autohotspotcron(ahc_file, enabled):
     else:
         ahc_file.write("""#/bin/sh
         /bin/true > /dev/null 2>&1
-        """)
+""")
 
 
 def set_wifi_startup_mode(mode):
@@ -76,7 +77,7 @@ def set_wifi_startup_mode(mode):
 def hostapd_write(ssid, channel, password=None):
     stemp = root_file_open('/etc/hostapd/hostapd.conf')
     stemp[0].truncate(0)
-    hostapd_conf = """interface=wlan0
+    hostapd_conf = """interface=%s
 driver=nl80211
 ssid=%s
 hw_mode=g
@@ -93,9 +94,9 @@ wmm_enabled=1         # QoS support
 wpa_passphrase=%s
 wpa_key_mgmt=WPA-PSK
 """
-    stemp[0].write(hostapd_conf % (ssid, channel))
+    stemp[0].write(hostapd_conf % (settings['network']['wifi_device'], ssid, channel))
     if password:
-        stemp[0].write('\n'+hostapd_security % (password,))
+        stemp[0].write('\n' + hostapd_security % (password,))
     root_file_close(stemp)
 
 
@@ -106,7 +107,7 @@ def wpa_supplicant_read(wpa_file):
     strip_networks = []
     start = False
     for line in wpa_file:
-        dline = line.decode().strip()
+        dline = line.strip()
         if network_start_p.match(dline):
             start = True
             network_raw = []
@@ -118,9 +119,7 @@ def wpa_supplicant_read(wpa_file):
             network_raw.append(dline)
         else:
             strip_networks.append(dline)
-
     strip_networks = '\n'.join(strip_networks)
-
     networks = []
     for network_raw in networks_raw:
         network = {}
@@ -128,7 +127,6 @@ def wpa_supplicant_read(wpa_file):
             k, v = line.split('=', 2)
             network[k.strip()] = v.strip()
         networks.append(network)
-
     return {'networks': networks, 'other': strip_networks}
 
 

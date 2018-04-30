@@ -172,6 +172,7 @@ def settings_network_wifi():
     with settings_json_lock:
         with open('settings.json', mode='w') as f:
             json.dump(settings, f)
+    return "Saved", 200
 
 
 @app.route('/wifi_connect', methods=['DELETE'])
