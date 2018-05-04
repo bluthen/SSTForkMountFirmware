@@ -649,7 +649,8 @@
                                 </label>
                                 <div class="col">
                                     <div class="input-group">
-                                        <input class="form-control" type="text" id="networkSettingsWifiAPSSID" placeholder="SSID">
+                                        <input class="form-control" type="text" id="networkSettingsWifiAPSSID" placeholder="SSID" maxlength="31">
+                                        <div class="invalid-feedback"></div>
                                     </div>
                                 </div>
                             </div>
@@ -659,7 +660,8 @@
                                 </label>
                                 <div class="col">
                                     <div class="input-group">
-                                        <input class="form-control" type="text" id="networkSettingsWifiAPKey" placeholder="Key">
+                                        <input class="form-control" type="text" id="networkSettingsWifiAPKey" placeholder="Key" maxlength="63">
+                                        <div class="invalid-feedback"></div>
                                     </div>
                                 </div>
                             </div>
@@ -669,7 +671,8 @@
                                 </label>
                                 <div class="col">
                                     <div class="input-group">
-                                        <input class="form-control" type="number" id="networkSettingsWifiAPChannel" min="0" max="" placeholder="Channel">
+                                        <input class="form-control" type="number" id="networkSettingsWifiAPChannel" min="0" max="" placeholder="Channel" maxlength="2">
+                                        <div class="invalid-feedback"></div>
                                     </div>
                                 </div>
                             </div>

@@ -35,7 +35,7 @@ $(document).ready(function () {
         }
         $('#status_ra_ticks').text('' + msg.rs + '/' + msg.rp);
         $('#status_dec_ticks').text('' + msg.ds + '/' + msg.dp);
-        status_steps2.text(msg.rp+'/'+msg.dp);
+        status_steps2.text(msg.rp + '/' + msg.dp);
         $('#status_time').text(msg.time);
         if (!status.slewing && slewmodal.hasClass('show')) {
             slewmodal.modal('hide');
@@ -179,6 +179,17 @@ $(document).ready(function () {
                 } else {
                     $('#settings_park_position').html('None Set');
                     $('#settings_unset_park_position').hide();
+                }
+                // Network
+                $('#networkSettingsWifiAPSSID').val(data.network.ssid);
+                $('#networkSettingsWifiAPKey').val(data.network.wpa2key);
+                $('#networkSettingsWifiAPChannel').val(data.network.channel);
+                if (data.network.mode === 'autoap') {
+                    $('#networkSettingsWifiAPModeAutoAp').click();
+                } else if (data.network.mode === 'always') {
+                    $('#networkSettingsWifiAPModeAlways').click();
+                } else if (data.network.mode === 'clientonly') {
+                    $('#networkSettingsWifiAPModeClientOnly').click();
                 }
             }
         });
@@ -483,7 +494,7 @@ $(document).ready(function () {
         return {alt: alt, az: az};
     };
 
-    var convert_manual_coordinates_steps = function() {
+    var convert_manual_coordinates_steps = function () {
         var ra, dec;
         ra = parseInt($('#goto_manual_steps_ra').val().trim(), 10);
         dec = parseInt($('#goto_manual_steps_dec').val().trim(), 10);
@@ -725,7 +736,7 @@ $(document).ready(function () {
             if (coords) {
                 sync(coords.ra, coords.dec);
             }
-        } else if($('#goto_manual_coord_select-altaz').is(':checked')) {
+        } else if ($('#goto_manual_coord_select-altaz').is(':checked')) {
             coords = convert_manual_coordinates_altaz();
             syncaltaz(coords.alt, coords.az);
         } else {
@@ -736,7 +747,7 @@ $(document).ready(function () {
         if ($('#goto_manual_coord_select-radec').is(':checked')) {
             coords = convert_manual_coordinates_radec();
             slewto(coords.ra, coords.dec);
-        } else if($('#goto_manual_coord_select-altaz').is(':checked')) {
+        } else if ($('#goto_manual_coord_select-altaz').is(':checked')) {
             coords = convert_manual_coordinates_altaz();
             slewtoaltaz(coords.alt, coords.az);
         } else {
@@ -747,57 +758,152 @@ $(document).ready(function () {
         }
     });
 
-    var escapeHTML = function(text, limit) {
+    $('#networkSettingsWifiAPSave').click(function () {
+        var data = {
+            mode: $('input[name="networkSettingsWifiAPMode"]:checked').val(),
+            ssid: $('#networkSettingsWifiAPSSID').removeClass('is-invalid').val().trim(),
+            wpa2key: $('#networkSettingsWifiAPKey').removeClass('is-invalid').val(),
+            channel: parseInt($('#networkSettingsWifiAPChannel').removeClass('is-invalid').val(), 10)
+        };
+        var valid = true;
+        if (data.wpa2key.length === 0) {
+            data.wpa2key = null;
+        }
+        if (data.mode !== 'clientonly' && data.ssid.length > 31) {
+            $('#networkSettingsWifiAPSSID').addClass('is-invalid').next().text('Must be less than 31 characters');
+            valid = false;
+        }
+        if (data.wpa2key !== null && data.mode !== 'clientonly' && (data.wpa2key.length < 8 || data.wpa2key.length > 63)) {
+            $('#networkSettingsWifiAPKey').addClass('is-invalid').next().text('Length must be 0 or between 8-63');
+            valid = false;
+        }
+        if (data.mode !== 'clientonly' && (data.channel <= 0 || data.channel >= 11)) {
+            $('#networkSettingsWifiAPChannel').addClass('is-invalid').next().text('Channel should be between 1 & 11')
+            valid = false;
+        }
+        if (!valid) {
+            return;
+        }
+        // TODO: Validate
+        $.ajax({
+            url: '/settings_network_wifi',
+            method: 'PUT',
+            data: data,
+            success: function (d) {
+
+            }//TODO: Error dialog, or message somewhere
+        });
+        //TODO: Dialog about how maybe after network change can't access anymore?
+    });
+
+    var escapeHTML = function (text, limit) {
         return $('<div>').text(text.substring(0, limit)).html();
     };
 
-    var wifiClientScan = function() {
+
+    var wifiClientConnect = function (ssid, mac) {
+        return function () {
+            //TODO: Put up spinner
+            $.ajax({
+                url: '/wifi_connect',
+                method: ['POST'],
+                data: {ssid: ssid, mac: mac},
+                success: function () {
+                    //TODO: ok dialog saying connected.
+                    //TODO: Reload?
+                }
+            });
+        }
+    };
+
+
+    var wifiClientScan = function () {
         $('#networkSettingsWifiClientList').hide();
         $('#networkSettingsWifiClientListSpinner').show();
         $.ajax({
             url: '/wifi_scan',
             dataType: 'json',
-            success: function(data) {
+            success: function (data) {
                 var i, tr;
                 var list = $('#networkSettingsWifiClientList tbody').empty();
-                for(i = 0; i < data.aps.length; i++) {
+                for (i = 0; i < data.aps.length; i++) {
                     var ap = data.aps[i];
                     var connectButton = '<button type="button" class="btn btn-success"><i class="fas fa-globe" title="set"></i>Connect</button>';
                     var connect_td = connectButton;
                     if (ap.ssid === data.connected.ssid && ap.mac === data.connected.mac) {
                         connect_td = 'Connected';
                     }
-                    tr = $('<tr>'+
-                        '<th scope="row">'+escapeHTML(ap.ssid, 20)+'<br/>'+ap.mac+'</th>'+
-                        '<td>'+ap.signal+'</td>'+
-                        '<td>'+ap.flags+'</td>'+
-                        '<td>'+connect_td+'</td>'
+                    tr = $('<tr>' +
+                        '<th scope="row">' + escapeHTML(ap.ssid, 20) + '<br/>' + ap.mac + '</th>' +
+                        '<td>' + ap.signal + '</td>' +
+                        '<td>' + ap.flags + '</td>' +
+                        '<td>' + connect_td + '</td>'
                     );
+                    $('button', tr).on('click', wifiClientConnect(ap.ssid, ap.mac));
                     list.append(tr);
                 }
                 $('#networkSettingsWifiClientListSpinner').hide();
                 $('#networkSettingsWifiClientList').show();
             }
-        })
+        });
     };
 
     // Settings menu
-    $('#settings_menu_general').click(function() {
+    $('#settings_menu_general').click(function () {
         $('#generalSettings').data('bs.modal', null).modal({backdrop: true, keyboard: true});
     });
 
-    $('#settings_menu_location').click(function() {
+    $('#settings_menu_location').click(function () {
         $('#locationSettings').data('bs.modal', null).modal({backdrop: true, keyboard: true});
     });
 
-    $('#networkSettingsWifiClientRescan').click(function() {
-       wifiClientScan();
+    $('#networkSettingsWifiClientRescan').click(function () {
+        wifiClientScan();
     });
 
-    $('#settings_menu_network').click(function() {
+    var wifiForget = function (ssid, mac) {
+        return function () {
+            //TODO: Put up spinner
+            $.ajax({
+                url: '/wifi_connect',
+                method: ['DELETE'],
+                data: {ssid: ssid, mac: mac},
+                success: function () {
+                    //TODO: ok dialog saying connected.
+                    //TODO: Reload?
+                }
+            });
+        }
+    };
+
+
+    var updateKnownWifi = function () {
+        $.ajax({
+            url: '/wifi_known',
+            method: 'GET',
+            success: function (d) {
+                var i, tr;
+                var list = $('#networkSettingsClientKnownList').empty();
+                var forgetButton = '<button type="button" class="btn btn-danger"></i>Forget</button>';
+
+                for (i = 0; i < d.length; i++) {
+                    var ap = d[i];
+                    tr = $('<tr>' +
+                        '<th scope="row">' + escapeHTML(ap.ssid, 20) + '<br/>' + ap.bssid + '</th>' +
+                        '<td>' + forgetButton + '</td>'
+                    );
+                    $('button', tr).on('click', wifiForget(ap.ssid, ap.bssid));
+                    list.append(tr);
+                }
+            }
+        });
+    };
+
+    $('#settings_menu_network').click(function () {
         $('#networkSettings').data('bs.modal', null).modal({backdrop: true, keyboard: true});
         //Update wifi client list.
         wifiClientScan();
+        updateKnownWifi();
     });
 
     $('#settings_save').click(function () {

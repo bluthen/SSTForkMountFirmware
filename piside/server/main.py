@@ -164,7 +164,6 @@ def settings_network_wifi():
     if mode == 'autoap' or mode == 'always':
         network.hostapd_write(ssid, channel, wpa2key)
     network.set_wifi_startup_mode(mode)
-    # TODO: Save to settings?
     settings['network']['mode'] = mode
     settings['network']['ssid'] = ssid
     settings['network']['wpa2key'] = wpa2key
@@ -195,6 +194,14 @@ def wifi_connect_delete():
         if settings['network']['wifimode'] == 'autoap':
             subprocess.run(['sudo', '/root/autohotspotcron'])
     return 'Removed', 200
+
+@app.route('/wifi_known', methods=['GET'])
+@nocache
+def wifi_known():
+    stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
+    wpasup = network.wpa_supplicant_read(stemp[0])
+    network.root_file_close(stemp)
+    return jsonify(wpasup['networks'])
 
 
 @app.route('/wifi_connect', methods=['POST'])

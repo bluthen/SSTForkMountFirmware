@@ -1,0 +1,8 @@
+ntpdate in sudoers
+udev teensy files
+
+Change to country=US in wpa_supplicant.conf
+
+
+Copy autohotspot to /usr/bin
+make cron /root/autohotspotcron get called every 2min
