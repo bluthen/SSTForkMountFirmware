@@ -649,4 +649,6 @@ Wire Wire Line
 	7500 4700 7600 4700
 Wire Wire Line
 	7500 4850 7600 4850
+Text Notes 6800 6050 0    60   ~ 0
+RA - M1\nDEC - M2
 $EndSCHEMATC
