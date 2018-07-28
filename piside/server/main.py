@@ -388,8 +388,8 @@ def set_time():
     s = datetime.datetime.now()
     time = request.form.get('time', None)
     overwrite = request.form.get('overwrite', None)
-    if runtime_settings['time_been_set'] and not overwrite:
-        return 'Already Set', 200
+    # if runtime_settings['time_been_set'] and not overwrite:
+    #    return 'Already Set', 200
     d = iso8601.parse_date(time)
     ntpstat = subprocess.run(['/usr/bin/ntpstat'])
     if ntpstat.returncode != 0:
