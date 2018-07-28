@@ -1,8 +1,65 @@
-ntpdate in sudoers
-udev teensy files
+unzip 2018-06-27-raspbian-stretch.zip
 
+dd if=2018-06-27-raspbian-stretch.img of=/dev/device bs=4M
+sync
+
+# Logged onto Pi
+sudo raspi-config
+    boot options -> desktop/cli -> console
+	localization -> change locale -> only enable (C&en_US ones, default en_US.UTF-8)
+	localization -> change timezone -> US -> Central
+	localization -> keyboard layout -> generic 104-key pc -> other -> English (US) -> English (US) -> The default -> no compose, No
+	localization -> change wifi country -> US
+	interfacing options -> ssh -> yes 
+	interfacing options -> serial -> no -> yes
+	update
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y ntp ntpdate
+sudo apt install -y hostapd dnsmasq
+sudo reboot
+
+
+
+# Copy piside code
+
+# in server folder
+sudo pip3 install -r requirements.txt 
+sudo easy_install supervisor
+# udev teensy files for controller
+sudo cp 49-teensy.rules /etc/udev/rules.d
+
+
+#Copy autohotspot to /usr/bin
+
+#ROOT CRON
+*/2 * * * * /root/autohotspotcron
+
+
+#Edit dnsmasq
+bogus-priv
+no-resolv
+address=/#/192.168.45.1
+server=8.8.4.4
+interface=wlan0
+dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
+log-facility=/var/log/dnsmasq.log
+log-async
+log-dhcp
+
+
+#Add to rc.local
+/usr/local/bin/supervisord -c /etc/supervisord.conf
+
+#Add to dhcpcd.conf
+interface wlan0
+static ip_address=192.168.45.1/24
+denyinterfaces eth0
+denyinterfaces wlan0
+
+
+
+
+ntpdate in sudoers
 Change to country=US in wpa_supplicant.conf
 
-
-Copy autohotspot to /usr/bin
-make cron /root/autohotspotcron get called every 2min

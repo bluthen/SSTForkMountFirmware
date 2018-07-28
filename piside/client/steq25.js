@@ -128,6 +128,7 @@ $(document).ready(function () {
             var direction, i;
             var id = $(e.currentTarget).attr('id');
             console.log('mousedown', id);
+            $(e.currentTarget).addClass('pressed');
             var directions = id.split('direction-controls-')[1].split('-');
             var speed = get_manual_speed();
             for (i = 0; i < directions.length; i++) {
@@ -138,6 +139,7 @@ $(document).ready(function () {
         });
         all.on('mouseleave mouseup touchend touchcancel', function (e) {
             var direction, i;
+            $(e.currentTarget).removeClass('pressed');
             var id = $(e.currentTarget).attr('id');
             var directions = id.split('direction-controls-')[1].split('-');
             for (i = 0; i < directions.length; i++) {

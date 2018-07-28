@@ -95,6 +95,10 @@ table.direction-controls td {
     border: none;
 }
 
+.pressed {
+    filter: brightness(50%);
+}
+
 .table-hover > tbody > tr:hover > td, .table-hover > tbody > tr:hover > th{
     background-color: #4B4B4B !important;
 }
