@@ -30,7 +30,7 @@ iers.conf.auto_download = False
 monkey_patch()
 
 st_queue = None
-app = Flask(__name__, static_folder='../client/')
+app = Flask(__name__, static_folder='../client_refactor/dist/')
 socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
 settings = None
 settings_json_lock = threading.RLock()
@@ -75,7 +75,7 @@ def nocache(view):
 @app.route('/static/<path:path>')
 @nocache
 def send_static(path):
-    return send_from_directory('../client', path)
+    return send_from_directory('../client_refactor/dist', path)
 
 
 @app.route('/')
@@ -106,6 +106,7 @@ def settings_put():
     keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
+            "time_autosync"
             ]
     for key in keys:
         if key in args:
@@ -119,7 +120,7 @@ def settings_put():
 
     keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "dec_ticks_per_degree"]
+            "dec_ticks_per_degree", "time_autosync"]
     for key in keys:
         if key in args:
             settings[key] = settings_buffer[key]

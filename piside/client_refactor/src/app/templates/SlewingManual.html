@@ -1,0 +1,150 @@
+<div>
+    <h4>Manual</h4>
+    <div class="container-fluid">
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary active">
+                <input type="radio" id="goto_manual_coord_select-radec" name="goto_manual_coord_select"
+                       value="radec"
+                       autocomplete="off" checked> RA/DEC
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio" id="goto_manual_coord_select-altaz" name="goto_manual_coord_select"
+                       value="altaz"
+                       autocomplete="off"> Alt/Az
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio" id="goto_manual_coord_select-steps" name="goto_manual_coord_select"
+                       value="steps"
+                       autocomplete="off"> Steps
+            </label>
+        </div>
+    </div>
+    <div id="goto_manual_coord_radec">
+        <div class="form-group row">
+            <label for="goto_manual_ra_hh" class="col-form-label col">
+                RA
+            </label>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_ra_hh" placeholder="hh">
+                    <span class="input-group-addon">&nbsp;h&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_ra_mm" placeholder="mm">
+                    <span class="input-group-addon">&nbsp;m&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_ra_ss" placeholder="ss">
+                    <span class="input-group-addon">&nbsp;s&nbsp;</span>
+                </div>
+            </div>
+            <br/>
+        </div>
+        <div class="row">
+            <label for="goto_manual_dec_dd" class="col col-form-label">
+                DEC
+            </label>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_dec_dd" placeholder="±dd">
+                    <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_dec_mm" placeholder="mm">
+                    <span class="input-group-addon">&nbsp;'&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_dec_ss" placeholder="ss"><br/>
+                    <span class="input-group-addon">&nbsp;"&nbsp;</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="goto_manual_coord_altaz" style="display:none">
+        <div class="form-group row">
+            <label for="goto_manual_alt_dd" class="col col-form-label">
+                Alt
+            </label>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_alt_dd" placeholder="±dd">
+                    <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_alt_mm" placeholder="mm">
+                    <span class="input-group-addon">&nbsp;'&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_alt_ss" placeholder="ss"><br/>
+                    <span class="input-group-addon">&nbsp;"&nbsp;</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="goto_manual_az_ddd" class="col col-form-label">
+                Az
+            </label>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_az_ddd" placeholder="ddd">
+                    <span class="input-group-addon">&nbsp;&deg;&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_az_mm" placeholder="mm">
+                    <span class="input-group-addon">&nbsp;'&nbsp;</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_az_ss" placeholder="ss">
+                    <span class="input-group-addon">&nbsp;"&nbsp;</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="goto_manual_coord_steps" style="display:none">
+        <div class="form-group row">
+            <label for="goto_manual_steps_ra" class="col col-form-label">
+                RA
+            </label>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_steps_ra" placeholder="±TOTAL_RA_STEPS">
+                    <span class="input-group-addon">&nbsp;Steps&nbsp;</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="goto_manual_steps_dec" class="col col-form-label">
+                Dec
+            </label>
+            <div class="col">
+                <div class="input-group">
+                    <input class="form-control" type="text" id="goto_manual_steps_dec"
+                           placeholder="±TOTAL_DEC_STEPS">
+                    <span class="input-group-addon">&nbsp;Steps&nbsp;</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="manual_slewto" type="button" class="btn btn-success"><i
+            class="far fa-play-circle"></i>Slew
+    </button>
+    <button id="manual_sync" type="button" class="btn btn-warning"><i class="fas fa-sync" alt="Sync"></i>Sync
+    </button>&nbsp;
+</div>

@@ -1,0 +1,27 @@
+{
+  "name": "SSTEQ25Client",
+  "version": "1.0.0",
+  "description": "SSTEQ25 web client",
+  "main": "index.js",
+  "author": "Russell Valentine <russell.valentine@gmail.com>",
+  "license": "Other",
+  "scripts": {
+    "build": "webpack --progress --mode=production --env.production",
+    "watch": "webpack --watch --progress --mode=production --env.production"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.7.0",
+    "copy-webpack-plugin": "^4.2.0",
+    "css-loader": "^1.0.0",
+    "node-sass": "^4.6.0",
+    "raw-loader": "^0.5.1",
+    "sass-loader": "^7.1.0",
+    "style-loader": "^0.21.0",
+    "uglifyjs-webpack-plugin": "^1.0.1",
+    "webpack": "^4.16.4",
+    "webpack-cli": "^3.1.0"
+  },
+  "dependencies": {}
+}

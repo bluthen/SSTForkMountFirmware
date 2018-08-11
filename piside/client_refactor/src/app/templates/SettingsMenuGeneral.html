@@ -1,0 +1,205 @@
+<div class="modal fade generalSettings" role="dialog" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">General Settings</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <div class="btn-group" data-toggle="buttons">
+                        <label class="btn btn-primary active">
+                            <input type="radio" id="settings-color-scheme-default" name="settings-color-scheme"
+                                   value="default"
+                                   autocomplete="off" checked> Default Color Scheme
+                        </label>
+                        <label class="btn btn-primary">
+                            <input type="radio" id="settings-color-scheme-nightvision"
+                                   name="settings-color-scheme"
+                                   value="redlights"
+                                   autocomplete="off"> Night-Vision Color Scheme
+                        </label>
+                    </div>
+                </div>
+                <br/>
+                Park Position (Alt-Az): <span id="settings_park_position"></span>
+                <div class="form-group">
+                    <button id="settings_park" type="button" class="btn btn-success"><i class="fas fa-home"></i>
+                        Park Scope
+                    </button>&nbsp;
+                    <button id="settings_set_park_position" type="button" class="btn btn-warning"><i
+                            class="fas fa-home"></i>
+                        Set
+                        Park
+                        Position to Current Position
+                    </button>
+                    <button id="settings_unset_park_position" type="button"
+                            class="btn btn-danger"><i class="fas fa-home"></i>
+                        Unset
+                        Park
+                        Position
+                    </button>
+                    <br/><br/>
+                    <button id="settings_start_tracking" type="button"
+                            class="btn btn-success"><i class="fas fa-hourglass-start"></i>
+                        Start tracking
+                    </button>
+                    <button id="settings_stop_tracking" type="button"
+                            class="btn btn-danger"><i class="fas fa-hourglass-end"></i>
+                        Stop tracking
+                    </button>
+                </div>
+
+                <div class="form-group" id="firmware_upload_div">
+                    <div class="col-md-1">
+                        <span id="firmware_version">Current&nbsp;Version:</span>
+                        <input id="firmware_file" type="file"/>
+                        <button id="firmware_file_upload" type="button" class="btn btn-primary"><i
+                                class="fas fa-upload"></i>
+                            Upload New Firmware
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="col-md-1">
+                        <input id="showAdvancedSettings" class="form-check-input" type="checkbox" value=""
+                               data-toggle="collapse"
+                               data-target="#advancedSettings" aria-expanded="false"
+                               aria-controls="advancedSettings">
+                        <label class="form-check-label"
+                               for="showAdvancedSettings">Show&nbsp;Advanced&nbsp;Settings</label>
+                    </div>
+                </div>
+
+                <div class="collapse" id="advancedSettings">
+                    <div class="form-group">
+                        <label for="settings_ra_track_rate">
+                            RA Tracking Steps/Second
+                        </label>
+                        <input class="form-control" id="settings_ra_track_rate" type="text"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="settings_dec_ticks_per_degree">
+                            DEC Steps/Degree
+                        </label>
+                        <input class="form-control" id="settings_dec_ticks_per_degree" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_direction">
+                            RA Direction
+                        </label>
+                        <input class="form-control" id="settings_ra_direction" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_direction">
+                            DEC Direction
+                        </label>
+                        <input class="form-control" id="settings_dec_direction" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_guide_rate">
+                            RA Guide Steps/Sec (Change from tracking, not absolute)
+                        </label>
+                        <input class="form-control" id="settings_ra_guide_rate" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_slew_fastest">
+                            RA Slew-Fastest Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_ra_slew_fastest" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_slew_faster">
+                            RA Slew-Faster Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_ra_slew_faster" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_slew_medium">
+                            RA Slew-Medium Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_ra_slew_medium" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_slew_slower">
+                            RA Slew-Slower Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_ra_slew_slower" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_slew_slowest">
+                            RA Slew-Slowest Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_ra_slew_slowest" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_guide_rate">
+                            DEC Guide Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_dec_guide_rate" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_slew_fastest">
+                            DEC Slew-Fastest Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_dec_slew_fastest" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_slew_faster">
+                            DEC Slew-Faster Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_dec_slew_faster" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_slew_medium">
+                            DEC Slew-Medium Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_dec_slew_medium" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_slew_slower">
+                            DEC Slew-Slower Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_dec_slew_slower" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_slew_slowest">
+                            DEC Slew-Slowest Steps/Sec
+                        </label>
+                        <input class="form-control" id="settings_dec_slew_slowest" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_orthogonal_error">
+                            Orthogonal Error Degrees
+                        </label>
+                        <input class="form-control" id="settings_orthogonal_error" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_ra_backlash">
+                            RA Backlash Steps
+                        </label>
+                        <input class="form-control" id="settings_ra_backlash" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_dec_backlash">
+                            DEC Backlash Steps
+                        </label>
+                        <input class="form-control" id="settings_dec_backlash" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <button id="settings_save" type="button" class="btn btn-warning"><i
+                                class="fas fa-cog"></i>Save
+                            Advanced Settings
+                        </button>
+                        <span id="settings_save_status"></span><br/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

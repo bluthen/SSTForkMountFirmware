@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <link rel="manifest" href="/static/manifest.json">
+    <title>SSTEQ-25 Control Panel</title>
+    <style>
+        /* Filter has some bugs on firefox
+        div.redlights {
+            -webkit-filter: url('#redfilter');
+            -moz-filter: url('#redfilter');
+            filter: url('#redfilter');
+        }*/
+    </style>
+    <link rel="stylesheet" type="text/css" id='bootstrapcss' href="bootstrap/css/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" id="tempusdominuscss" href="tempusdominus-bootstrap-4.min.css"/>
+    <link rel="stylesheet" type="text/css" id='maincss' href="main.css"/>
+    <script src="jquery-3.2.1.min.js"></script>
+    <script src="lodash.min.js"></script>
+    <script src="fontawesome-all.js"></script>
+    <script src="bootstrap/js/popper.min.js"></script>
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+    <script src="moment.min.js"></script>
+    <script src="tempusdominus-bootstrap-4.min.js"></script>
+    <script src="socket.io.2.0.4.js"></script>
+    <script src="app.js"></script>
+    <script>
+        //screen.orientation.lock('portrait');
+    </script>
+</head>
+<body>
+<div class="redlights App">
+    <div class="modal fade" id="errorInfoModal" tabindex="-1" role="dialog"
+         aria-labeledby="errorInfoModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorInfoModalTitle">Error</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="errorInfoModalBody">
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="slewModal" tabindex="-1" role="dialog" aria-labeledby="slewModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="slewModalTitle">Slewing</h5>
+                </div>
+                <div class="modal-body" id="slewModalBody">
+                    Position: <span id="slewModalStatus"></span><span id="slewModalAltAzStatus"></span><span
+                        id="slewModalStepsStatus"></span><br/>
+                    Target: <span id="slewModalTarget"></span>
+                    <br/>
+                    Slewing...
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="slewModalCancel">Cancel Slew</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div>
+    <svg>
+        <filter id="redfilter">
+            <feColorMatrix in="SourceGraphic"
+                           type="matrix"
+                           values=".21 .72 0.07 0 0
+                               0 0 0 0 0
+                               0 0 0 0 0
+                               0 0 0 1 0"/>
+        </filter>
+    </svg>
+</div>
+</body>
+</html>
