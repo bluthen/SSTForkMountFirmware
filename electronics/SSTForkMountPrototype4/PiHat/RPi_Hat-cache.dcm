@@ -1,0 +1,15 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP G5LE-1A
+D Omron G5Q relay, Miniature Single Pole, SPST-NO, 10A
+K Miniature Single Pole Relay
+F https://www.omron.com/ecb/products/pdf/en-g5q.pdf
+$ENDCMP
+#
+$CMP G5Q-1A
+D Omron G5Q relay, Miniature Single Pole, SPST-NO, 10A
+K Miniature Single Pole Relay
+F https://www.omron.com/ecb/products/pdf/en-g5q.pdf
+$ENDCMP
+#
+#End Doc Library

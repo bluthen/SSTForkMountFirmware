@@ -1,0 +1,222 @@
+EESchema Schematic File Version 2
+LIBS:RPi_Hat-rescue
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:isadore_custom_components
+LIBS:SSTForkMountPrototype2-cache
+LIBS:relays
+LIBS:switches
+LIBS:RPi_Hat-cache
+EELAYER 25 0
+EELAYER END
+$Descr USLetter 11000 8500
+encoding utf-8
+Sheet 2 2
+Title "SSTEQ25"
+Date "2018-08-18"
+Rev "0.0.5"
+Comp "StarSync Trackers LLC"
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L RPi_GPIO J2
+U 1 1 5516AE26
+P 7500 2700
+AR Path="/5516AE26" Ref="J2"  Part="1" 
+AR Path="/5515D395/5516AE26" Ref="J2"  Part="1" 
+F 0 "J2" H 8250 2950 60  0000 C CNN
+F 1 "RPi_GPIO" H 8250 2850 60  0000 C CNN
+F 2 "RPi_Hat:Pin_Header_Straight_2x20" H 7500 2700 60  0001 C CNN
+F 3 "" H 7500 2700 60  0000 C CNN
+	1    7500 2700
+	1    0    0    -1  
+$EndComp
+Text Notes 7800 5000 0    60   Italic 0
+Thru-Hole Connector
+Text GLabel 9300 3000 2    60   Output ~ 0
+RPI_TX
+Text GLabel 9300 3100 2    60   Input ~ 0
+RPI_RX
+Wire Wire Line
+	9200 3000 9300 3000
+Wire Wire Line
+	9200 3100 9300 3100
+$Comp
+L +5V #PWR032
+U 1 1 5B0302F7
+P 9300 2700
+F 0 "#PWR032" H 9300 2550 50  0001 C CNN
+F 1 "+5V" H 9300 2840 50  0000 C CNN
+F 2 "" H 9300 2700 50  0001 C CNN
+F 3 "" H 9300 2700 50  0001 C CNN
+	1    9300 2700
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	9200 2700 9300 2700
+Wire Wire Line
+	9200 2800 9250 2800
+Wire Wire Line
+	9250 2800 9250 2700
+Connection ~ 9250 2700
+$Comp
+L GND #PWR033
+U 1 1 5B030319
+P 9300 4300
+F 0 "#PWR033" H 9300 4050 50  0001 C CNN
+F 1 "GND" H 9300 4150 50  0000 C CNN
+F 2 "" H 9300 4300 50  0001 C CNN
+F 3 "" H 9300 4300 50  0001 C CNN
+	1    9300 4300
+	0    -1   -1   0   
+$EndComp
+$Comp
+L GND #PWR034
+U 1 1 5B03032F
+P 9350 2850
+F 0 "#PWR034" H 9350 2600 50  0001 C CNN
+F 1 "GND" H 9350 2700 50  0000 C CNN
+F 2 "" H 9350 2850 50  0001 C CNN
+F 3 "" H 9350 2850 50  0001 C CNN
+	1    9350 2850
+	0    -1   -1   0   
+$EndComp
+$Comp
+L GND #PWR035
+U 1 1 5B030345
+P 9300 3300
+F 0 "#PWR035" H 9300 3050 50  0001 C CNN
+F 1 "GND" H 9300 3150 50  0000 C CNN
+F 2 "" H 9300 3300 50  0001 C CNN
+F 3 "" H 9300 3300 50  0001 C CNN
+	1    9300 3300
+	0    -1   -1   0   
+$EndComp
+$Comp
+L GND #PWR036
+U 1 1 5B03035B
+P 9300 3600
+F 0 "#PWR036" H 9300 3350 50  0001 C CNN
+F 1 "GND" H 9300 3450 50  0000 C CNN
+F 2 "" H 9300 3600 50  0001 C CNN
+F 3 "" H 9300 3600 50  0001 C CNN
+	1    9300 3600
+	0    -1   -1   0   
+$EndComp
+$Comp
+L GND #PWR037
+U 1 1 5B030391
+P 7200 3900
+F 0 "#PWR037" H 7200 3650 50  0001 C CNN
+F 1 "GND" H 7200 3750 50  0000 C CNN
+F 2 "" H 7200 3900 50  0001 C CNN
+F 3 "" H 7200 3900 50  0001 C CNN
+	1    7200 3900
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR038
+U 1 1 5B0303A7
+P 7200 4600
+F 0 "#PWR038" H 7200 4350 50  0001 C CNN
+F 1 "GND" H 7200 4450 50  0000 C CNN
+F 2 "" H 7200 4600 50  0001 C CNN
+F 3 "" H 7200 4600 50  0001 C CNN
+	1    7200 4600
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR039
+U 1 1 5B0303BD
+P 7200 3100
+F 0 "#PWR039" H 7200 2850 50  0001 C CNN
+F 1 "GND" H 7200 2950 50  0000 C CNN
+F 2 "" H 7200 3100 50  0001 C CNN
+F 3 "" H 7200 3100 50  0001 C CNN
+	1    7200 3100
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	7200 4600 7300 4600
+Wire Wire Line
+	7200 3900 7300 3900
+Wire Wire Line
+	7200 3100 7300 3100
+Wire Wire Line
+	9200 4300 9300 4300
+Wire Wire Line
+	9200 3600 9300 3600
+Wire Wire Line
+	9200 3300 9300 3300
+Wire Wire Line
+	9200 2900 9250 2900
+Wire Wire Line
+	9250 2900 9250 2850
+Wire Wire Line
+	9250 2850 9350 2850
+NoConn ~ 9200 3200
+NoConn ~ 9200 3400
+NoConn ~ 9200 3500
+NoConn ~ 9200 3700
+NoConn ~ 9200 3800
+NoConn ~ 9200 3900
+NoConn ~ 9200 4000
+NoConn ~ 9200 4100
+NoConn ~ 9200 4200
+NoConn ~ 9200 4400
+NoConn ~ 9200 4500
+NoConn ~ 9200 4600
+NoConn ~ 7300 4500
+NoConn ~ 7300 4400
+NoConn ~ 7300 4300
+NoConn ~ 7300 4000
+NoConn ~ 7300 3800
+NoConn ~ 7300 3700
+NoConn ~ 7300 3600
+NoConn ~ 7300 3500
+NoConn ~ 7300 3400
+NoConn ~ 7300 3300
+NoConn ~ 7300 3200
+NoConn ~ 7300 3000
+NoConn ~ 7300 2900
+NoConn ~ 7300 2800
+NoConn ~ 7300 2700
+Text GLabel 7200 4100 0    60   Input ~ 0
+PWR_SW_PI
+Wire Wire Line
+	7200 4100 7300 4100
+Text GLabel 7200 4200 0    60   Output ~ 0
+PWR_RELAY_PI
+Wire Wire Line
+	7200 4200 7300 4200
+$EndSCHEMATC
