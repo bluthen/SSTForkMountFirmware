@@ -1,4 +1,4 @@
-update=Sat 11 Aug 2018 05:17:07 PM CDT
+update=Sat 01 Sep 2018 02:01:22 PM CDT
 version=1
 last_client=kicad
 [cvpcb]
@@ -26,16 +26,6 @@ BoardOutlineThickness=0.09999999999999999
 ModuleOutlineThickness=0.15
 [general]
 version=1
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=
-SpiceForceRefPrefix=0
-SpiceUseNetNumbers=0
-LabSize=60
 [eeschema]
 version=1
 LibDir=C:/xesscorp/KiCad/libraries
@@ -75,3 +65,13 @@ LibName32=/home/russ/projects/exotericanalytics/isadore_electronics/kicad/isador
 LibName33=/home/russ/projects/starsynctrackers/SSTForkMountFirmware/electronics/SSTForkMountPrototype2/SSTForkMountPrototype2-cache
 LibName34=relays
 LibName35=switches
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60

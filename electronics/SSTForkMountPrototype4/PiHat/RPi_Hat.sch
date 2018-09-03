@@ -874,4 +874,6 @@ Connection ~ 2550 2150
 Connection ~ 3400 1850
 Wire Wire Line
 	3900 2800 4000 2800
+Text Notes 1200 4850 0    60   ~ 0
+TP1 at ~0.354V with current stepper motors.
 $EndSCHEMATC
