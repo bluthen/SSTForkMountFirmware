@@ -875,5 +875,5 @@ Connection ~ 3400 1850
 Wire Wire Line
 	3900 2800 4000 2800
 Text Notes 1200 4850 0    60   ~ 0
-TP1 at ~0.354V with current stepper motors.\nAlso cut APWR jumper
+TP1 at ~0.2V with current stepper motors.\nAlso cut APWR jumper
 $EndSCHEMATC

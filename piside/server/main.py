@@ -40,6 +40,28 @@ conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
 runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info': None, 'tracking': True}
 
 
+# Sets up power switch
+# TODO: disable power switch for simulation
+def setup_power_switch():
+    try:
+        import RPi.GPIO as GPIO
+        RELAY_PIN = 6
+        SWITCH_PIN = 5
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(RELAY_PIN, GPIO.OUT)
+        GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.output(RELAY_PIN, True)
+
+        GPIO.add_event_detect(SWITCH_PIN, GPIO.RISING, callback=switch_off)
+    except ModuleNotFoundError:
+        # We are probably in simulation
+        print("Warning: Can't use power switch.")
+
+
+def switch_off(pin):
+    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+
+
 @app.context_processor
 def override_url_for():
     """
@@ -632,6 +654,7 @@ def manual_control(message):
 
 def main():
     global st_queue, settings
+    setup_power_switch()
     with settings_json_lock:
         with open('settings.json') as f:
             settings = json.load(f)
