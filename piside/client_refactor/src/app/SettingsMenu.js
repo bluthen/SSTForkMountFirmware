@@ -2,6 +2,7 @@
 import SettingsMenuGeneral from './SettingsMenuGeneral.js'
 import SettingsMenuLocation from './SettingsMenuLocation.js'
 import SettingsMenuNetwork from './SettingsMenuNetwork.js'
+import SettingsMenuPolarAlignAssist from './SettingsMenuPolarAlignAssist';
 
 import template from './templates/SettingsMenu.html'
 
@@ -15,6 +16,7 @@ class SettingsMenu {
         this.settingsMenuGeneral = new SettingsMenuGeneral(App, settingsMenuDiv);
         this.settingsMenuLocation = new SettingsMenuLocation(settingsMenuDiv, startingSettings);
         this.settingsMenuNetwork = new SettingsMenuNetwork(settingsMenuDiv);
+        this.settingsMenuPolarAlignAssist = new SettingsMenuPolarAlignAssist(settingsMenuDiv);
 
         // Settings menu
         $('#settings_menu_general', _selfDiv).click(() => {
@@ -29,6 +31,9 @@ class SettingsMenu {
             this.settingsMenuNetwork.show();
         });
 
+        $('#settings_menu_polaralignassist', _selfDiv).click(() => {
+            this.settingsMenuPolarAlignAssist.show();
+        });
 
 
     }
