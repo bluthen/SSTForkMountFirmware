@@ -128,7 +128,7 @@ def settings_put():
     keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "time_autosync"
+            "time_autosync", "polar_align_camera_rotation"
             ]
     for key in keys:
         if key in args:
@@ -142,7 +142,7 @@ def settings_put():
 
     keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "dec_ticks_per_degree", "time_autosync"]
+            "dec_ticks_per_degree", "time_autosync", "polar_align_camera_rotation"]
     for key in keys:
         if key in args:
             settings[key] = settings_buffer[key]
