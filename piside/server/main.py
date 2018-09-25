@@ -24,10 +24,17 @@ import math
 import os
 import sstchuck
 import network
+import polar_align_assist
+from fractions import Fraction
 
 iers.conf.auto_download = False
 
 monkey_patch()
+
+paa_process_lock = threading.RLock()
+paa_process = None
+paa_count = 0
+
 
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
@@ -128,7 +135,7 @@ def settings_put():
     keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "time_autosync", "polar_align_camera_rotation"
+            "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"
             ]
     for key in keys:
         if key in args:
@@ -142,7 +149,7 @@ def settings_put():
 
     keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "dec_ticks_per_degree", "time_autosync", "polar_align_camera_rotation"]
+            "dec_ticks_per_degree", "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"]
     for key in keys:
         if key in args:
             settings[key] = settings_buffer[key]
@@ -217,6 +224,7 @@ def wifi_connect_delete():
         if settings['network']['wifimode'] == 'autoap':
             subprocess.run(['sudo', '/root/autohotspotcron'])
     return 'Removed', 200
+
 
 @app.route('/wifi_known', methods=['GET'])
 @nocache
@@ -652,8 +660,64 @@ def manual_control(message):
     emit('controls_response', {'data': 33})
 
 
+@app.route('/paa_capture', methods=['POST'])
+@nocache
+def paa_capture():
+    global paa_process
+    exposure = int(request.form.get('exposure'))
+    iso = int(request.form.get('iso'))
+    single = request.form.get('single') == 'true'
+    print(exposure, single)
+    with paa_process_lock:
+        if not paa_process or paa_process.poll() is not None:
+            paa_process = subprocess.Popen(
+                ['/usr/bin/python3', 'polar_align_assist.py'],
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+            t = threading.Thread(target=listen_paa_stdout, args=(paa_process,))
+            t.start()
+            t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
+            t.start()
+        paa_process.stdin.write(('%d %s %d\n' % (exposure, str(single), iso)).encode())
+    return "Capturing", 200
+
+
+@app.route('/paa_capture', methods=['DELETE'])
+@nocache
+def paa_capture_stop():
+    with paa_process_lock:
+        if paa_process and paa_process.poll() is None:
+            paa_process.stdin.write('stop\n'.encode())
+    return 'Stopping', 200
+
+
+@app.route('/paa_image', methods=['GET'])
+@nocache
+def paa_image():
+    global paa_count
+    img = '%d.jpg' % (paa_count,)
+    print('paa_image', img, flush=True)
+    return send_from_directory('/ramtmp', img)
+
+
+def listen_paa_stdout(process):
+    global paa_count
+    while process.poll() is None:
+        sline = process.stdout.readline().decode().strip().split(' ')
+        if len(sline) == 2 and sline[0] == 'CAPTURED':
+            paa_count = int(sline[1])
+            socketio.emit('paa_capture_response', {'paa_count': paa_count})
+
+
+def listen_paa_stderr(process):
+    global paa_count
+    while process.poll() is None:
+        line = process.stderr.readline().decode().strip()
+        print('polar_align_assist.py:', line)
+
 def main():
-    global st_queue, settings
+    global st_queue, settings, paa_thread
     setup_power_switch()
     with settings_json_lock:
         with open('settings.json') as f:
@@ -669,11 +733,21 @@ def main():
     sstchuck_thread.start()
 
     print('Running...')
-    socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)
-    stellarium_server.terminate()
-    sstchuck.terminate()
-    stellarium_thread.join()
-    sstchuck_thread.join()
+    try:
+        socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)
+        stellarium_server.terminate()
+        sstchuck.terminate()
+        stellarium_thread.join()
+        sstchuck_thread.join()
+        if paa_thread:
+            paa_thread.join()
+    finally:
+        if paa_process and paa_process.poll() is None:
+            paa_process.stdin.write('STOP\nQUIT\n'.encode())
+            try:
+                paa_process.wait(10)
+            except subprocess.TimeoutExpired:
+                paa_process.kill()
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ import SettingsMenuPolarAlignAssist from './SettingsMenuPolarAlignAssist';
 import template from './templates/SettingsMenu.html'
 
 class SettingsMenu {
-    constructor(App, parentDiv, startingSettings) {
+    constructor(App, parentDiv, startingSettings, directionsControls) {
         const _selfDiv = $(template);
         parentDiv.append(_selfDiv);
         const settingsMenuDiv = $('<div></div>');
@@ -16,7 +16,7 @@ class SettingsMenu {
         this.settingsMenuGeneral = new SettingsMenuGeneral(App, settingsMenuDiv);
         this.settingsMenuLocation = new SettingsMenuLocation(settingsMenuDiv, startingSettings);
         this.settingsMenuNetwork = new SettingsMenuNetwork(settingsMenuDiv);
-        this.settingsMenuPolarAlignAssist = new SettingsMenuPolarAlignAssist(settingsMenuDiv);
+        this.settingsMenuPolarAlignAssist = new SettingsMenuPolarAlignAssist(App, settingsMenuDiv, directionsControls);
 
         // Settings menu
         $('#settings_menu_general', _selfDiv).click(() => {
