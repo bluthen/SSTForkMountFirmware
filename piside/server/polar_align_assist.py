@@ -5,6 +5,8 @@ import os
 import sys
 import select
 import datetime
+import shutil
+import img_average
 
 # Version 2 Camera resolution 3280x2464 max 10s exposure
 # Version 1 Camera resolution 2592x1944 max 6s exposure
@@ -38,42 +40,80 @@ def get_camera(camerainfo=detect_camera_hardware(), binning=2):
     return camera
 
 
-def ramtmp_generator(camera, single):
+def delete_files(path):
+    for fn in os.listdir(path):
+        fp = os.path.join(path, fn)
+        try:
+            if os.path.isfile(fp):
+                os.unlink(fp)
+        except:
+            pass
+
+
+def ramtmp_generator(camera, count, delay, calibrate_mode):
     global ramtmp_count
 
+    if calibrate_mode:
+        delete_files('/caltmp')
+
     stop_capture = False
+    i = 0
     while not stop_capture:
         last = datetime.datetime.now()
+        if i == 0:
+            print('STATUS First Exposure...', flush=True)
+        else:
+            print('STATUS Capturing image %d' % (i+1,), flush=True)
         yield '/ramtmp/%d.jpg' % (ramtmp_count)
         ramtmp_count += 1
         old_file = "/ramtmp/%d.jpg" % (ramtmp_count-2,)
         if os.path.exists(old_file):
             os.remove(old_file)
+        if calibrate_mode:
+            shutil.copyfile("/ramtmp/%d.jpg" % (ramtmp_count-1), "/caltmp/%d.jpg" % (ramtmp_count-1))
         print('ramtmp_generator', file=sys.stderr, flush=True)
         print('CAPTURED '+str(ramtmp_count-1), flush=True)
-        dt = 0.25 - (datetime.datetime.now() - last).total_seconds()
+        dt = delay - (datetime.datetime.now() - last).total_seconds()
         print(dt, file=sys.stderr, flush=True)
         if dt > 0:
             sleep(dt)
         # queue.put('/ramtmp/%d.jpg' % (paa_count-1,))
         # socketio.emit('paa_capture_response', {'message': 'captured'})
-        qitem = None
+        line = None
         if select.select([sys.stdin], [], [], 0.0)[0]:
-            qitem = sys.stdin.readline().strip()
-        if single or qitem == 'stop':
-            stop_capture = True
-        if qitem:
-            sline = qitem.split(' ')
-            if len(sline) == 3:
-                exposure_time = int(sline[0])
+            line = sys.stdin.readline().strip()
+        if line:
+            cmd = parse_cmd(line)
+            if cmd:
+                exposure_time = int(cmd['exposure_time'])
                 camera.shutter_speed = exposure_time
                 camera.framerate = Fraction(1000000.0 / exposure_time)
-                camera.iso = int(sline[2])
-                single = sline[1].lower() == 'true'
+                camera.iso = cmd['iso']
+                i = 0
+                count = cmd['count']
+                delay = cmd['delay']
+                calibrate_mode = cmd['calibrate_mode']
+        i += 1
+        if (count != -1 and i >= count) or line == 'stop':
+            stop_capture = True
+    print("CAPTUREDONE", flush=True)
+    if calibrate_mode:
+        print('ramtmp_generator calibrating', ramtmp_count, file=sys.stderr, flush=True)
+        print("STATUS Averaging images", flush=True)
+        img_average.average('/caltmp')
+        shutil.copyfile('/caltmp/average.jpg', '/ramtmp/%d.jpg' % (ramtmp_count,))
+        delete_files('/caltmp')
+        ramtmp_count += 1
+        old_file = "/ramtmp/%d.jpg" % (ramtmp_count-2,)
+        if os.path.exists(old_file):
+            os.remove(old_file)
+        print('CAPTURED ' + str(ramtmp_count - 1), flush=True)
+    print('STATUS Done capturing', flush=True)
     print('ramtmp_generator done', file=sys.stderr, flush=True)
 
 
-def capture(exposure_time, single=False, camera=None, camerainfo=detect_camera_hardware(), iso=800):
+def capture(exposure_time=100000, iso=800, count=1, delay=0.25, calibrate_mode=False, camera=None, camerainfo=detect_camera_hardware()):
+    print('STATUS Setting up camera', flush=True)
     created_camera = False
     if exposure_time > camerainfo['max_exposure']:
         exposure_time = camerainfo['max_exposure']
@@ -92,7 +132,7 @@ def capture(exposure_time, single=False, camera=None, camerainfo=detect_camera_h
         camera.shutter_speed = exposure_time
         camera.framerate = framerate
         print('Starting capture_sequence')
-        camera.capture_sequence(ramtmp_generator(camera, single), use_video_port=True)
+        camera.capture_sequence(ramtmp_generator(camera, count, delay, calibrate_mode), use_video_port=True)
         print('capture sequence done')
         #camera.stop_preview()
     finally:
@@ -100,19 +140,35 @@ def capture(exposure_time, single=False, camera=None, camerainfo=detect_camera_h
             camera.close()
 
 
+def parse_cmd(line):
+    sline = line.strip().split(' ')
+    # Arg 1: exposure_time microseconds
+    # Arg 2: ISO
+    # Arg 3: num of exposures (-1 for inf)
+    # Arg 4: Delay between exposures (s)
+    # Arg 5: If calibrate mode
+    ret = {}
+    if len(sline) == 5:
+        ret['exposure_time'] = int(sline[0])
+        ret['iso'] = int(sline[1])
+        ret['count'] = int(sline[2])
+        ret['delay'] = float(sline[3])
+        ret['calibrate_mode'] = sline[4].lower() == 'true'
+        return ret
+    return None
+
+
 def main():
-    line = sys.stdin.readline().strip()
+    line = sys.stdin.readline()
     with get_camera() as camera:
-        while line:
-            sline = line.split(' ')
-            if len(sline) == 3:
-                exposure_time = int(sline[0])
-                single = sline[1].lower() == 'true'
-                iso = int(sline[2])
-                capture(exposure_time, single, camera, iso=iso)
+        while line != '':
+            cmd = parse_cmd(line)
+            if cmd:
+                print('cmd:', cmd, file=sys.stderr, flush=True)
+                capture(cmd['exposure_time'], cmd['iso'], cmd['count'], cmd['delay'], cmd['calibrate_mode'], camera)
             if line.strip() == 'QUIT':
                 return
-            line = sys.stdin.readline().strip()
+            line = sys.stdin.readline()
 
 
 if __name__ == '__main__':

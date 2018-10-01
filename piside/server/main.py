@@ -655,7 +655,7 @@ def search_location():
 @socketio.on('manual_control')
 def manual_control(message):
     emit('controls_response', {'data': 33})
-    print("Got %s" + json.dumps(message))
+    # print("Got %s" + json.dumps(message))
     control.manual_control(message['direction'], message['speed'])
     emit('controls_response', {'data': 33})
 
@@ -666,8 +666,9 @@ def paa_capture():
     global paa_process
     exposure = int(request.form.get('exposure'))
     iso = int(request.form.get('iso'))
-    single = request.form.get('single') == 'true'
-    print(exposure, single)
+    count = int(request.form.get('count'))
+    delay = float(request.form.get('delay'))
+    calibration = request.form.get('calibration')
     with paa_process_lock:
         if not paa_process or paa_process.poll() is not None:
             paa_process = subprocess.Popen(
@@ -679,7 +680,7 @@ def paa_capture():
             t.start()
             t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
             t.start()
-        paa_process.stdin.write(('%d %s %d\n' % (exposure, str(single), iso)).encode())
+        paa_process.stdin.write(('%d %d %d %f %s\n' % (exposure, iso, count, delay, str(calibration))).encode())
     return "Capturing", 200
 
 
@@ -704,10 +705,14 @@ def paa_image():
 def listen_paa_stdout(process):
     global paa_count
     while process.poll() is None:
-        sline = process.stdout.readline().decode().strip().split(' ')
+        sline = process.stdout.readline().decode().strip().split(' ', 1)
         if len(sline) == 2 and sline[0] == 'CAPTURED':
             paa_count = int(sline[1])
-            socketio.emit('paa_capture_response', {'paa_count': paa_count})
+            socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
+        elif sline[0] == 'CAPTUREDONE':
+            socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
+        elif sline[0] == 'STATUS':
+            socketio.emit('paa_capture_response', {'status': sline[1]})
 
 
 def listen_paa_stderr(process):
@@ -715,6 +720,7 @@ def listen_paa_stderr(process):
     while process.poll() is None:
         line = process.stderr.readline().decode().strip()
         print('polar_align_assist.py:', line)
+
 
 def main():
     global st_queue, settings, paa_thread

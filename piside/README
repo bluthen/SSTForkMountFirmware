@@ -63,3 +63,11 @@ denyinterfaces wlan0
 ntpdate in sudoers
 Change to country=US in wpa_supplicant.conf
 
+
+
+mkdir /ramtmp
+mkdir /caltmp
+chown pi /caltmp
+in /etc/fstab
+tmpfs /ramtmp tmpfs defaults,size=20m,mode=1777 0 0
+
