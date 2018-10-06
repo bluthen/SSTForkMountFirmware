@@ -3,6 +3,7 @@ import socket
 import re
 import tempfile
 import os
+import time
 
 settings = None
 
@@ -34,11 +35,13 @@ def root_file_close(stemp, mode=755):
     stemp[0].close()
     subprocess.run(['/usr/bin/sudo', '/bin/cp', stemp[1], stemp[2]])
     subprocess.run(['/usr/bin/sudo', '/bin/chown', 'root', stemp[2]])
-    subprocess.run(['/usr/bin/sudo', '/bin/chmod', mode, stemp[2]])
+    subprocess.run(['/usr/bin/sudo', '/bin/chmod', str(mode), stemp[2]])
     os.remove(stemp[1])
 
 
-def set_autohotspotcron(ahc_file, enabled):
+def set_autohotspotcron(enabled):
+    stemp = root_file_open('/root/autohotspotcron')
+    ahc_file = stemp[0]
     ahc_file.truncate(0)
     if enabled:
         ahc_file.write("""#/bin/sh
@@ -48,30 +51,118 @@ def set_autohotspotcron(ahc_file, enabled):
         ahc_file.write("""#/bin/sh
         /bin/true > /dev/null 2>&1
 """)
+    root_file_close(stemp)
+
+
+def set_network_startup(hostpad_enabled):
+    stemp = root_file_open('/root/networkstartup.sh')
+    stemp[0].truncate(0)
+    if hostpad_enabled:
+        stemp[0].write("""#!/bin/sh
+/root/ctrl_dnsmasq.py check_and_restart
+service hostapd start
+        """)
+    else:
+        stemp[0].write("""#!/bin/sh
+        /root/ctrl_dnsmasq.py check_and_restart
+                """)
+    root_file_close(stemp)
 
 
 def set_wifi_startup_mode(mode):
-    if mode == 'clientonly' or mode == 'autoap':
-        subprocess.run(['sudo', '/usr/sbin/update-rc.d', 'hostapd', 'disable'])
-        subprocess.run(['sudo', '/usr/sbin/update-rc.d', 'dnsmasq', 'disable'])
-        subprocess.run(['sudo', '/etc/init.d/hostapd', 'stop'])
-        subprocess.run(['sudo', '/etc/init.d/dnsmasq', 'stop'])
-    elif mode == 'always':
-        subprocess.run(['sudo', '/usr/sbin/update-rc.d', 'hostapd', 'enable'])
-        subprocess.run(['sudo', '/usr/sbin/update-rc.d', 'dnsmasq', 'enable'])
-        subprocess.run(['sudo', '/etc/init.d/hostapd', 'restart'])
-        subprocess.run(['sudo', '/etc/init.d/dnsmasq', 'restart'])
-    if mode == 'always' or mode == 'clientonly':
-        subprocess.run(['sudo', '/bin/systemctl', 'disable', 'autohotspot.service'])
-        stemp = root_file_open('/root/autohotspotcron')
-        set_autohotspotcron(stemp[0], False)
-        root_file_close(stemp)
+    if mode == 'always':
+        set_autohotspotcron(False)
+        set_network_startup(True)
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'enable'])
+        subprocess.run(['sudo', 'service', 'hostapd', 'restart'])
+    elif mode == 'clientonly':
+        set_autohotspotcron(False)
+        set_network_startup(False)
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
+    elif mode == 'autoap':
+        set_network_startup(False)
+        subprocess.run(['sudo', 'service', 'hostapd', 'stop'])
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
+        set_autohotspotcron(True)
+
+
+def hostapd_read():
+    ret = {'ssid': '', 'wpa2key': '', 'channel': ''}
+    stemp = None
+    try:
+        stemp = root_file_open('/etc/hostapd/hostapd.conf')
+        for line in stemp[0]:
+            line = line.strip()
+            if line.find('ssid=') == 0:
+                ret['ssid'] = line.split('ssid=')[1]
+            if line.find('wpa_passphrase=') == 0:
+                ret['wpa2key'] = line.split('wpa_passphrase=')[1]
+            if line.find('channel') == 0:
+                ret['channel'] = line.split('channel=')[1]
+    finally:
+        if stemp and stemp[1]:
+            stemp[0].close()
+            os.remove(stemp[1])
+    return ret
+
+
+def set_ethernet_static(ip, netmask):
+    stemp = root_file_open('/etc/network/interfaces.d/defaults')
+    stemp[0].truncate(0)
+    defaults = """auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp 
+
+auto eth0:0
+iface eth0:0 inet static
+address %s
+netmask %s
+""" % (ip, netmask)
+    stemp[0].write(defaults)
+    root_file_close(stemp)
+    # time.sleep(4)
+    subprocess.run(['sudo', 'ip', 'addr', 'flush', 'eth0'])
+    subprocess.run(['sudo', 'systemctl', 'restart', 'networking.service'])
+
+
+def read_ethernet_settings():
+    stemp = None
+    found = False
+    ret = {'ip': '', 'netmask': '', 'dhcp_server': False}
+    try:
+        stemp = root_file_open('/etc/network/interfaces.d/defaults')
+        for line in stemp[0]:
+            line = line.strip()
+            if line.find('iface eth0:0 inet static') == 0:
+                found = True
+            if found and line.find('address') == 0:
+                ret['ip'] = line.split(' ')[1]
+            if found and line.find('netmask') == 0:
+                ret['netmask'] = line.split(' ')[1]
+    finally:
+        if stemp and stemp[1]:
+            stemp[0].close()
+            os.remove(stemp[1])
+    try:
+        stemp = root_file_open('/etc/dnsmasq.conf')
+        for line in stemp[0]:
+            line = line.strip()
+            if line.find('interface=eth0') == 0:
+                ret['dhcp_server'] = True
+    finally:
+        if stemp and stemp[1]:
+            stemp[0].close()
+            os.remove(stemp[1])
+    return ret
+
+
+def set_ethernet_dhcp_server(enabled):
+    if enabled:
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
     else:
-        subprocess.run(['sudo', '/bin/systemctl', 'enable', 'autohotspot.service'])
-        stemp = root_file_open('/root/autohotspotcron')
-        set_autohotspotcron(stemp[0], True)
-        root_file_close(stemp)
-        subprocess.run(['sudo', '/root/autohotspotcron'])
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
 
 
 def hostapd_write(ssid, channel, password=None):

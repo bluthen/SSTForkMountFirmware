@@ -25,17 +25,20 @@
                         <h3>AP Mode</h3>
                         <div class="btn-group" data-toggle="buttons">
                             <label class="btn btn-primary active">
-                                <input type="radio" id="networkSettingsWifiAPModeAutoAp" name="networkSettingsWifiAPMode"
+                                <input type="radio" id="networkSettingsWifiAPModeAutoAp"
+                                       name="networkSettingsWifiAPMode"
                                        value="autoap"
                                        autocomplete="off" checked> Auto AP
                             </label>
                             <label class="btn btn-primary">
-                                <input type="radio" id="networkSettingsWifiAPModeAlways" name="networkSettingsWifiAPMode"
+                                <input type="radio" id="networkSettingsWifiAPModeAlways"
+                                       name="networkSettingsWifiAPMode"
                                        value="always"
-                                       autocomplete="off"> Always
+                                       autocomplete="off"> AP Only
                             </label>
                             <label class="btn btn-primary">
-                                <input type="radio" id="networkSettingsWifiAPModeClientOnly" name="networkSettingsWifiAPMode"
+                                <input type="radio" id="networkSettingsWifiAPModeClientOnly"
+                                       name="networkSettingsWifiAPMode"
                                        value="clientonly"
                                        autocomplete="off"> Client Only
                             </label>
@@ -46,7 +49,8 @@
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="text" id="networkSettingsWifiAPSSID" placeholder="SSID" maxlength="31">
+                                    <input class="form-control" type="text" id="networkSettingsWifiAPSSID"
+                                           placeholder="SSID" maxlength="31">
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
@@ -57,7 +61,8 @@
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="text" id="networkSettingsWifiAPKey" placeholder="Key" maxlength="63">
+                                    <input class="form-control" type="text" id="networkSettingsWifiAPKey"
+                                           placeholder="Key" maxlength="63">
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
@@ -68,7 +73,8 @@
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="number" id="networkSettingsWifiAPChannel" min="0" max="" placeholder="Channel" maxlength="2">
+                                    <input class="form-control" type="number" id="networkSettingsWifiAPChannel" min="0"
+                                           max="" placeholder="Channel" maxlength="2">
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
@@ -78,19 +84,20 @@
                                 <button id="networkSettingsWifiAPSave" class="btn btn-warning">Save AP Settings</button>
                             </div>
                         </div>
-
                         <div class="form-group row">
                             <label for="networkSettingsWifiAPChannel" class="col-form-label col">
                                 <h3>Wifi Client</h3>
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <button id="networkSettingsWifiClientRescan" class="btn btn-success">Rescan...</button>
+                                    <button id="networkSettingsWifiClientRescan" class="btn btn-success">Rescan...
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <div id="networkSettingsWifiClientListSpinner" class="fa-3x" style="display:none;"><i class="fas fa-spinner fa-pulse"></i></div>
+                            <div id="networkSettingsWifiClientListSpinner" class="fa-3x" style="display:none;"><i
+                                    class="fas fa-spinner fa-pulse"></i></div>
                             <table id="networkSettingsWifiClientList" class="table table-hover table-striped">
                                 <thead>
                                 <tr>
@@ -104,7 +111,6 @@
                             </table>
                         </div>
                         <div>
-
                             <h3>Known Access Points</h3>
                             <table id="networkSettingsClientKnownList" class="table table-hover table-striped">
                                 <thead>
@@ -115,38 +121,27 @@
                                 </thead>
                                 <tbody></tbody>
                             </table>
-
                         </div>
-
                     </div>
                     <div class="tab-pane fade" id="networkSettingsEthernetTab" role="tabpanel">
                         <br/>
                         <h3>Ethernet Mode</h3>
                         <div class="btn-group d-flex" role="group" data-toggle="buttons">
-                            <div>
-                                <label class="btn btn-primary disabled">
-                                    <input type="radio" id="networkSettingsEthernetModeAutoDHCP" name="networkSettingsEthernetMode"
-                                           value="autodhcp"
-                                           autocomplete="off" disabled> Auto DHCP Client/Server
-                                </label>
-                                <label class="btn btn-primary active">
-                                    <input type="radio" id="networkSettingsEthernetModeClientDHCP" name="networkSettingsEthernetMode"
-                                           value="dhcpclient"
-                                           autocomplete="off" checked>DHCP Client Only
-                                </label>
-                            </div>
-                            <div>
-                                <label class="btn btn-primary disabled">
-                                    <input type="radio" id="networkSettingsEthernetModeAlwaysDHCP" name="networkSettingsEthernetMode"
-                                           value="dhcpserver"
-                                           autocomplete="off" disabled>DHCP Server Only
-                                </label>
-                                <label class="btn btn-primary disabled">
-                                    <input type="radio" id="networkSettingsEthernetModeStatic" name="networkSettingsEthernetMode"
-                                           value="static"
-                                           autocomplete="off" disabled> Static IP
-                                </label>
-                            </div>
+                            <label class="btn btn-primary active">
+                                <input type="radio" id="networkSettingsEthernetDHCPServerDisabled"
+                                       name="networkSettingsEthernetDHCPServer"
+                                       value="false"
+                                       autocomplete="off" checked> Disable DHCP Server
+                            </label>
+                            <label class="btn btn-primary active">
+                                <input type="radio" id="networkSettingsEthernetDHCPServerEnabled"
+                                       name="networkSettingsEthernetDHCPServer"
+                                       value="true"
+                                       autocomplete="off">Enable DHCP Server
+                            </label>
+                        </div>
+                        <div>
+                            DHCP Client is always enabled but you can also set a static IP.
                         </div>
                         <h3>Static IP</h3>
                         <div class="form-group row">
@@ -155,7 +150,9 @@
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="text" id="networkSettingsEthernetStaticIP" placeholder="xxx.xxx.xxx.xxx" disabled>
+                                    <input class="form-control" type="text" id="networkSettingsEthernetStaticIP"
+                                           placeholder="xxx.xxx.xxx.xxx">
+                                    <div class="invalid-feedback"></div>
                                 </div>
                             </div>
                         </div>
@@ -165,13 +162,18 @@
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="text" id="networkSettingsEthernetStaticNetmask" placeholder="xxx.xxx.xxx.xxx" disabled>
+                                    <input class="form-control" type="text" id="networkSettingsEthernetStaticNetmask"
+                                           placeholder="xxx.xxx.xxx.xxx">
+                                    <div class="invalid-feedback"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="form-group row">
                             <div class="col">
-                                <button id="networkSettingsEthernetSave" class="btn btn-warning" disabled>Save Ethernet Settings</button>
+                                <button id="networkSettingsEthernetSave" class="btn btn-warning">Save Ethernet
+                                    Settings
+                                </button>
+                                <span class="status"></span>
                             </div>
                         </div>
                     </div>

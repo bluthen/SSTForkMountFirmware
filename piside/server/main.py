@@ -35,7 +35,6 @@ paa_process_lock = threading.RLock()
 paa_process = None
 paa_count = 0
 
-
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
 socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
@@ -167,6 +166,28 @@ def settings_put():
     return '', 204
 
 
+@app.route('/settings_network_ethernet', methods=['PUT'])
+@nocache
+def settings_network_ethernet():
+    global settings
+    dhcp_server = request.form.get('dhcp_server', None)
+    if dhcp_server:
+        dhcp_server = dhcp_server.lower() == 'true'
+    else:
+        dhcp_server = False
+
+    ip = request.form.get('ip', None)
+    netmask = request.form.get('netmask', None)
+
+    if None not in (dhcp_server, ip, netmask):
+        network.set_ethernet_dhcp_server(dhcp_server)
+        network.set_ethernet_static(ip, netmask)
+        settings['network']['ip'] = ip
+        settings['network']['netmask'] = ip
+        settings['network']['dhcp_server'] = ip
+    return 'Saved', 204
+
+
 @app.route('/settings_network_wifi', methods=['PUT'])
 @nocache
 def settings_network_wifi():
@@ -191,8 +212,7 @@ def settings_network_wifi():
             return 'Invalid channel', 400
         if len(ssid) > 31:
             return 'SSID must be less than 32 characters', 400
-    if mode == 'autoap' or mode == 'always':
-        network.hostapd_write(ssid, channel, wpa2key)
+    network.hostapd_write(ssid, channel, wpa2key)
     network.set_wifi_startup_mode(mode)
     settings['network']['mode'] = mode
     settings['network']['ssid'] = ssid
@@ -249,7 +269,7 @@ def wifi_connect():
     if None in [ssid, mac]:
         return 'Missing ssid or mac', 400
     if not known and not open and psk is None:
-        return 'You must given passphrase', 400
+        return 'You must give a passphrase', 400
 
     stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
     wpasup = network.wpa_supplicant_read(stemp[0])
@@ -278,26 +298,6 @@ def wifi_connect():
         subprocess.run(['sudo', '/root/autohotspotcron'])
     else:
         subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
-
-
-@app.route('/settings_network_ethernet', methods=['PUT'])
-@nocache
-def settings_network_ethernet():
-    mode = request.form.get('mode', None)
-    ip = request.form.get('ip', None)
-    netmask = request.form.get('netmask', None)
-
-    if mode not in ['static', 'dhcpserver', 'dhcpclient', 'autodhcp']:
-        return 'Invalid Ethernet mode', 400
-    if mode == 'static' and not ip or not netmask:
-        return 'Missing IP or Netmask'
-    if mode == 'static':
-        if not network.valid_ip(ip):
-            return 'Invalid IP Address.', 400
-        if not network.valid_ip(netmask):
-            return 'Invalid netmask', 400
-    # TODO: Save settings
-    # TODO: Restart network settings
 
 
 @app.route('/set_location', methods=['DELETE'])
@@ -723,11 +723,17 @@ def listen_paa_stderr(process):
 
 
 def main():
-    global st_queue, settings, paa_thread
+    global st_queue, settings
     setup_power_switch()
     with settings_json_lock:
         with open('settings.json') as f:
             settings = json.load(f)
+        wifiinfo = network.hostapd_read()
+        for key in wifiinfo.keys():
+            settings['network'][key] = wifiinfo[key]
+        ethernetinfo = network.read_ethernet_settings()
+        for key in ethernetinfo.keys():
+            settings['network'][key] = ethernetinfo[key]
     st_queue = control.init(socketio, settings, runtime_settings)
     network.init(settings)
 
@@ -745,8 +751,6 @@ def main():
         sstchuck.terminate()
         stellarium_thread.join()
         sstchuck_thread.join()
-        if paa_thread:
-            paa_thread.join()
     finally:
         if paa_process and paa_process.poll() is None:
             paa_process.stdin.write('STOP\nQUIT\n'.encode())
