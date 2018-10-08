@@ -3,7 +3,6 @@ import socket
 import re
 import tempfile
 import os
-import time
 
 settings = None
 
@@ -39,53 +38,6 @@ def root_file_close(stemp, mode=755):
     os.remove(stemp[1])
 
 
-def set_autohotspotcron(enabled):
-    stemp = root_file_open('/root/autohotspotcron')
-    ahc_file = stemp[0]
-    ahc_file.truncate(0)
-    if enabled:
-        ahc_file.write("""#/bin/sh
-/usr/bin/autohotspot > /dev/null 2>&1
-""")
-    else:
-        ahc_file.write("""#/bin/sh
-        /bin/true > /dev/null 2>&1
-""")
-    root_file_close(stemp)
-
-
-def set_network_startup(hostpad_enabled):
-    stemp = root_file_open('/root/networkstartup.sh')
-    stemp[0].truncate(0)
-    if hostpad_enabled:
-        stemp[0].write("""#!/bin/sh
-/root/ctrl_dnsmasq.py check_and_restart
-service hostapd start
-        """)
-    else:
-        stemp[0].write("""#!/bin/sh
-        /root/ctrl_dnsmasq.py check_and_restart
-                """)
-    root_file_close(stemp)
-
-
-def set_wifi_startup_mode(mode):
-    if mode == 'always':
-        set_autohotspotcron(False)
-        set_network_startup(True)
-        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'enable'])
-        subprocess.run(['sudo', 'service', 'hostapd', 'restart'])
-    elif mode == 'clientonly':
-        set_autohotspotcron(False)
-        set_network_startup(False)
-        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
-    elif mode == 'autoap':
-        set_network_startup(False)
-        subprocess.run(['sudo', 'service', 'hostapd', 'stop'])
-        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
-        set_autohotspotcron(True)
-
-
 def hostapd_read():
     ret = {'ssid': '', 'wpa2key': '', 'channel': ''}
     stemp = None
@@ -119,6 +71,11 @@ auto eth0:0
 iface eth0:0 inet static
 address %s
 netmask %s
+
+auto wlan0
+allow-hotplug wlan0
+iface wlan0 inet dhcp
+wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
 """ % (ip, netmask)
     stemp[0].write(defaults)
     root_file_close(stemp)
@@ -189,6 +146,12 @@ wpa_key_mgmt=WPA-PSK
     if password:
         stemp[0].write('\n' + hostapd_security % (password,))
     root_file_close(stemp)
+    # Make hostname the ssid also
+    stemp = root_file_open('/etc/hostname')
+    stemp[0].truncate(0)
+    stemp[0].write(ssid+'\n')
+    root_file_close(stemp)
+    subprocess.run(['sudo', '/bin/hostname', ssid])
 
 
 def wpa_supplicant_read(wpa_file):
@@ -248,7 +211,7 @@ def wpa_supplicant_remove(networks, ssid, mac):
 
 
 def current_wifi_connect():
-    results = subprocess.run(['/sbin/iwconfig', settings['network']['wifi_device']], stdout=subprocess.PIPE)
+    results = subprocess.run(['/sbin/iwconfig', 'wlan0'], stdout=subprocess.PIPE)
     sout = results.stdout.decode().splitlines()
     essid_p = re.compile('.* ESSID:"(.+)".*')
     access_point_p = re.compile('.* Access Point: (\S+).*')
@@ -262,6 +225,32 @@ def current_wifi_connect():
         if m:
             mac = m.group(1).lower()
     return {'ssid': ssid, 'mac': mac}
+
+
+def wifi_client_scan_iw():
+    results = subprocess.run(['sudo', '/sbin/iw', 'dev', 'wlan0', 'scan', 'ap-force'], stdout=subprocess.PIPE)
+
+    aps = []
+    first = True
+    ap = None
+    for line in results.stdout.decode().splitlines():
+        line = line.strip()
+        if line.find('BSS Load:') == -1 and line.find('BSS ') == 0:
+            if ap:
+                aps.append(ap)
+            ap = {'mac': line[4:21]}
+        elif line.find('freq: ') == 0:
+            ap['freq'] = line.split(' ')[1]
+        elif line.find('signal: ') == 0:
+            ap['signal'] = float(line.split(' ')[1])
+        elif line.find('SSID: ') == 0:
+            ap['ssid'] = line.split(' ')[1]
+        elif line.find('* Authentication suites: ') == 0:
+            ap['flags'] = line.split(': ')[1]
+    if ap:
+        aps.append(ap)
+    aps = sorted(aps, key=lambda k: k['signal'], reverse=True)
+    return aps
 
 
 def wifi_client_scan():

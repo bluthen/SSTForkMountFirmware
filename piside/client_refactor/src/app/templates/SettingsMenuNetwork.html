@@ -1,4 +1,4 @@
-<div class="modal fade" id="networkSettings" role="dialog">
+<div class="modal fade bd-example-modal-lg" id="networkSettings" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -22,27 +22,7 @@
                 <div class="tab-content" id="networkTabContent">
                     <div class="tab-pane fade show active" id="networkSettingsWifiTab" role="tabpanel">
                         <br/>
-                        <h3>AP Mode</h3>
-                        <div class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-primary active">
-                                <input type="radio" id="networkSettingsWifiAPModeAutoAp"
-                                       name="networkSettingsWifiAPMode"
-                                       value="autoap"
-                                       autocomplete="off" checked> Auto AP
-                            </label>
-                            <label class="btn btn-primary">
-                                <input type="radio" id="networkSettingsWifiAPModeAlways"
-                                       name="networkSettingsWifiAPMode"
-                                       value="always"
-                                       autocomplete="off"> AP Only
-                            </label>
-                            <label class="btn btn-primary">
-                                <input type="radio" id="networkSettingsWifiAPModeClientOnly"
-                                       name="networkSettingsWifiAPMode"
-                                       value="clientonly"
-                                       autocomplete="off"> Client Only
-                            </label>
-                        </div>
+                        <h3>AP Settings</h3>
                         <div class="form-group row">
                             <label for="networkSettingsWifiAPSSID" class="col-form-label col">
                                 SSID
@@ -82,6 +62,7 @@
                         <div class="form-group row">
                             <div class="col">
                                 <button id="networkSettingsWifiAPSave" class="btn btn-warning">Save AP Settings</button>
+                                <span class="status"></span>
                             </div>
                         </div>
                         <div class="form-group row">
@@ -103,7 +84,7 @@
                                 <tr>
                                     <th scope="col">SSID</th>
                                     <th scope="col">Signal</th>
-                                    <th scope="col">Security</th>
+                                    <th scope="col">Security/Passphrase</th>
                                     <th scope="col">Connect</th>
                                 </tr>
                                 </thead>

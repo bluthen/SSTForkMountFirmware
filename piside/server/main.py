@@ -24,8 +24,6 @@ import math
 import os
 import sstchuck
 import network
-import polar_align_assist
-from fractions import Fraction
 
 iers.conf.auto_download = False
 
@@ -191,30 +189,30 @@ def settings_network_ethernet():
 @app.route('/settings_network_wifi', methods=['PUT'])
 @nocache
 def settings_network_wifi():
-    mode = request.form.get('mode', None)
     ssid = request.form.get('ssid', None)
     wpa2key = request.form.get('wpa2key', None)
     channel = request.form.get('channel', None)
 
-    if None in [mode, ssid, wpa2key, channel]:
+    if None in [ssid, wpa2key, channel]:
         return 'Invalid parameters', 400
 
-    if mode not in ['autoap', 'always', 'clientonly']:
-        return 'Invalid AP Mode', 400
-    if mode != 'clientonly':
-        if len(wpa2key) < 8 or len(wpa2key) > 63:
-            return 'Invalid WPA2Key, must be between eight and 63 characters', 400
-        try:
-            channel = int(channel)
-        except ValueError:
-            return 'Invalid channel', 400
-        if channel < 1 or channel > 14:
-            return 'Invalid channel', 400
-        if len(ssid) > 31:
-            return 'SSID must be less than 32 characters', 400
+    if len(wpa2key) == 0:
+        wpa2key = None
+    if wpa2key and len(wpa2key) < 8 or len(wpa2key) > 63:
+        return 'Invalid WPA2Key, must be between eight and 63 characters', 400
+    try:
+        channel = int(channel)
+    except ValueError:
+        return 'Invalid channel', 400
+    if channel < 1 or channel > 14:
+        return 'Invalid channel', 400
+    if len(ssid) > 31:
+        return 'SSID must be less than 32 characters', 400
     network.hostapd_write(ssid, channel, wpa2key)
-    network.set_wifi_startup_mode(mode)
-    settings['network']['mode'] = mode
+    # Stop hostapd and dnsmasq let autohotspot go
+    subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
+    subprocess.run(['sudo', '/usr/sbin/service', 'hostapd', 'stop'])
+    subprocess.run(['sudo', '/root/autohotspotcron'])
     settings['network']['ssid'] = ssid
     settings['network']['wpa2key'] = wpa2key
     settings['network']['channel'] = channel
@@ -238,11 +236,8 @@ def wifi_connect_delete():
     network.root_file_close(stemp)
     # If we are currently connected
     wificon = network.current_wifi_connect()
-    if wificon['ssid'] == ssid and wificon['mac'] == mac:
-        if settings['network']['wifimode'] in ['autoap', 'clientonly']:
-            subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
-        if settings['network']['wifimode'] == 'autoap':
-            subprocess.run(['sudo', '/root/autohotspotcron'])
+    if wificon['ssid'] == ssid or wificon['mac'] == mac:
+        subprocess.run(['sudo', '/root/autohotspotcron'])
     return 'Removed', 200
 
 
@@ -261,14 +256,12 @@ def wifi_connect():
     ssid = request.form.get('ssid', None)
     mac = request.form.get('mac', None)
     psk = request.form.get('psk', None)
-    open = request.form.get('open', None)
+    open_wifi = request.form.get('open', None)
     known = request.form.get('known', None)
-    if settings['network']['wifimode'] == 'always':
-        return "Can not connect as client when mode is Always AP", 400
 
     if None in [ssid, mac]:
         return 'Missing ssid or mac', 400
-    if not known and not open and psk is None:
+    if not known and not open_wifi and psk is None:
         return 'You must give a passphrase', 400
 
     stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
@@ -280,13 +273,14 @@ def wifi_connect():
             if psk:
                 n['psk'] = psk
             n['priority'] = 5
+            found = True
         elif 'priority' in n:
             del n['priority']
 
     if not found:
         n = {'bssid': mac, 'ssid': "\"%s\"" % ssid}
         if psk:
-            n['psk'] = psk
+            n['psk'] = '"'+psk+'"'
         else:
             n['key_mgmt'] = 'None'
         wpasup['networks'].append(n)
@@ -294,10 +288,9 @@ def wifi_connect():
     network.wpa_supplicant_write(stemp[0], wpasup['other'], wpasup['networks'])
     network.root_file_close(stemp)
     # TODO: Maybe we do this after responding for user feedback?
-    if settings['network']['wifimode'] == 'autoap':
-        subprocess.run(['sudo', '/root/autohotspotcron'])
-    else:
-        subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
+    subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
+    subprocess.run(['sudo', '/root/autohotspotcron'])
+    return '', 204
 
 
 @app.route('/set_location', methods=['DELETE'])
@@ -593,7 +586,7 @@ def firmware_update():
 @app.route('/wifi_scan', methods=['GET'])
 @nocache
 def wifi_scan():
-    aps = network.wifi_client_scan()
+    aps = network.wifi_client_scan_iw()
     connected = network.current_wifi_connect()
     return jsonify({'aps': aps, 'connected': connected})
 

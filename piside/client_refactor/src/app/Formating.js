@@ -52,6 +52,15 @@ export default {
     },
     absoluteURL: function (relativeURL) {
         return new URL(relativeURL, window.location.href).href;
+    },
+    makeSpinner: function(element) {
+        const spinner = $('<div class="fa-3x"><i class="fas fa-spinner fa-pulse"></i></div>');
+        $(element).parent().append(spinner);
+        $(element).hide();
+        return () => {
+            spinner.remove();
+            $(element).show();
+        }
     }
 
 }

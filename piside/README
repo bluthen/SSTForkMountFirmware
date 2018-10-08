@@ -36,6 +36,11 @@ sudo cp 49-teensy.rules /etc/udev/rules.d
 */2 * * * * /root/autohotspotcron
 
 
+#Put in /root/autohotspotcron
+#!/bin/sh
+/usr/bin/autohotspot
+
+
 #Edit dnsmasq
 bogus-priv
 no-resolv
@@ -50,6 +55,16 @@ log-dhcp
 
 #Add to rc.local
 /usr/local/bin/supervisord -c /etc/supervisord.conf
+/root/networkstartup.sh
+
+#Put in /root/networkstartup.sh
+#!/bin/sh
+/root/ctrl_dnsmasq.py wlan0 disable
+/root/ctrl_dnsmasq.py check_and_restart
+/root/autohotspotcron
+
+
+
 
 #Add to dhcpcd.conf
 interface wlan0
@@ -71,3 +86,6 @@ chown pi /caltmp
 in /etc/fstab
 tmpfs /ramtmp tmpfs defaults,size=20m,mode=1777 0 0
 
+
+
+ln -s /home/pi/SSTForkMountFirmware/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py

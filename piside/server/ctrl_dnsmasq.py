@@ -31,16 +31,23 @@ def main():
         check_and_restart()
     elif len(sys.argv) == 3 and iface in ('wlan0', 'eth0'):
         enable = sys.argv[2] == 'enable'
+        changed = False
         for line in fileinput.input('/etc/dnsmasq.conf', inplace=True):
             line = line.rstrip('\n')
-            if line.find('interface=%s' % (iface,)) in (0, 1):
-                if enable:
+            findret = line.find('interface=%s' % (iface,))
+            if findret in (0, 1):
+                if findret == 1 and enable:
                     print('interface=%s' % (iface,))
-                else:
+                    changed = True
+                elif findret == 0 and not enable:
                     print('#interface=%s' % (iface,))
+                    changed = True
+                else:
+                    print(line)
             else:
                 print(line)
-        check_and_restart()
+        if changed:
+            check_and_restart()
     else:
         usage()
 
