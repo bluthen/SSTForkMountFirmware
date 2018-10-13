@@ -164,6 +164,21 @@ def settings_put():
     return '', 204
 
 
+@app.route('/settings_horizon_limit', method=['PUT'])
+@nocache
+def settings_horizon_limit():
+    global settings
+    points = request.form.get('points', None)
+    if not points:
+        return 'Missing points', 400
+    points = json.loads(points)
+    settings['horizon_limit_points'] = points
+    with settings_json_lock:
+        with open('settings.json', mode='w') as f:
+            json.dump(settings, f)
+    return 'Points saved', 204
+
+
 @app.route('/settings_network_ethernet', methods=['PUT'])
 @nocache
 def settings_network_ethernet():

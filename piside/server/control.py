@@ -88,6 +88,42 @@ def get_status():
     return status
 
 
+def below_horizon_limit(altaz):
+    '''
+
+    :param altaz:
+    :return:
+    '''
+    az = altaz['az']
+    alt = altaz['alt']
+    if 'points' in settings and settings['points']:
+        if len(settings['points']) == 1:
+            if alt <= settings['points'][0]['alt']:
+                return True
+            else:
+                return False
+        else:
+            for i in range(len(settings['points'])-1):
+                point1 = settings['points'][i]
+                if i+1 < len(settings['points']):
+                    point2 = settings['points'][i+1]
+                else:
+                    point2 = settings['points'][0]
+                p1az = point1['az']
+                if point2['az'] < p1az or len(settings['points']) == 1:
+                    p1az -= 360.0
+
+                point2 = settings['points'][i+1]
+                if p1az <= az < point2['az']:
+                    m = (point2['alt'] - point1['alt'])/(point2['az'] - p1az)
+                    b = point1['alt']
+                    if alt < (m*(az-p1az) + b):
+                        return True
+                    else:
+                        return False
+    return False
+
+
 def slewtocheck(ra, dec):
     if not ra or not dec:
         return False
@@ -96,6 +132,8 @@ def slewtocheck(ra, dec):
     # TODO: Check if in keepout zone
     # Check if above horizon
     if altaz and altaz['alt'] is not None and altaz['alt'] < 0:
+        return False
+    elif below_horizon_limit(altaz):
         return False
     else:
         return True
@@ -133,6 +171,7 @@ def send_status():
     status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     status['time_been_set'] = runtime_settings['time_been_set']
     status['synced'] = runtime_settings['sync_info'] is not None
+    inhorizon = False
     if status['synced']:
         coord = steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
                                   AstroTime.now(), settings['ra_track_rate'], settings['dec_ticks_per_degree'])
@@ -140,6 +179,11 @@ def send_status():
         status['dec'] = coord.icrs.dec.deg
         # print('earth_location', runtime_settings['earth_location'])
         altaz = to_altaz_asdeg(coord)
+        inhorizon = below_horizon_limit(altaz)
+        if inhorizon and settings['tracking']:
+            settings['tracking'] = False
+            ra_set_speed(0)
+            status['alert'] = 'In horizon limit, tracking stopped'
         # print(altaz)
         status['alt'] = altaz['alt']
         status['az'] = altaz['az']
@@ -172,7 +216,7 @@ def micro_update_settings():
 
 
 def init(osocketio, fsettings, fruntime_settings):
-    global settings, microserial, microseriallock, status_interval, socketio, inited, runtime_settings
+    global settings, microserial, microseriallock, status_interval, horizon_check_interval, socketio, inited, runtime_settings
     if inited:
         return
     inited = True

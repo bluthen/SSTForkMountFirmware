@@ -1,0 +1,37 @@
+<div class="modal fade bd-example-modal-lg" id="horizonLimithorizonLimitSettings" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Network Settings</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <canvas id="horizonLimitgraphCanvas" width="620" height="620"></canvas>
+                <div style="width: 100%; display: table;">
+                    <div style="display: table-row">
+                        <div style="display: table-cell">
+                            <h1>Add Point</h1>
+                            <label for="horizonLimitaddalt">Alt:</label><input style="width:6ex;" id="horizonLimitaddalt" type="text" value="0"><br/>
+                            <label for="horizonLimitaddaz">Az:</label><input style="width:6ex;" id="horizonLimitaddaz" type="text"
+                                                                 value="0"><br/>
+                            <button id="horizonLimitaddButton">Add Point</button>
+                            <button id="horizonLimitaddCurrentPositionButton">Add Current Position Point</button>
+                        </div>
+                        <div style="display: table-cell">
+                            <h1>Modify Point</h1>
+                            <span style="text-size:80%">Note: you can also drag points in the graph</span><br/>
+                            <select id="horizonLimitexistingPoints">
+                                <option>Point A</option>
+                            </select><br/>
+                            <label for="horizonLimitmodAlt">Alt:</label><input style="width:6ex;" id="horizonLimitmodAlt" type="text"><br/>
+                            <label for="horizonLimitmodAz">Az:</label><input style="width:6ex;" id="horizonLimitmodAz" type="text"><br/>
+                            <button id="horizonLimitmoveButton">Move</button>&nbsp;&nbsp;<button id="horizonLimitdeleteButton">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
