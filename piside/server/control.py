@@ -2,7 +2,6 @@ import threading
 import serial
 from functools import partial
 import time
-import json
 
 import datetime
 import astropy
@@ -11,7 +10,7 @@ from astropy.time import Time as AstroTime
 import astropy.units as u
 import math
 
-import main
+import settings
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -19,7 +18,6 @@ AXIS_DEC = 2
 
 timers = {}
 OPPOSITE_MANUAL = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
-settings = None
 microserial = None
 microseriallock = threading.RLock()
 slew_lock = threading.RLock()
@@ -96,24 +94,24 @@ def below_horizon_limit(altaz):
     '''
     az = altaz['az']
     alt = altaz['alt']
-    if 'points' in settings and settings['points']:
-        if len(settings['points']) == 1:
-            if alt <= settings['points'][0]['alt']:
+    if 'points' in settings.settings and settings.settings['points']:
+        if len(settings.settings['points']) == 1:
+            if alt <= settings.settings['points'][0]['alt']:
                 return True
             else:
                 return False
         else:
-            for i in range(len(settings['points'])-1):
-                point1 = settings['points'][i]
-                if i+1 < len(settings['points']):
-                    point2 = settings['points'][i+1]
+            for i in range(len(settings.settings['points'])-1):
+                point1 = settings.settings['points'][i]
+                if i+1 < len(settings.settings['points']):
+                    point2 = settings.settings['points'][i+1]
                 else:
-                    point2 = settings['points'][0]
+                    point2 = settings.settings['points'][0]
                 p1az = point1['az']
-                if point2['az'] < p1az or len(settings['points']) == 1:
+                if point2['az'] < p1az or len(settings.settings['points']) == 1:
                     p1az -= 360.0
 
-                point2 = settings['points'][i+1]
+                point2 = settings.settings['points'][i+1]
                 if p1az <= az < point2['az']:
                     m = (point2['alt'] - point1['alt'])/(point2['az'] - p1az)
                     b = point1['alt']
@@ -140,11 +138,11 @@ def slewtocheck(ra, dec):
 
 
 def update_location():
-    # print(settings['location'])
-    if 'location' not in settings or not settings['location'] or not settings['location']['lat']:
+    # print(settings.settings['location'])
+    if 'location' not in settings.settings or not settings.settings['location'] or not settings.settings['location']['lat']:
         return
-    el = EarthLocation(lat=settings['location']['lat'] * u.deg,
-                       lon=settings['location']['long'] * u.deg,
+    el = EarthLocation(lat=settings.settings['location']['lat'] * u.deg,
+                       lon=settings.settings['location']['long'] * u.deg,
                        height=405.0 * u.m)
     runtime_settings['earth_location'] = el
 
@@ -174,14 +172,14 @@ def send_status():
     inhorizon = False
     if status['synced']:
         coord = steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                  AstroTime.now(), settings['ra_track_rate'], settings['dec_ticks_per_degree'])
+                                  AstroTime.now(), settings.settings['ra_track_rate'], settings.settings['dec_ticks_per_degree'])
         status['ra'] = coord.icrs.ra.deg
         status['dec'] = coord.icrs.dec.deg
         # print('earth_location', runtime_settings['earth_location'])
         altaz = to_altaz_asdeg(coord)
         inhorizon = below_horizon_limit(altaz)
-        if inhorizon and settings['tracking']:
-            settings['tracking'] = False
+        if inhorizon and settings.settings['tracking']:
+            settings.settings['tracking'] = False
             ra_set_speed(0)
             status['alert'] = 'In horizon limit, tracking stopped'
         # print(altaz)
@@ -196,41 +194,40 @@ def send_status():
 def micro_update_settings():
     with microseriallock:
         microserial.reset_input_buffer()
-        microserial.write(('set_var ra_max_tps %f\r' % settings['ra_slew_fastest']).encode())
+        microserial.write(('set_var ra_max_tps %f\r' % settings.settings['ra_slew_fastest']).encode())
         read_serial_until_prompt()
-        microserial.write(('set_var ra_guide_rate %f\r' % settings['micro']['ra_guide_rate']).encode())
+        microserial.write(('set_var ra_guide_rate %f\r' % settings.settings['micro']['ra_guide_rate']).encode())
         read_serial_until_prompt()
-        microserial.write(('set_var ra_direction %f\r' % settings['micro']['ra_direction']).encode())
+        microserial.write(('set_var ra_direction %f\r' % settings.settings['micro']['ra_direction']).encode())
         read_serial_until_prompt()
-        microserial.write(('set_var dec_max_tps %f\r' % settings['dec_slew_fastest']).encode())
+        microserial.write(('set_var dec_max_tps %f\r' % settings.settings['dec_slew_fastest']).encode())
         read_serial_until_prompt()
-        microserial.write(('set_var dec_guide_rate %f\r' % settings['micro']['dec_guide_rate']).encode())
+        microserial.write(('set_var dec_guide_rate %f\r' % settings.settings['micro']['dec_guide_rate']).encode())
         read_serial_until_prompt()
-        microserial.write(('set_var dec_direction %f\r' % settings['micro']['dec_direction']).encode())
+        microserial.write(('set_var dec_direction %f\r' % settings.settings['micro']['dec_direction']).encode())
         read_serial_until_prompt()
         if runtime_settings['tracking']:
-            ra_set_speed(settings['ra_track_rate'])
+            ra_set_speed(settings.settings['ra_track_rate'])
         else:
             ra_set_speed(0)
         dec_set_speed(0)
 
 
-def init(osocketio, fsettings, fruntime_settings):
-    global settings, microserial, microseriallock, status_interval, horizon_check_interval, socketio, inited, runtime_settings
+def init(osocketio, fruntime_settings):
+    global microserial, microseriallock, status_interval, horizon_check_interval, socketio, inited, runtime_settings
     if inited:
         return
     inited = True
     # print('Inited')
     runtime_settings = fruntime_settings
-    settings = fsettings
     socketio = osocketio
     # Load settings file
     # Open serial port
-    microserial = serial.Serial(settings['microserial']['port'], settings['microserial']['baud'], timeout=2)
+    microserial = serial.Serial(settings.settings['microserial']['port'], settings.settings['microserial']['baud'], timeout=2)
     update_location()
-    if settings['park_position'] and runtime_settings['earth_location']:
-        coord = astropy.coordinates.SkyCoord(alt=settings['park_position']['alt'] * u.deg,
-                                             az=settings['park_position']['az'] * u.deg, frame='altaz',
+    if settings.settings['park_position'] and runtime_settings['earth_location']:
+        coord = astropy.coordinates.SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                                             az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
                                              obstime=AstroTime.now(),
                                              location=runtime_settings['earth_location']).icrs
         sync(coord.ra.deg, coord.dec.deg)
@@ -265,11 +262,11 @@ def manual_control(direction, speed):
                     with microseriallock:
                         status = get_status()
                         # print(status)
-                        if (runtime_settings['tracking'] and status['rs'] != settings['ra_track_rate']) or status['rs'] != 0:
-                            sspeed = status['rs'] - math.copysign(settings['ra_slew_fastest'] / 10.0, status['rs'])
-                            if status['rs'] == 0 or abs(sspeed) < settings['ra_track_rate'] or sspeed / status['rs'] < 0:
+                        if (runtime_settings['tracking'] and status['rs'] != settings.settings['ra_track_rate']) or status['rs'] != 0:
+                            sspeed = status['rs'] - math.copysign(settings.settings['ra_slew_fastest'] / 10.0, status['rs'])
+                            if status['rs'] == 0 or abs(sspeed) < settings.settings['ra_track_rate'] or sspeed / status['rs'] < 0:
                                 if runtime_settings['tracking']:
-                                    sspeed = settings['ra_track_rate']
+                                    sspeed = settings.settings['ra_track_rate']
                                 else:
                                     sspeed = 0
                                 done = True
@@ -287,7 +284,7 @@ def manual_control(direction, speed):
                         status = get_status()
                         if status['ds'] != 0:
                             # print(status)
-                            sspeed = status['ds'] - math.copysign(settings['dec_slew_fastest'] / 10.0, status['ds'])
+                            sspeed = status['ds'] - math.copysign(settings.settings['dec_slew_fastest'] / 10.0, status['ds'])
                             if status['ds'] == 0 or sspeed / status['ds'] < 0:
                                 sspeed = 0
                                 done = True
@@ -306,30 +303,30 @@ def manual_control(direction, speed):
                     if OPPOSITE_MANUAL[direction] in timers:
                         return
                     if direction == 'left':
-                        sspeed = status['rs'] - settings['ra_slew_' + speed] / 10.0
-                        # print('ra_slew_'+speed, settings['ra_slew_'+speed]/10.0)
-                        if abs(sspeed) > settings['ra_slew_' + speed]:
-                            sspeed = -settings['ra_slew_' + speed]
+                        sspeed = status['rs'] - settings.settings['ra_slew_' + speed] / 10.0
+                        # print('ra_slew_'+speed, settings.settings['ra_slew_'+speed]/10.0)
+                        if abs(sspeed) > settings.settings['ra_slew_' + speed]:
+                            sspeed = -settings.settings['ra_slew_' + speed]
                         # print(sspeed)
                         ra_set_speed(sspeed)
                     elif direction == 'right':
-                        sspeed = status['rs'] + settings['ra_slew_' + speed] / 10.0
-                        if abs(sspeed) > settings['ra_slew_' + speed]:
-                            sspeed = settings['ra_slew_' + speed]
+                        sspeed = status['rs'] + settings.settings['ra_slew_' + speed] / 10.0
+                        if abs(sspeed) > settings.settings['ra_slew_' + speed]:
+                            sspeed = settings.settings['ra_slew_' + speed]
                         # print(sspeed)
                         ra_set_speed(sspeed)
                     elif direction == 'up':
-                        # print('--------------- dec up %.1f' % settings['dec_slew_' + speed])
-                        sspeed = status['ds'] + settings['dec_slew_' + speed] / 10.0
-                        if abs(sspeed) > settings['dec_slew_' + speed]:
-                            sspeed = settings['dec_slew_' + speed]
+                        # print('--------------- dec up %.1f' % settings.settings['dec_slew_' + speed])
+                        sspeed = status['ds'] + settings.settings['dec_slew_' + speed] / 10.0
+                        if abs(sspeed) > settings.settings['dec_slew_' + speed]:
+                            sspeed = settings.settings['dec_slew_' + speed]
                         # print(sspeed)
                         dec_set_speed(sspeed)
                     elif direction == 'down':
-                        sspeed = status['ds'] - settings['dec_slew_' + speed] / 10.0
-                        if abs(sspeed) > settings['dec_slew_' + speed]:
-                            sspeed = -settings['dec_slew_' + speed]
-                        # print('--------------- dec down -%.1f' % settings['dec_slew_' + speed])
+                        sspeed = status['ds'] - settings.settings['dec_slew_' + speed] / 10.0
+                        if abs(sspeed) > settings.settings['dec_slew_' + speed]:
+                            sspeed = -settings.settings['dec_slew_' + speed]
+                        # print('--------------- dec down -%.1f' % settings.settings['dec_slew_' + speed])
                         # print(sspeed)
                         dec_set_speed(sspeed)
                     timers[direction] = threading.Timer(0.5, partial(manual_control, direction, None))
@@ -390,8 +387,8 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             dec_close_enough = 0
         else:
             need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
-                                                   settings['ra_track_rate'],
-                                                   settings['dec_ticks_per_degree'])
+                                                   settings.settings['ra_track_rate'],
+                                                   settings.settings['dec_ticks_per_degree'])
         last_datetime = datetime.datetime.now()
         started_slewing = last_datetime
         total_time = 0.0
@@ -399,8 +396,8 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         while not cancel_slew:
             if not parking:
                 need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
-                                                       settings['ra_track_rate'],
-                                                       settings['dec_ticks_per_degree'])
+                                                       settings.settings['ra_track_rate'],
+                                                       settings.settings['dec_ticks_per_degree'])
             now = datetime.datetime.now()
             status = get_status()
             if first:
@@ -417,16 +414,16 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             if abs(round(ra_delta)) <= ra_close_enough and abs(round(dec_delta)) <= dec_close_enough:
                 break
 
-            if abs(ra_delta) < math.ceil(settings['ra_track_rate']):
+            if abs(ra_delta) < math.ceil(settings.settings['ra_track_rate']):
                 if not parking and runtime_settings['tracking']:
-                    # ra_speed = settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = settings['ra_track_rate'] + ra_delta/dt
+                    # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
+                    ra_speed = settings.settings['ra_track_rate'] + ra_delta/dt
                 else:
                     # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
                     ra_speed = ra_delta/dt
-            elif abs(ra_delta) < settings['ra_slew_fastest']/2.0:
+            elif abs(ra_delta) < settings.settings['ra_slew_fastest']/2.0:
                 if not parking and runtime_settings['tracking']:
-                    ra_speed = settings['ra_track_rate'] + 2.0*ra_delta
+                    ra_speed = settings.settings['ra_track_rate'] + 2.0*ra_delta
                 else:
                     ra_speed = 2.0*ra_delta
                 # Short slew otherwise we are slowing down
@@ -435,19 +432,19 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                     if abs(ra_speed) > abs(status['rs']):
                         ra_speed = ra_delta
                 # speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                # speed2 = math.copysign(settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
+                # speed2 = math.copysign(settings.settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
                 # if abs(speed2) < abs(speed):
                 #     speed = speed2
                 # ra_speed = speed
             else:
-                speed = (total_time**2.0)*math.copysign(settings['ra_slew_fastest']/9.0, ra_delta)
-                if abs(speed) > settings['ra_slew_fastest']:
-                    speed = math.copysign(settings['ra_slew_fastest'], ra_delta)
+                speed = (total_time**2.0)*math.copysign(settings.settings['ra_slew_fastest']/9.0, ra_delta)
+                if abs(speed) > settings.settings['ra_slew_fastest']:
+                    speed = math.copysign(settings.settings['ra_slew_fastest'], ra_delta)
                 ra_speed = speed
 
             if abs(dec_delta) < dec_close_enough:
                 dec_speed = 0.0
-            elif abs(dec_delta) < settings['dec_slew_fastest']/2.0:
+            elif abs(dec_delta) < settings.settings['dec_slew_fastest']/2.0:
                 dec_speed = dec_delta*2.0
                 if abs(dec_speed) > abs(status['ds']):
                     dec_speed = status['ds'] + dec_speed/loops_to_full_speed
@@ -455,14 +452,14 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                         dec_speed = dec_delta
 
                 #speed = ((1.0-sleep_time)/sleep_time) * dec_delta
-                #speed2 = math.copysign(settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
+                #speed2 = math.copysign(settings.settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
                 #if abs(speed2) < abs(speed):
                 #    speed = speed2
                 #dec_speed = speed
             else:
-                speed = status['ds'] + math.copysign(settings['dec_slew_fastest'] / loops_to_full_speed, dec_delta)
-                if abs(speed) > settings['dec_slew_fastest']:
-                    speed = math.copysign(settings['dec_slew_fastest'], dec_delta)
+                speed = status['ds'] + math.copysign(settings.settings['dec_slew_fastest'] / loops_to_full_speed, dec_delta)
+                if abs(speed) > settings.settings['dec_slew_fastest']:
+                    speed = math.copysign(settings.settings['dec_slew_fastest'], dec_delta)
                 dec_speed = speed
 
             if not math.isclose(status['rs'], ra_speed, rel_tol=0.02):
@@ -483,12 +480,10 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             time.sleep(sleep_time)
 
         if runtime_settings['tracking']:
-            ra_set_speed(settings['ra_track_rate'])
+            ra_set_speed(settings.settings['ra_track_rate'])
         else:
             ra_set_speed(0)
         dec_set_speed(0.0)
-        #with open('slew.json', 'w') as f:
-        #    json.dump(data, f)
     finally:
         autoguide_enable()
         slewing = False
@@ -701,8 +696,8 @@ def ra_deg_d(started_angle, end_angle):
 
 
 def two_sync_calc_error(last_sync, current_sync):
-    steps = skycoord_to_steps(last_sync, current_sync['coords'], current_sync['time'], settings['ra_track_rate'],
-                              settings['dec_ticks_per_degree'])
+    steps = skycoord_to_steps(last_sync, current_sync['coords'], current_sync['time'], settings.settings['ra_track_rate'],
+                              settings.settings['dec_ticks_per_degree'])
     ra_ther = steps['ra'] - last_sync['steps']['ra']
     ra_exp = current_sync['steps']['ra'] - last_sync['steps']['ra']
     dec_ther = steps['dec'] - last_sync['steps']['dec']

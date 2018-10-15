@@ -3,6 +3,8 @@ import control
 import time
 import traceback
 
+import settings
+
 terminateself = False
 
 
@@ -139,7 +141,7 @@ def terminate():
     terminateself = True
 
 
-def run(settings):
+def run():
     # Try to detect comport
     # print('Started SSTChuck')
     ignore_devices = []
@@ -148,7 +150,7 @@ def run(settings):
             ports = serial.tools.list_ports.comports()
             for port in ports:
                 # print(port.device)
-                if port.manufacturer == 'Teensyduino' and port.device != settings['microserial']['port'] and \
+                if port.manufacturer == 'Teensyduino' and port.device != settings.settings['microserial']['port'] and \
                                 port.device not in ignore_devices:
                     # print('SSTChuck: Trying device: ' + port.device)
                     runchuck(port)

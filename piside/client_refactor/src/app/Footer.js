@@ -5,7 +5,7 @@ import Formating from './Formating'
 import template from './templates/Footer.html'
 
 class Footer {
-    constructor (App, parentDiv, startingSettings) {
+    constructor(App, parentDiv, startingSettings) {
         this._selfDiv = $(template);
         parentDiv.append(this._selfDiv);
 
@@ -19,6 +19,12 @@ class Footer {
         App.socket.on('status', (msg) => {
             //console.log(msg);
             const status = msg;
+            if ('alert' in msg) {
+                console.error('ALERT', msg.alert);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(msg.alert);
+                $('#errorInfoModal').modal();
+            }
             const status_radec = $('#status_radec');
             const status_altaz = $('#status_altaz');
             const status_radec2 = $('#slewModalStatus');

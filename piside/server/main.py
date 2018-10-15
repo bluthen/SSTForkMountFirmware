@@ -22,6 +22,7 @@ import astropy.units as u
 import stellarium_server
 import math
 import os
+import settings
 import sstchuck
 import network
 
@@ -36,7 +37,6 @@ paa_count = 0
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
 socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
-settings = None
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
@@ -63,7 +63,8 @@ def setup_power_switch():
 
 
 def switch_off(pin):
-    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+    if not settings.is_simulation():
+        subprocess.run(['sudo', 'shutdown', '-h', 'now'])
 
 
 @app.context_processor
@@ -119,13 +120,12 @@ def version():
 @app.route('/settings')
 @nocache
 def settings_get():
-    return jsonify(settings)
+    return jsonify(settings.settings)
 
 
 @app.route('/settings', methods=['PUT'])
 @nocache
 def settings_put():
-    global settings
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
@@ -149,40 +149,34 @@ def settings_put():
             "dec_ticks_per_degree", "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"]
     for key in keys:
         if key in args:
-            settings[key] = settings_buffer[key]
+            settings.settings[key] = settings_buffer[key]
     keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction"]
     for key in keys:
         if key in args:
             if 'micro' not in settings_buffer:
                 settings_buffer['micro'] = {}
-            settings['micro'][key] = float(settings_buffer['micro'][key])
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+            settings.settings['micro'][key] = float(settings_buffer['micro'][key])
+    settings.write_settings(settings.settings)
     control.micro_update_settings()
     print('return')
     return '', 204
 
 
-@app.route('/settings_horizon_limit', method=['PUT'])
+@app.route('/settings_horizon_limit', methods=['PUT'])
 @nocache
 def settings_horizon_limit():
-    global settings
     points = request.form.get('points', None)
     if not points:
         return 'Missing points', 400
     points = json.loads(points)
-    settings['horizon_limit_points'] = points
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+    settings.settings['horizon_limit_points'] = points
+    settings.write_settings(settings.settings)
     return 'Points saved', 204
 
 
 @app.route('/settings_network_ethernet', methods=['PUT'])
 @nocache
 def settings_network_ethernet():
-    global settings
     dhcp_server = request.form.get('dhcp_server', None)
     if dhcp_server:
         dhcp_server = dhcp_server.lower() == 'true'
@@ -195,9 +189,9 @@ def settings_network_ethernet():
     if None not in (dhcp_server, ip, netmask):
         network.set_ethernet_dhcp_server(dhcp_server)
         network.set_ethernet_static(ip, netmask)
-        settings['network']['ip'] = ip
-        settings['network']['netmask'] = ip
-        settings['network']['dhcp_server'] = ip
+        settings.settings['network']['ip'] = ip
+        settings.settings['network']['netmask'] = ip
+        settings.settings['network']['dhcp_server'] = ip
     return 'Saved', 204
 
 
@@ -225,15 +219,14 @@ def settings_network_wifi():
         return 'SSID must be less than 32 characters', 400
     network.hostapd_write(ssid, channel, wpa2key)
     # Stop hostapd and dnsmasq let autohotspot go
-    subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
-    subprocess.run(['sudo', '/usr/sbin/service', 'hostapd', 'stop'])
-    subprocess.run(['sudo', '/root/autohotspotcron'])
-    settings['network']['ssid'] = ssid
-    settings['network']['wpa2key'] = wpa2key
-    settings['network']['channel'] = channel
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+    if not settings.is_simulation():
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
+        subprocess.run(['sudo', '/usr/sbin/service', 'hostapd', 'stop'])
+        subprocess.run(['sudo', '/root/autohotspotcron'])
+    settings.settings['network']['ssid'] = ssid
+    settings.settings['network']['wpa2key'] = wpa2key
+    settings.settings['network']['channel'] = channel
+    settings.write_settings(settings.settings)
     return "Saved", 200
 
 
@@ -252,7 +245,8 @@ def wifi_connect_delete():
     # If we are currently connected
     wificon = network.current_wifi_connect()
     if wificon['ssid'] == ssid or wificon['mac'] == mac:
-        subprocess.run(['sudo', '/root/autohotspotcron'])
+        if not settings.is_simulation():
+            subprocess.run(['sudo', '/root/autohotspotcron'])
     return 'Removed', 200
 
 
@@ -303,19 +297,18 @@ def wifi_connect():
     network.wpa_supplicant_write(stemp[0], wpasup['other'], wpasup['networks'])
     network.root_file_close(stemp)
     # TODO: Maybe we do this after responding for user feedback?
-    subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
-    subprocess.run(['sudo', '/root/autohotspotcron'])
+    if not settings.is_simulation():
+        subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
+        subprocess.run(['sudo', '/root/autohotspotcron'])
     return '', 204
 
 
 @app.route('/set_location', methods=['DELETE'])
 @nocache
 def unset_location():
-    settings['location'] = None
+    settings.settings['location'] = None
     runtime_settings['earth_location'] = None
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+    settings.write_settings(settings.settings)
     return 'Unset Location', 200
 
 
@@ -328,17 +321,15 @@ def set_location():
     if 'lat' not in location or 'long' not in location or 'name' not in location and location['name'].strip() != '':
         return 'Missing arguments', 400
     location = {'lat': float(location['lat']), 'long': float(location['long']), 'name': str(location['name'])}
-    old_location = settings['location']
-    settings['location'] = location
+    old_location = settings.settings['location']
+    settings.settings['location'] = location
     try:
         control.update_location()
     except:
-        settings['location'] = old_location
+        settings.settings['location'] = old_location
         traceback.print_exc(file=sys.stdout)
         return 'Invalid location', 400
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+    settings.write_settings(settings.settings)
     return 'Set Location', 200
 
 
@@ -434,7 +425,10 @@ def set_time():
     if ntpstat.returncode != 0:
         d = d + (datetime.datetime.now() - s)
         time = d.isoformat()
-        daterun = subprocess.run(['/usr/bin/sudo', '/bin/date', '-s', time])
+        if not settings.is_simulation():
+            daterun = subprocess.run(['/usr/bin/sudo', '/bin/date', '-s', time])
+        else:
+            daterun = {'returncode': 0}
         if daterun.returncode == 0:
             runtime_settings['time_been_set'] = True
             return 'Date Set', 200
@@ -453,23 +447,19 @@ def set_park_position():
         return 'You must set location before setting park position.', 400
     status = control.get_status()
     coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                      astropy.time.Time.now(), settings['ra_track_rate'],
-                                      settings['dec_ticks_per_degree'])
+                                      astropy.time.Time.now(), settings.settings['ra_track_rate'],
+                                      settings.settings['dec_ticks_per_degree'])
     altaz = control.to_altaz_asdeg(coord)
-    settings['park_position'] = altaz
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+    settings.settings['park_position'] = altaz
+    settings.write_settings(settings.settings)
     return 'Park Position Set', 200
 
 
 @app.route('/set_park_position', methods=['DELETE'])
 @nocache
 def unset_park_position():
-    settings['park_position'] = None
-    with settings_json_lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+    settings.settings['park_position'] = None
+    settings.write_settings(settings.settings)
     return 'Park Position Unset', 200
 
 
@@ -479,14 +469,14 @@ def do_park():
     # TODO: If started parked we can use 0,0
     if not runtime_settings['earth_location']:
         return 'Location not set', 400
-    if not settings['park_position']:
+    if not settings.settings['park_position']:
         return 'No park position has been set.', 400
     if not runtime_settings['sync_info']:
         return 'No sync info has been set.', 400
     runtime_settings['tracking'] = False
     control.ra_set_speed(0)
-    coord = astropy.coordinates.SkyCoord(alt=settings['park_position']['alt'] * u.deg,
-                                         az=settings['park_position']['az'] * u.deg, frame='altaz',
+    coord = astropy.coordinates.SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
                                          obstime=astropy.time.Time.now(), location=runtime_settings['earth_location'])
     coord = astropy.coordinates.SkyCoord(ra=coord.icrs.ra, dec=coord.icrs.dec, frame='icrs')
     control.move_to_skycoord(runtime_settings['sync_info'], coord.icrs, True)
@@ -497,7 +487,7 @@ def do_park():
 @nocache
 def start_tracking():
     runtime_settings['tracking'] = True
-    control.ra_set_speed(settings['ra_track_rate'])
+    control.ra_set_speed(settings.settings['ra_track_rate'])
     return 'Tracking', 200
 
 
@@ -581,7 +571,8 @@ def search_object():
 
 
 def reboot():
-    return subprocess.run(['/usr/bin/sudo', '/sbin/reboot'])
+    if not settings.is_simulation():
+        return subprocess.run(['/usr/bin/sudo', '/sbin/reboot'])
 
 
 @app.route('/firmware_update', methods=['POST'])
@@ -731,25 +722,21 @@ def listen_paa_stderr(process):
 
 
 def main():
-    global st_queue, settings
+    global st_queue
     setup_power_switch()
-    with settings_json_lock:
-        with open('settings.json') as f:
-            settings = json.load(f)
-        wifiinfo = network.hostapd_read()
-        for key in wifiinfo.keys():
-            settings['network'][key] = wifiinfo[key]
-        ethernetinfo = network.read_ethernet_settings()
-        for key in ethernetinfo.keys():
-            settings['network'][key] = ethernetinfo[key]
-    st_queue = control.init(socketio, settings, runtime_settings)
-    network.init(settings)
+    wifiinfo = network.hostapd_read()
+    for key in wifiinfo.keys():
+        settings.settings['network'][key] = wifiinfo[key]
+    ethernetinfo = network.read_ethernet_settings()
+    for key in ethernetinfo.keys():
+        settings.settings['network'][key] = ethernetinfo[key]
+    st_queue = control.init(socketio, runtime_settings)
 
     # TODO: Config if start stellarium server.
     stellarium_thread = threading.Thread(target=stellarium_server.run)
     stellarium_thread.start()
 
-    sstchuck_thread = threading.Thread(target=sstchuck.run, args=[settings])
+    sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
 
     print('Running...')

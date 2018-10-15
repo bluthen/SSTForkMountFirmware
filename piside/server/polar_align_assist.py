@@ -1,4 +1,9 @@
-from picamera import PiCamera
+import settings
+
+if settings.is_simulation():
+    from simulation_helper import PiCamera
+else:
+    from picamera import PiCamera
 from time import sleep
 from fractions import Fraction
 import os

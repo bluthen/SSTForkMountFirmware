@@ -4,12 +4,8 @@ import re
 import tempfile
 import os
 
-settings = None
-
-
-def init(lsettings):
-    global settings
-    settings = lsettings
+import simulation_helper
+import settings
 
 
 def valid_ip(address):
@@ -22,7 +18,11 @@ def valid_ip(address):
 
 
 def root_file_open(path):
-    results = subprocess.run(['/usr/bin/sudo', '/bin/cat', path], stdout=subprocess.PIPE)
+    if settings.is_simulation():
+        path = './simulation_files' + path
+        results = subprocess.run(['/bin/cat', path], stdout=subprocess.PIPE)
+    else:
+        results = subprocess.run(['/usr/bin/sudo', '/bin/cat', path], stdout=subprocess.PIPE)
     stemp = tempfile.mkstemp(suffix='sstneworktmp')
     stemp = [os.fdopen(stemp[0], 'a+'), stemp[1], path]
     stemp[0].write(results.stdout.decode())
@@ -32,9 +32,12 @@ def root_file_open(path):
 
 def root_file_close(stemp, mode=755):
     stemp[0].close()
-    subprocess.run(['/usr/bin/sudo', '/bin/cp', stemp[1], stemp[2]])
-    subprocess.run(['/usr/bin/sudo', '/bin/chown', 'root', stemp[2]])
-    subprocess.run(['/usr/bin/sudo', '/bin/chmod', str(mode), stemp[2]])
+    if settings.is_simulation():
+        subprocess.run(['/bin/cp', stemp[1], stemp[2]])
+    else:
+        subprocess.run(['/usr/bin/sudo', '/bin/cp', stemp[1], stemp[2]])
+        subprocess.run(['/usr/bin/sudo', '/bin/chown', 'root', stemp[2]])
+        subprocess.run(['/usr/bin/sudo', '/bin/chmod', str(mode), stemp[2]])
     os.remove(stemp[1])
 
 
@@ -80,8 +83,9 @@ wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
     stemp[0].write(defaults)
     root_file_close(stemp)
     # time.sleep(4)
-    subprocess.run(['sudo', 'ip', 'addr', 'flush', 'eth0'])
-    subprocess.run(['sudo', 'systemctl', 'restart', 'networking.service'])
+    if not settings.is_simulation():
+        subprocess.run(['sudo', 'ip', 'addr', 'flush', 'eth0'])
+        subprocess.run(['sudo', 'systemctl', 'restart', 'networking.service'])
 
 
 def read_ethernet_settings():
@@ -116,10 +120,11 @@ def read_ethernet_settings():
 
 
 def set_ethernet_dhcp_server(enabled):
-    if enabled:
-        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
-    else:
-        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
+    if not settings.is_simulation():
+        if enabled:
+            subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
+        else:
+            subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
 
 
 def hostapd_write(ssid, channel, password=None):
@@ -142,7 +147,7 @@ wmm_enabled=1         # QoS support
 wpa_passphrase=%s
 wpa_key_mgmt=WPA-PSK
 """
-    stemp[0].write(hostapd_conf % (settings['network']['wifi_device'], ssid, channel))
+    stemp[0].write(hostapd_conf % (settings.settings['network']['wifi_device'], ssid, channel))
     if password:
         stemp[0].write('\n' + hostapd_security % (password,))
     root_file_close(stemp)
@@ -151,7 +156,8 @@ wpa_key_mgmt=WPA-PSK
     stemp[0].truncate(0)
     stemp[0].write(ssid+'\n')
     root_file_close(stemp)
-    subprocess.run(['sudo', '/bin/hostname', ssid])
+    if not settings.is_simulation():
+        subprocess.run(['sudo', '/bin/hostname', ssid])
 
 
 def wpa_supplicant_read(wpa_file):
@@ -228,8 +234,10 @@ def current_wifi_connect():
 
 
 def wifi_client_scan_iw():
-    results = subprocess.run(['sudo', '/sbin/iw', 'dev', 'wlan0', 'scan', 'ap-force'], stdout=subprocess.PIPE)
-
+    if not settings.is_simulation():
+        results = subprocess.run(['sudo', '/sbin/iw', 'dev', 'wlan0', 'scan', 'ap-force'], stdout=subprocess.PIPE)
+    else:
+        results = simulation_helper.iw_scan()
     aps = []
     first = True
     ap = None
@@ -254,8 +262,9 @@ def wifi_client_scan_iw():
 
 
 def wifi_client_scan():
-    subprocess.run(['sudo', '/sbin/wpa_cli', '-i', settings['network']['wifi_device'], 'scan'])
-    results = subprocess.run(['sudo', '/sbin/wpa_cli', '-i', settings['network']['wifi_device'], 'scan_results'],
+    # Doesn't work when wpa_suppliment is turned off
+    subprocess.run(['sudo', '/sbin/wpa_cli', '-i', settings.settings['network']['wifi_device'], 'scan'])
+    results = subprocess.run(['sudo', '/sbin/wpa_cli', '-i', settings.settings['network']['wifi_device'], 'scan_results'],
                              stdout=subprocess.PIPE)
     aps = []
     first = True
