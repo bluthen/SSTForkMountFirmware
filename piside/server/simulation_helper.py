@@ -9,12 +9,18 @@ class PiCamera:
                  sensor_mode=0, led_pin=None, clock_mode='reset', framerate_range=None):
         self.MAX_RESOLUTION = [3280, 2464]
         if resolution != None:
-            self.resolution = resolution
+            self.resolution = tuple(resolution)
         else:
-            self.resolution = self.MAX_RESOLUTION
+            self.resolution = tuple(self.MAX_RESOLUTION)
         self.shutter_speed = 100000
         self.framerate = Fraction(1000000.0 / self.shutter_speed)
         self.iso = 100
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
 
     def start_preview(self):
         pass
@@ -40,4 +46,4 @@ def iw_scan_decode():
 
 
 def iw_scan():
-    return types.SimpleNamespace(**{'stdout': {'decode': iw_scan_decode}})
+    return types.SimpleNamespace(**{'stdout': types.SimpleNamespace(**{'decode': iw_scan_decode})})

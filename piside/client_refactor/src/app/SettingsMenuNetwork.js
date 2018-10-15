@@ -149,7 +149,8 @@ class SettingsMenuNetwork {
             this.wifiClientScan();
         });
         $('#networkSettingsWifiAPSave', this._selfDiv).click(saveClicked.bind(this));
-        $('#networkSettingsEthernetSave', this._selfDiv).click(saveEthernetClicked.bind(this))
+        $('#networkSettingsEthernetSave', this._selfDiv).click(saveEthernetClicked.bind(this));
+        $('#networkSettingsWifiAPChannel', this._selfDiv).inputSpinner();
     }
 
     show() {

@@ -698,7 +698,10 @@ def paa_image():
     global paa_count
     img = '%d.jpg' % (paa_count,)
     print('paa_image', img, flush=True)
-    return send_from_directory('/ramtmp', img)
+    if settings.is_simulation():
+        return send_from_directory('./simulation_files/ramtmp', img)
+    else:
+        return send_from_directory('/ramtmp', img)
 
 
 def listen_paa_stdout(process):

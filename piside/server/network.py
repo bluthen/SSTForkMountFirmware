@@ -217,7 +217,7 @@ def wpa_supplicant_remove(networks, ssid, mac):
 
 
 def current_wifi_connect():
-    results = subprocess.run(['/sbin/iwconfig', 'wlan0'], stdout=subprocess.PIPE)
+    results = subprocess.run(['/sbin/iwconfig', settings.settings['network']['wifi_device']], stdout=subprocess.PIPE)
     sout = results.stdout.decode().splitlines()
     essid_p = re.compile('.* ESSID:"(.+)".*')
     access_point_p = re.compile('.* Access Point: (\S+).*')
@@ -235,7 +235,7 @@ def current_wifi_connect():
 
 def wifi_client_scan_iw():
     if not settings.is_simulation():
-        results = subprocess.run(['sudo', '/sbin/iw', 'dev', 'wlan0', 'scan', 'ap-force'], stdout=subprocess.PIPE)
+        results = subprocess.run(['sudo', '/sbin/iw', 'dev', settings.settings['network']['wifi_device'], 'scan', 'ap-force'], stdout=subprocess.PIPE)
     else:
         results = simulation_helper.iw_scan()
     aps = []
@@ -246,7 +246,7 @@ def wifi_client_scan_iw():
         if line.find('BSS Load:') == -1 and line.find('BSS ') == 0:
             if ap:
                 aps.append(ap)
-            ap = {'mac': line[4:21]}
+            ap = {'mac': line[4:21], 'flags': '', 'ssid': '', 'freq': ''}
         elif line.find('freq: ') == 0:
             ap['freq'] = line.split(' ')[1]
         elif line.find('signal: ') == 0:

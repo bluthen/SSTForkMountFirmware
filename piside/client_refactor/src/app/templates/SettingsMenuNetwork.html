@@ -1,6 +1,6 @@
 <div class="modal fade bd-example-modal-lg" id="networkSettings" role="dialog">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 96%; width:96%">
+        <div class="modal-content" style="width:100%">
             <div class="modal-header">
                 <h5 class="modal-title">Network Settings</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -53,8 +53,8 @@
                             </label>
                             <div class="col">
                                 <div class="input-group">
-                                    <input class="form-control" type="number" id="networkSettingsWifiAPChannel" min="0"
-                                           max="" placeholder="Channel" maxlength="2">
+                                    <input type="number" value="6" data-decimals="0" min="1" max="11" step="1"
+                                           id="networkSettingsWifiAPChannel"/>
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
