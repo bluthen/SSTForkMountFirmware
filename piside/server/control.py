@@ -94,24 +94,24 @@ def below_horizon_limit(altaz):
     '''
     az = altaz['az']
     alt = altaz['alt']
-    if 'points' in settings.settings and settings.settings['points']:
-        if len(settings.settings['points']) == 1:
-            if alt <= settings.settings['points'][0]['alt']:
+    if 'horizon_limit_points' in settings.settings and settings.settings['horizon_limit_points']:
+        if len(settings.settings['horizon_limit_points']) == 1:
+            if alt <= settings.settings['horizon_limit_points'][0]['alt']:
                 return True
             else:
                 return False
         else:
-            for i in range(len(settings.settings['points'])-1):
-                point1 = settings.settings['points'][i]
-                if i+1 < len(settings.settings['points']):
-                    point2 = settings.settings['points'][i+1]
+            for i in range(len(settings.settings['horizon_limit_points'])-1):
+                point1 = settings.settings['horizon_limit_points'][i]
+                if i+1 < len(settings.settings['horizon_limit_points']):
+                    point2 = settings.settings['horizon_limit_points'][i+1]
                 else:
-                    point2 = settings.settings['points'][0]
+                    point2 = settings.settings['horizon_limit_points'][0]
                 p1az = point1['az']
-                if point2['az'] < p1az or len(settings.settings['points']) == 1:
+                if point2['az'] < p1az or len(settings.settings['horizon_limit_points']) == 1:
                     p1az -= 360.0
 
-                point2 = settings.settings['points'][i+1]
+                point2 = settings.settings['horizon_limit_points'][i+1]
                 if p1az <= az < point2['az']:
                     m = (point2['alt'] - point1['alt'])/(point2['az'] - p1az)
                     b = point1['alt']
@@ -177,9 +177,9 @@ def send_status():
         status['dec'] = coord.icrs.dec.deg
         # print('earth_location', runtime_settings['earth_location'])
         altaz = to_altaz_asdeg(coord)
-        inhorizon = below_horizon_limit(altaz)
-        if inhorizon and settings.settings['tracking']:
-            settings.settings['tracking'] = False
+        below_horizon = below_horizon_limit(altaz)
+        if below_horizon and runtime_settings['tracking']:
+            runtime_settings['tracking'] = False
             ra_set_speed(0)
             status['alert'] = 'In horizon limit, tracking stopped'
         # print(altaz)

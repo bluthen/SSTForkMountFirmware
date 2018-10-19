@@ -4,7 +4,11 @@ import template from './templates/SettingsMenuHorizonLimit.html';
 
 
 const savePoints = _.throttle(function(points) {
-    $.ajax()
+    $.ajax({
+        url: '../settings_horizon_limit',
+        method: 'PUT',
+        data: {points: JSON.stringify(points)}
+    });
 }, 500);
 
 
@@ -83,6 +87,16 @@ class SettingsMenuHorizonLimit {
             }
             this._graph.points = points;
         });
+
+        $.ajax({
+            url: '../settings',
+            method: 'GET',
+            success: (data) => {
+                if (data.hasOwnProperty('horizon_limit_points')) {
+                    this._graph.points = data.horizon_limit_points;
+                }
+            }
+        })
     }
 
     show() {
