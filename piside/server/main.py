@@ -1,10 +1,17 @@
+from astropy.utils import iers
+import astropy.time
+import astropy.coordinates
+from astropy.coordinates import solar_system_ephemeris
+import astropy.units as u
+
+from eventlet import monkey_patch
+monkey_patch()
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
 from flask_socketio import SocketIO, emit
 from functools import wraps, update_wrapper
 import json
 import control
 import threading
-from eventlet import monkey_patch
 import re
 import sqlite3
 import iso8601
@@ -14,11 +21,6 @@ import sys
 import traceback
 import tempfile
 import zipfile
-from astropy.utils import iers
-import astropy.time
-import astropy.coordinates
-from astropy.coordinates import solar_system_ephemeris
-import astropy.units as u
 import stellarium_server
 import math
 import os
@@ -27,8 +29,6 @@ import sstchuck
 import network
 
 iers.conf.auto_download = False
-
-monkey_patch()
 
 paa_process_lock = threading.RLock()
 paa_process = None
