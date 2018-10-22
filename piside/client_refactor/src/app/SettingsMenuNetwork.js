@@ -37,7 +37,7 @@ const saveClicked = function () {
         $('#networkSettingsWifiAPSSID', this._selfDiv).addClass('is-invalid').next().text('Must be less than 31 characters');
         valid = false;
     }
-    if (data.wpa2key.length !== 0 && (data.wpa2key.length < 8 || data.wpa2key.length > 63)) {
+    if (data.wpa2key && data.wpa2key.length !== 0 && (data.wpa2key.length < 8 || data.wpa2key.length > 63)) {
         $('#networkSettingsWifiAPKey', this._selfDiv).addClass('is-invalid').next().text('Length must be 0 or between 8-63');
         valid = false;
     }
@@ -54,11 +54,11 @@ const saveClicked = function () {
         url: '/settings_network_wifi',
         method: 'PUT',
         data: data,
-        success: function (d) {
+        success: (d) => {
             unspin();
             $('span', $('#networkSettingsWifiAPSave', this._selfDiv).parent()).text('Saved').show().fadeOut(1000);
         },
-        error: function (jq) {
+        error: (jq) => {
             unspin();
             $('#errorInfoModalTitle').text('Error');
             $('#errorInfoModalBody').text(jq.responseText);

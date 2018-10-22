@@ -202,11 +202,9 @@ def settings_network_wifi():
     wpa2key = request.form.get('wpa2key', None)
     channel = request.form.get('channel', None)
 
-    if None in [ssid, wpa2key, channel]:
+    if None in [ssid, channel]:
         return 'Invalid parameters', 400
 
-    if len(wpa2key) == 0:
-        wpa2key = None
     if wpa2key and len(wpa2key) < 8 or len(wpa2key) > 63:
         return 'Invalid WPA2Key, must be between eight and 63 characters', 400
     try:
@@ -584,6 +582,10 @@ def firmware_update():
         tfile.seek(0)
         zip_ref = zipfile.ZipFile(tfile)
         zip_ref.extractall('/home/pi/SSTForkMountFirmware/piside')
+    try:
+        subprocess.run(['/usr/bin/python3', 'post_update.py'])
+    except:
+        pass
     t = threading.Timer(5, reboot)
     t.start()
     return 'Updated'
