@@ -72,11 +72,11 @@ const setLocationManualClicked = function () {
         const match = lat.match(/^([NS])(\d+)[° ](\d+)' ?(\d*.?\d+)?/);
         if (match) {
             lat_deg = parseInt(match[2], 10);
+            lat_deg += parseFloat(match[3]) / 60.0;
+            lat_deg += parseFloat(match[4]) / (60.0 * 60.0);
             if (match[1] === 'S') {
                 lat_deg = -lat_deg;
             }
-            lat_deg += parseFloat(match[3]) / 60.0;
-            lat_deg += parseFloat(match[4]) / (60.0 * 60.0);
         } else {
             //Invalid
             console.error('Invalid Latitude entered.');
@@ -95,11 +95,11 @@ const setLocationManualClicked = function () {
         const match = long.match(/^([WE])(\d+)[° ](\d+)' ?(\d*.?\d+)?/);
         if (match) {
             long_deg = parseInt(match[2], 10);
+            long_deg += parseFloat(match[3]) / 60.0;
+            long_deg += parseFloat(match[4]) / (60.0 * 60.0);
             if (match[1] === 'W') {
                 long_deg = -long_deg;
             }
-            long_deg += parseFloat(match[3]) / 60.0;
-            long_deg += parseFloat(match[4]) / (60.0 * 60.0);
         } else {
             //Invalid
             console.error('Invalid Longitude entered.');
