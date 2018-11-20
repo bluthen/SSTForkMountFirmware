@@ -61,8 +61,9 @@ def circle_least_squares(contour):
         return r_2, center
 
 
-
+contours_circle = []
 def contours_mousecallback(img, contours, event, x, y, flags, param):
+    global contours_circle
     if event == cv2.EVENT_LBUTTONDBLCLK:
         cimg = np.zeros((img.shape[0], img.shape[1], 3), np.uint8)
         cv2.drawContours(cimg, contours, -1, (0, 255, 0), thickness=1)
@@ -80,6 +81,7 @@ def contours_mousecallback(img, contours, event, x, y, flags, param):
                 print('Circle center: ', center, radius)
                 center = (int(round(center[0])), int(round(center[1])))
                 radius = int(round(radius))
+                contours_circle = [center, radius]
                 cv2.circle(cimg, center, round(radius), (0, 255, 0), 1)
                 # draw the center of the circle
                 cv2.circle(cimg, center, 1, (0, 0, 255), 1)
@@ -130,6 +132,11 @@ def circles(img, cimg):
     circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 1,
                                param1=100, param2=35, minRadius=25, maxRadius=0)
     circles_round = np.uint16(np.around(circles))
+
+    if contours_circle:
+        cv2.circle(cimg, contours_circle[0], contours_circle[1], (255, 255, 0), 1)
+        cv2.circle(cimg, contours_circle[0], 1, (0, 255, 255), 1)
+
     for i in circles_round[0, :]:
         mask = np.zeros(img.shape, np.uint8)
         cv2.circle(mask, (i[0], i[1]), i[2], 255, -1)
@@ -137,10 +144,11 @@ def circles(img, cimg):
         print(circle_mean)
         if True or circle_mean > 100:
             # draw the outer circle
-            cv2.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            cv2.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 1)
             # draw the center of the circle
             cv2.circle(cimg, (i[0], i[1]), 1, (0, 0, 255), 1)
     print(circles)
+
     cv2.imshow('detected circles', cimg)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
