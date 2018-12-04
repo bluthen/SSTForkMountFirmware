@@ -12,7 +12,7 @@ class Footer {
         const location = $('#location', this._selfDiv);
         location.empty();
 
-        if (startingSettings.location.name) {
+        if (startingSettings.location && startingSettings.location.name) {
             location.text(startingSettings.location.name);
         }
 
