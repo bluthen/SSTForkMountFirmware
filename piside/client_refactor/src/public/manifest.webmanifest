@@ -9,6 +9,7 @@
     }
   ],
   "start_url": "/static/index.html",
+  "background_color": "#FFFFFF",
   "display": "standalone",
   "orientation": "portrait"
 }

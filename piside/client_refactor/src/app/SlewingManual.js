@@ -101,7 +101,9 @@ const numbericIntOnly = function (plusminus) {
     return function (e) {
         // https://weblog.west-wind.com/posts/2011/Apr/22/Restricting-Input-in-HTML-Textboxes-to-Numeric-Values
         const key = e.which || e.keyCode;
-        console.log(key);
+        const keyStr = e.key;
+        //console.log(key);
+        //console.log(e);
 
         if (!e.shiftKey && !e.altKey && !e.ctrlKey &&
             // numbers
@@ -109,7 +111,7 @@ const numbericIntOnly = function (plusminus) {
             // Numeric keypad
             key >= 96 && key <= 105 ||
             // comma, period and minus on keypad
-            (plusminus && (key === 187 || key === 189 || key === 109 || key === 107)) ||
+            (plusminus && (key === 173 || key === 187 || key === 189 || key === 109 || key === 107) || (keyStr && keyStr === '-')) ||
             // Backspace and Tab and Enter
             key === 8 || key === 9 || key === 13 ||
             // Home and End
