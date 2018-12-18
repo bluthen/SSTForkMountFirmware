@@ -7,8 +7,6 @@ import Footer from './Footer'
 
 const initStep2 = function(startingSettings) {
     this.footer = new Footer(this, $('body'), startingSettings);
-    this.directionControls = new DirectionControls(this, $('.App'));
-    this.slewing = new Slewing(this, $('.App'));
     this.settingsMenu = new SettingsMenu(this, $('.App'), startingSettings, this.directionControls);
 
     this.socket.on('controls_response', function (msg) {

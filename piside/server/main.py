@@ -3,6 +3,7 @@ import astropy.time
 import astropy.coordinates
 from astropy.coordinates import solar_system_ephemeris
 import astropy.units as u
+import time
 
 from eventlet import monkey_patch
 monkey_patch()
@@ -34,6 +35,8 @@ paa_process_lock = threading.RLock()
 paa_process = None
 paa_count = 0
 
+power_thread_quit = False
+
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
 socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
@@ -46,7 +49,7 @@ runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info':
 
 # Sets up power switch
 # TODO: disable power switch for simulation
-def setup_power_switch():
+def run_power_switch():
     try:
         import RPi.GPIO as GPIO
         RELAY_PIN = 6
@@ -56,15 +59,17 @@ def setup_power_switch():
         GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.output(RELAY_PIN, True)
 
-        GPIO.add_event_detect(SWITCH_PIN, GPIO.RISING, callback=switch_off)
+        while not power_thread_quit:
+            time.sleep(0.1)
+            if GPIO.input(SWITCH_PIN):
+                continue 
+            time.sleep(0.1)
+            if not GPIO.input(SWITCH_PIN):
+                subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+
     except ModuleNotFoundError:
         # We are probably in simulation
         print("Warning: Can't use power switch.")
-
-
-def switch_off(pin):
-    if not settings.is_simulation():
-        subprocess.run(['sudo', 'shutdown', '-h', 'now'])
 
 
 @app.context_processor
@@ -316,9 +321,9 @@ def set_location():
     location = request.form.get('location', None)
     location = json.loads(location)
     print(location)
-    if 'lat' not in location or 'long' not in location or 'name' not in location and location['name'].strip() != '':
+    if 'lat' not in location or 'long' not in location or 'elevation' not in location or ('name' not in location and location['name'].strip() != ''):
         return 'Missing arguments', 400
-    location = {'lat': float(location['lat']), 'long': float(location['long']), 'name': str(location['name'])}
+    location = {'lat': float(location['lat']), 'long': float(location['long']), 'elevation': float(location['elevation']), 'name': str(location['name'])}
     old_location = settings.settings['location']
     settings.settings['location'] = location
     try:
@@ -727,8 +732,10 @@ def listen_paa_stderr(process):
 
 
 def main():
-    global st_queue
-    setup_power_switch()
+    global st_queue, power_thread_quit
+    power_thread_quit = False
+    power_thread = threading.Thread(target=run_power_switch)
+    power_thread.start()
     wifiinfo = network.hostapd_read()
     for key in wifiinfo.keys():
         settings.settings['network'][key] = wifiinfo[key]
@@ -747,10 +754,12 @@ def main():
     print('Running...')
     try:
         socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)
+        power_thread_quit = True
         stellarium_server.terminate()
         sstchuck.terminate()
         stellarium_thread.join()
         sstchuck_thread.join()
+        power_thread.join()
     finally:
         if paa_process and paa_process.poll() is None:
             paa_process.stdin.write('STOP\nQUIT\n'.encode())

@@ -149,7 +149,7 @@ function redraw(self) {
     newPlot.graphics.beginFill('#FF7F7F').setStrokeStyle(1);
 
     newPlot.graphics.drawCircle(largeRadius, largeRadius, largeRadius).endFill();
-    newPlot.graphics.beginFill('#FFFFFF');
+    newPlot.graphics.beginFill('#000000');
 
 
     for (let i = 0; i < self._points.length; i++) {

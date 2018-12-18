@@ -42,6 +42,7 @@ const saveSettingsClicked = function() {
 class SettingsMenuGeneral {
     constructor(App, parentDiv) {
         this._selfDiv = $(template);
+        this._selfDiv.hide();
         parentDiv.append(this._selfDiv);
 
         App.socket.on('status', (msg) => {
@@ -72,7 +73,6 @@ class SettingsMenuGeneral {
                 url: '/park',
                 method: 'PUT',
                 success: () => {
-                    this.close();
                     $('#slewModalTarget').html('Parking...');
                     //TODO: Dialog to abort?
                     $('#slewModal').data('bs.modal', null).modal({backdrop: 'static', keyboard: false});
@@ -183,12 +183,12 @@ class SettingsMenuGeneral {
 
     show() {
         this.updateSettings(() => {
-            this._selfDiv.data('bs.modal', null).modal({backdrop: true, keyboard: true});
+            this._selfDiv.show();
         });
     }
 
-    close() {
-        this._selfDiv.modal('hide');
+    hide() {
+        this._selfDiv.hide();
     }
 
     updateSettings(successCB) {

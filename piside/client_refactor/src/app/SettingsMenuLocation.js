@@ -5,6 +5,9 @@ import Formating from './Formating'
 import template from './templates/SettingsMenuLocation.html'
 
 let searchLocationCounter = 0;
+
+const DEFAULT_ELEVATION = 405;
+
 const searchLocation = _.throttle(function () {
     const search = $('#location_search_txt', this._selfDiv).val();
     if (!search.trim()) {
@@ -25,18 +28,18 @@ const searchLocation = _.throttle(function () {
             if (sc !== searchLocationCounter) {
                 return;
             }
-            const setclicked = (lat, lon, name) => {
+            const setclicked = (lat, lon, elevation, name) => {
                 return (e) => {
-                    this.setLocation(lat, lon, name);
+                    this.setLocation(lat, lon, elevation, name);
                     e.preventDefault();
                 }
             };
             const tbody = $('#location_search_results tbody', this._selfDiv);
             tbody.empty();
             for (let i = 0; i < d.cities.length; i++) {
-                const tr = $('<tr><td>' + d.cities[i][2] + ', ' + d.cities[i][4] + ' ' + d.cities[i][1] + '</td><td>' + Formating.lat(d.cities[i][9]) + ' ' + Formating.long(d.cities[i][10]) + '</td><td>' + action + '</td>');
+                const tr = $('<tr><td>' + d.cities[i][2] + ', ' + d.cities[i][4] + ' ' + d.cities[i][1] + '</td><td>' + Formating.lat(d.cities[i][9]) + ' ' + Formating.long(d.cities[i][10]) + '</td><td>'+d.cities[i][12]+'m</td><td>' + action + '</td>');
                 tbody.append(tr);
-                $('button', tr).on('click', setclicked(parseFloat(d.cities[i][9]), parseFloat(d.cities[i][10]), d.cities[i][2] + ', ' + d.cities[i][4]));
+                $('button', tr).on('click', setclicked(parseFloat(d.cities[i][9]), parseFloat(d.cities[i][10]), parseFloat(d.cities[i][12]), d.cities[i][2] + ', ' + d.cities[i][4]));
             }
 
             console.log(d);
@@ -53,6 +56,8 @@ const setLocationManualClicked = function () {
     let lat_deg, long_deg;
     let lat = $('#manual_lat', this._selfDiv).val();
     let long = $('#manual_long', this._selfDiv).val();
+    const elevation = parseFloat($('#manual_elevation', this._selfDiv).val().trim());
+
     const name = $('#manual_name', this._selfDiv).val().trim();
 
     if (!name || name.trim() === '') {
@@ -113,7 +118,7 @@ const setLocationManualClicked = function () {
 
     //convert coordinates
     //Check lat long and name are okay
-    this.setLocation(lat_deg, long_deg, name);
+    this.setLocation(lat_deg, long_deg, elevation, name);
 };
 
 
@@ -196,12 +201,15 @@ class SettingsMenuLocation {
         });
     }
 
-    setLocation(lat, long, name) {
+    setLocation(lat, long, elevation, name) {
+        if (isNaN(elevation)) {
+            elevation = DEFAULT_ELEVATION;
+        }
         //TODO: Confirm Dialog?
         $.ajax({
             url: '/set_location',
             method: 'PUT',
-            data: {location: JSON.stringify({lat: lat, long: long, name: name})},
+            data: {location: JSON.stringify({lat: lat, long: long, elevation: elevation, name: name})},
             success: function (d) {
                 // Footer
                 const location = $('#location');
@@ -218,9 +226,12 @@ class SettingsMenuLocation {
         });
     }
 
-
     show() {
-        this._selfDiv.data('bs.modal', null).modal({backdrop: true, keyboard: true});
+        this._selfDiv.show();
+    }
+
+    hide() {
+        this._selfDiv.hide();
     }
 
 }

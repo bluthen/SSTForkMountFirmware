@@ -155,12 +155,16 @@ class SettingsMenuNetwork {
 
     show() {
         this.update(() => {
-            this._selfDiv.data('bs.modal', null).modal({backdrop: true, keyboard: true});
+            this._selfDiv.show();
             //Update wifi client list.
             this.updateKnownWifi().finally(() => {
                 this.wifiClientScan();
             });
         });
+    }
+
+    hide() {
+        this._selfDiv.hide();
     }
 
     update(successCB) {

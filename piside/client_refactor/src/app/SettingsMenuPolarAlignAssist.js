@@ -197,7 +197,11 @@ class SettingsMenuPolarAlignAssist {
     }
 
     show() {
-        this._selfDiv.data('bs.modal', null).modal({backdrop: true, keyboard: true});
+        this._selfDiv.show();
+    }
+
+    hide() {
+        this._selfDiv.hide();
     }
 }
 

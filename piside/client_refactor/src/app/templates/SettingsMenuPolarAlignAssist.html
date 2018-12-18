@@ -1,216 +1,207 @@
-<div class="modal fade polarAlignAssist" role="dialog" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Polar Align Assist</h5>
+<div class="settings-menu-polaralignassist container-fluid">
+    <canvas></canvas>
+    <div name="paa_status"></div>
+    <div><a href="/paa_image">Direct link to last camera image</a></div>
+    <div class="form-group">
+        <div class="row">
+            <div class="col">
+                <div class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-primary active">
+                        <input type="radio" id="settings-polar-align-assist-single"
+                               name="settings-polar-align-assist-capture"
+                               value="single"
+                               autocomplete="off" checked> Single Capture
+                    </label>
+                    <label class="btn btn-primary">
+                        <input type="radio" id="settings-polar-align-assist-continuous"
+                               name="settings-polar-align-assist-capture"
+                               value="continuous"
+                               autocomplete="off"> Continuous Capture
+                    </label>
+                </div>
             </div>
-            <div class="modal-body">
-                <canvas></canvas>
-                <div name="paa_status"></div>
-                <div><a href="/paa_image">Direct link to last camera image</a></div>
-                <div class="form-group">
-                    <div class="row">
-                        <div class="col">
-                            <div class="btn-group" data-toggle="buttons">
-                                <label class="btn btn-primary active">
-                                    <input type="radio" id="settings-polar-align-assist-single"
-                                           name="settings-polar-align-assist-capture"
-                                           value="single"
-                                           autocomplete="off" checked> Single Capture
-                                </label>
-                                <label class="btn btn-primary">
-                                    <input type="radio" id="settings-polar-align-assist-continuous"
-                                           name="settings-polar-align-assist-capture"
-                                           value="continuous"
-                                           autocomplete="off"> Continuous Capture
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div>
-                                <button id="settings_polar_align_assist_capture" type="button" class="btn btn-success">
-                                    <i
-                                            class="fas fa-camera"></i>Capture
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <div class="col">
+                <div>
+                    <button id="settings_polar_align_assist_capture" type="button" class="btn btn-success">
+                        <i
+                                class="fas fa-camera"></i>Capture
+                    </button>
                 </div>
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_exposure_time">
-                        Exposure
-                    </label>
-                    <div class="col-sm-10">
-                        <input type="number" value="10" data-decimals="1" min="0.5" max="10" step="0.1"
-                               id="settings_polar_align_assist_exposure_time"/>
-                    </div>
-                </div>
+            </div>
+        </div>
+    </div>
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_exposure_time">
+            Exposure
+        </label>
+        <div class="col-sm-10">
+            <input type="number" value="10" data-decimals="1" min="0.5" max="10" step="0.1"
+                   id="settings_polar_align_assist_exposure_time"/>
+        </div>
+    </div>
 
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_rotation">
-                        Rotation
-                    </label>
-                    <div class="col-sm-10">
-                        <input type="number" data-loop="true" value="0" data-decimals="1" min="0" max="360" step="1"
-                               id="settings_polar_align_assist_rotation"/>
-                    </div>
-                </div>
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_rotation">
+            Rotation
+        </label>
+        <div class="col-sm-10">
+            <input type="number" data-loop="true" value="0" data-decimals="1" min="0" max="360" step="1"
+                   id="settings_polar_align_assist_rotation"/>
+        </div>
+    </div>
 
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_zoom">
-                        Zoom
-                    </label>
-                    <div class="col-sm-10">
-                        <input type="number" value="100" data-decimals="0" min="1" max="300" step="10"
-                               id="settings_polar_align_assist_zoom"/>
-                    </div>
-                </div>
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_zoom">
+            Zoom
+        </label>
+        <div class="col-sm-10">
+            <input type="number" value="100" data-decimals="0" min="1" max="300" step="10"
+                   id="settings_polar_align_assist_zoom"/>
+        </div>
+    </div>
 
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_zoom">
-                        ISO
-                    </label>
-                    <div class="col-sm-10">
-                        <input type="number" value="800" data-decimals="0" min="100" max="800" step="100"
-                               id="settings_polar_align_assist_iso"/>
-                    </div>
-                </div>
-
-
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_overlay_opacity">
-                        Overlay Opacity
-                    </label>
-                    <div class="col-sm-10">
-                        <input type="number" value="60" data-decimals="0" min="0" max="100" step="5"
-                               id="settings_polar_align_assist_overlay_opacity"/>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <div class="col">
-                        <input id="settings_polar_align_assist_show_config" class="form-check-input" type="checkbox"
-                               value=""
-                               data-toggle="collapse"
-                               data-target="#polarAlignConfig" aria-expanded="false"
-                               aria-controls="polarAlignConfig">
-                        <label class="form-check-label"
-                               for="settings_polar_align_assist_show_config">Show&nbsp;Polar Align Assist
-                            Settings</label>
-                    </div>
-                </div>
-                <div class="collapse" id="polarAlignConfig">
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_zoom">
+            ISO
+        </label>
+        <div class="col-sm-10">
+            <input type="number" value="800" data-decimals="0" min="100" max="800" step="100"
+                   id="settings_polar_align_assist_iso"/>
+        </div>
+    </div>
 
 
-                    <div class="form-group">
-                        <div class="row">
-                            <div class="col">
-                                <div class="btn-group" data-toggle="buttons">
-                                    <label class="btn btn-primary active">
-                                        <input type="radio" id="settings_polar_align_assist_calibrate_left"
-                                               name="settings_polar_align_assist_calibrate_dir"
-                                               value="left"
-                                               autocomplete="off" checked> Left
-                                    </label>
-                                    <label class="btn btn-primary">
-                                        <input type="radio" id="settings_polar_align_assist_calibrate_right"
-                                               name="settings_polar_align_assist_calibrate_dir"
-                                               value="right"
-                                               autocomplete="off"> Right
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_overlay_opacity">
+            Overlay Opacity
+        </label>
+        <div class="col-sm-10">
+            <input type="number" value="60" data-decimals="0" min="0" max="100" step="5"
+                   id="settings_polar_align_assist_overlay_opacity"/>
+        </div>
+    </div>
 
-                    <div class="form-group row" id="settings_polar_align_assist_speed">
-                        <div class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-primary active">
-                                <input type="radio" class="direction-controls-speed-fastest"
-                                       name="pa-direction-controls-speed"
-                                       value="fastest"
-                                       autocomplete="off" checked><i class="fas fa-angle-double-left"></i><i
-                                    class="fas fa-angle-double-left" style="margin-left:-2px"></i>
-                                Speed Fastest
-                            </label>
-                            <label class="btn btn-primary">
-                                <input type="radio" class="direction-controls-speed-faster"
-                                       name="pa-direction-controls-speed"
-                                       value="faster"
-                                       autocomplete="off"><i class="fas fa-angle-double-left"></i><i
-                                    class="fas fa-angle-left"
-                                    style="margin-left:-2px"></i>
-                                Faster
-                            </label>
-                            <label class="btn btn-primary">
-                                <input type="radio" class="direction-controls-speed-medium"
-                                       name="pa-direction-controls-speed"
-                                       value="medium"
-                                       autocomplete="off"><i class="fas fa-angle-double-left"></i> Medium
-                            </label>
-                            <label class="btn btn-primary">
-                                <input type="radio" class="direction-controls-speed-slower"
-                                       name="pa-direction-controls-speed"
-                                       value="slower"
-                                       autocomplete="off"><i class="fas fa-angle-left"></i> Slower
-                            </label>
-                            <label class="btn btn-primary">
-                                <input type="radio" class="direction-controls-speed-slowest"
-                                       name="pa-direction-controls-speed"
-                                       value="slowest" autocomplete="off">Speed Slowest
-                            </label>
-                        </div>
-                    </div>
+    <div class="form-group">
+        <div class="col">
+            <input id="settings_polar_align_assist_show_config" class="form-check-input" type="checkbox"
+                   value=""
+                   data-toggle="collapse"
+                   data-target="#polarAlignConfig" aria-expanded="false"
+                   aria-controls="polarAlignConfig">
+            <label class="form-check-label"
+                   for="settings_polar_align_assist_show_config">Show&nbsp;Polar Align Assist
+                Settings</label>
+        </div>
+    </div>
+    <div class="collapse" id="polarAlignConfig">
 
 
-                    <div class="form-group row">
-                        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_calibrate_rotate_time">
-                            Rotate Time
+        <div class="form-group">
+            <div class="row">
+                <div class="col">
+                    <div class="btn-group" data-toggle="buttons">
+                        <label class="btn btn-primary active">
+                            <input type="radio" id="settings_polar_align_assist_calibrate_left"
+                                   name="settings_polar_align_assist_calibrate_dir"
+                                   value="left"
+                                   autocomplete="off" checked> Left
                         </label>
-                        <div class="col-sm-10">
-                            <input type="number" value="120" data-decimals="0" min="0" max="100" step="5"
-                                   id="settings_polar_align_assist_calibrate_rotate_time"/>
-                        </div>
-                    </div>
-
-
-                    <div class="form-group row">
-                        <div class="form-group">
-                            <button id="settings_polar_align_assist_make_calibration_image" type="button"
-                                    class="btn btn-warning"><i
-                                    class="fas fa-cog"></i>Make Calibration Image
-                            </button>
-                        </div>
-                    </div>
-
-
-                    <div class="form-group row">
-                        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_config_rotation_x">
-                            Camera Rotation X
+                        <label class="btn btn-primary">
+                            <input type="radio" id="settings_polar_align_assist_calibrate_right"
+                                   name="settings_polar_align_assist_calibrate_dir"
+                                   value="right"
+                                   autocomplete="off"> Right
                         </label>
-                        <div class="col-sm-10">
-                            <input type="number" value="1639" data-decimals="0" min="0" max="3279" step="1"
-                                   id="settings_polar_align_assist_config_rotation_x"/>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_config_rotation_y">
-                            Camera Rotation Y
-                        </label>
-                        <div class="col-sm-10">
-                            <input type="number" value="1231" data-decimals="0" min="0" max="2463" step="1"
-                                   id="settings_polar_align_assist_config_rotation_y"/>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <div class="form-group">
-                            <button id="settings_polar_align_assist_save" type="button" class="btn btn-warning"><i
-                                    class="fas fa-cog"></i>Save
-                            </button>
-                            <span id="settings_polar_align_assist_save_status"></span><br/>
-                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="form-group row" id="settings_polar_align_assist_speed">
+            <div class="btn-group" data-toggle="buttons">
+                <label class="btn btn-primary active">
+                    <input type="radio" class="direction-controls-speed-fastest"
+                           name="pa-direction-controls-speed"
+                           value="fastest"
+                           autocomplete="off" checked><i class="fas fa-angle-double-left"></i><i
+                        class="fas fa-angle-double-left" style="margin-left:-2px"></i>
+                    Speed Fastest
+                </label>
+                <label class="btn btn-primary">
+                    <input type="radio" class="direction-controls-speed-faster"
+                           name="pa-direction-controls-speed"
+                           value="faster"
+                           autocomplete="off"><i class="fas fa-angle-double-left"></i><i
+                        class="fas fa-angle-left"
+                        style="margin-left:-2px"></i>
+                    Faster
+                </label>
+                <label class="btn btn-primary">
+                    <input type="radio" class="direction-controls-speed-medium"
+                           name="pa-direction-controls-speed"
+                           value="medium"
+                           autocomplete="off"><i class="fas fa-angle-double-left"></i> Medium
+                </label>
+                <label class="btn btn-primary">
+                    <input type="radio" class="direction-controls-speed-slower"
+                           name="pa-direction-controls-speed"
+                           value="slower"
+                           autocomplete="off"><i class="fas fa-angle-left"></i> Slower
+                </label>
+                <label class="btn btn-primary">
+                    <input type="radio" class="direction-controls-speed-slowest"
+                           name="pa-direction-controls-speed"
+                           value="slowest" autocomplete="off">Speed Slowest
+                </label>
+            </div>
+        </div>
+
+
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_calibrate_rotate_time">
+                Rotate Time
+            </label>
+            <div class="col-sm-10">
+                <input type="number" value="120" data-decimals="0" min="0" max="100" step="5"
+                       id="settings_polar_align_assist_calibrate_rotate_time"/>
+            </div>
+        </div>
+
+
+        <div class="form-group row">
+            <div class="form-group">
+                <button id="settings_polar_align_assist_make_calibration_image" type="button"
+                        class="btn btn-warning"><i
+                        class="fas fa-cog"></i>Make Calibration Image
+                </button>
+            </div>
+        </div>
+
+
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_config_rotation_x">
+                Camera Rotation X
+            </label>
+            <div class="col-sm-10">
+                <input type="number" value="1639" data-decimals="0" min="0" max="3279" step="1"
+                       id="settings_polar_align_assist_config_rotation_x"/>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_config_rotation_y">
+                Camera Rotation Y
+            </label>
+            <div class="col-sm-10">
+                <input type="number" value="1231" data-decimals="0" min="0" max="2463" step="1"
+                       id="settings_polar_align_assist_config_rotation_y"/>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="form-group">
+                <button id="settings_polar_align_assist_save" type="button" class="btn btn-warning"><i
+                        class="fas fa-cog"></i>Save
+                </button>
+                <span id="settings_polar_align_assist_save_status"></span><br/>
             </div>
         </div>
     </div>

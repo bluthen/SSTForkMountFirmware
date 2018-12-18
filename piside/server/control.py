@@ -137,13 +137,20 @@ def slewtocheck(ra, dec):
         return True
 
 
+DEFAULT_ELEVATION_M = 405.0
+
+
 def update_location():
     # print(settings.settings['location'])
     if 'location' not in settings.settings or not settings.settings['location'] or not settings.settings['location']['lat']:
         return
+    if 'elevation' not in settings.settings['location']:
+        elevation = DEFAULT_ELEVATION_M
+    else:
+        elevation = settings.settings['location']['elevation']
     el = EarthLocation(lat=settings.settings['location']['lat'] * u.deg,
                        lon=settings.settings['location']['long'] * u.deg,
-                       height=405.0 * u.m)
+                       height=elevation * u.m)
     runtime_settings['earth_location'] = el
 
 
@@ -549,6 +556,20 @@ def steps_needed_to_deaccelerate(a, v0, vi):
     vi = float(vi)
     t = (vi - v0) / (2.0 * a)
     return a * t * t + v0 * t
+
+
+def elevation_to_pressure(elevation):
+    """
+    Gives you expected absolute pressure at elevation.
+    :param elevation: in meters
+    :return: pressure in Pa
+    :Example:
+        >>> import control
+        >>> elevation_to_pressure(10000)
+        26437.48946505586
+    """
+    # https://www.engineeringtoolbox.com/air-altitude-pressure-d_462.html
+    return 101325.0*((1.0-2.2557e-5 * elevation)**(5.25588))
 
 
 def clean_deg(deg, dec=False):
