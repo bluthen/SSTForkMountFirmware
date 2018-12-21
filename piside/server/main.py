@@ -170,13 +170,19 @@ def settings_put():
 @app.route('/settings_horizon_limit', methods=['PUT'])
 @nocache
 def settings_horizon_limit():
+    enabled = request.form.get('horizon_limit_enabled', None)
     points = request.form.get('points', None)
-    if not points:
-        return 'Missing points', 400
-    points = json.loads(points)
-    settings.settings['horizon_limit_points'] = points
-    settings.write_settings(settings.settings)
-    return 'Points saved', 204
+    if not points and enabled is None:
+        return 'Missing points/enable', 400
+    if enabled:
+        enabled = enabled == 'true'
+        settings.settings['horizon_limit_enabled'] = enabled
+        settings.write_settings(settings.settings)
+    if points:
+        points = json.loads(points)
+        settings.settings['horizon_limit_points'] = points
+        settings.write_settings(settings.settings)
+    return 'Saved', 204
 
 
 @app.route('/settings_network_ethernet', methods=['PUT'])

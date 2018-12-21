@@ -17,7 +17,6 @@ class SettingsMenu {
         parentDiv.append(settingsMenuDiv);
 
         this.settingsMenuControls = new SettingsMenuControls(App, settingsMenuDiv);
-        this.settingsMenuControls.show();
         this.settingsMenuGeneral = new SettingsMenuGeneral(App, settingsMenuDiv);
         this.settingsMenuLocation = new SettingsMenuLocation(settingsMenuDiv, startingSettings);
         this.settingsMenuNetwork = new SettingsMenuNetwork(settingsMenuDiv);
@@ -35,55 +34,78 @@ class SettingsMenu {
         };
 
         // Controls
-        $('#settings_menu_controls', _selfDiv).click(() => {
+        const controls = () => {
             hideAll();
             $('#settings_menu_controls', _selfDiv).parent().addClass('active');
             $('#settings_menu_content', _selfDiv).collapse('hide');
             menuHeader.text('Controls');
             this.settingsMenuControls.show();
-        });
+        };
 
         // Settings menu
-        $('#settings_menu_general', _selfDiv).click(() => {
+        const settings = () => {
             hideAll();
             $('#settings_menu_general', _selfDiv).parent().addClass('active');
             $('#settings_menu_content', _selfDiv).collapse('hide');
             menuHeader.text('General Settings');
             this.settingsMenuGeneral.show();
-        });
+        };
 
-        $('#settings_menu_location', _selfDiv).click(() => {
+        const location_menu = () => {
             hideAll();
             $('#settings_menu_location', _selfDiv).parent().addClass('active');
             $('#settings_menu_content', _selfDiv).collapse('hide');
             menuHeader.text('Location Settings');
             this.settingsMenuLocation.show();
-        });
+        };
 
-        $('#settings_menu_network', _selfDiv).click(() => {
+        const network = () => {
             hideAll();
             $('#settings_menu_network', _selfDiv).parent().addClass('active');
             $('#settings_menu_content', _selfDiv).collapse('hide');
             menuHeader.text('Network Settings');
             this.settingsMenuNetwork.show();
-        });
+        };
 
-        $('#settings_menu_horizon', _selfDiv).click(() => {
+        const horizon = () => {
             hideAll();
             $('#settings_menu_horizon', _selfDiv).parent().addClass('active');
             $('#settings_menu_content', _selfDiv).collapse('hide');
             menuHeader.text('Horizon Settings');
-           this.settingsMenuHorizonLimit.show();
-        });
+            this.settingsMenuHorizonLimit.show();
+        };
 
-        $('#settings_menu_polaralignassist', _selfDiv).click(() => {
+        const polaralignassist = () => {
             hideAll();
             $('#settings_menu_polaralignassist', _selfDiv).parent().addClass('active');
             $('#settings_menu_content', _selfDiv).collapse('hide');
             menuHeader.text('Polar Alignment Assist');
             this.settingsMenuPolarAlignAssist.show();
-        });
+        };
 
+        const hashChange = (e) => {
+            const hash = location.hash;
+            if (hash === '#settings_menu_controls') {
+                controls();
+            } else if (hash === '#settings_menu_general') {
+                settings();
+            } else if (hash === '#settings_menu_location') {
+                location_menu();
+            } else if (hash === '#settings_menu_network') {
+                network();
+            } else if (hash === '#settings_menu_horizon') {
+                horizon();
+            } else if (hash === '#settings_menu_polaralignassist') {
+                polaralignassist();
+            } else {
+                controls();
+            }
+        };
+
+
+        $(window).on('hashchange', hashChange);
+
+        hashChange();
     }
 }
 

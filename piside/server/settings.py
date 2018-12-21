@@ -11,7 +11,11 @@ def write_settings(settings):
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
 def read_settings():
     with open('settings.json') as f:
-        return json.load(f)
+        s = json.load(f)
+        # TODO: Use a full hard coded defaults for keys for upgrades
+        if 'horizon_limit_enabled' not in s:
+            s['horizon_limit_enabled'] = False
+        return s
 
 
 def is_simulation():

@@ -3,7 +3,7 @@ import HorizonGraph from './horizonLimit/HorizonGraph';
 import template from './templates/SettingsMenuHorizonLimit.html';
 
 
-const savePoints = _.throttle(function(points) {
+const savePoints = _.throttle(function (points) {
     $.ajax({
         url: '../settings_horizon_limit',
         method: 'PUT',
@@ -88,10 +88,26 @@ class SettingsMenuHorizonLimit {
             this._graph.points = points;
         });
 
+        $('#horizonLimitEnable', this._selfDiv).change(() => {
+            const enabled = $('#horizonLimitEnable', this._selfDiv).is(':checked');
+            $.ajax({
+                url: '../settings_horizon_limit',
+                method: 'PUT',
+                data: {horizon_limit_enabled: enabled}
+            });
+        });
+
         $.ajax({
             url: '../settings',
             method: 'GET',
             success: (data) => {
+                if (data.hasOwnProperty('horizon_limit_enabled')) {
+                    if (data.horizon_limit_enabled) {
+                        $('#horizonLimitEnable', this._selfDiv).click();
+                    } else {
+                        $('#horizonLimitDisable', this._selfDiv).click();
+                    }
+                }
                 if (data.hasOwnProperty('horizon_limit_points')) {
                     this._graph.points = data.horizon_limit_points;
                 }
