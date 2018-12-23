@@ -88,35 +88,36 @@ def get_status():
 
 
 def below_horizon_limit(altaz):
-    '''
+    """
 
     :param altaz:
     :return:
-    '''
+    """
     az = altaz['az']
     alt = altaz['alt']
-    if settings.settings['horizon_limit_enabled'] and 'horizon_limit_points' in settings.settings and settings.settings['horizon_limit_points']:
+    if settings.settings['horizon_limit_enabled'] and 'horizon_limit_points' in settings.settings and \
+            settings.settings['horizon_limit_points']:
         if len(settings.settings['horizon_limit_points']) == 1:
             if alt <= settings.settings['horizon_limit_points'][0]['alt']:
                 return True
             else:
                 return False
         else:
-            for i in range(len(settings.settings['horizon_limit_points'])-1):
+            for i in range(len(settings.settings['horizon_limit_points']) - 1):
                 point1 = settings.settings['horizon_limit_points'][i]
-                if i+1 < len(settings.settings['horizon_limit_points']):
-                    point2 = settings.settings['horizon_limit_points'][i+1]
+                if i + 1 < len(settings.settings['horizon_limit_points']):
+                    point2 = settings.settings['horizon_limit_points'][i + 1]
                 else:
                     point2 = settings.settings['horizon_limit_points'][0]
                 p1az = point1['az']
                 if point2['az'] < p1az or len(settings.settings['horizon_limit_points']) == 1:
                     p1az -= 360.0
 
-                point2 = settings.settings['horizon_limit_points'][i+1]
+                point2 = settings.settings['horizon_limit_points'][i + 1]
                 if p1az <= az < point2['az']:
-                    m = (point2['alt'] - point1['alt'])/(point2['az'] - p1az)
+                    m = (point2['alt'] - point1['alt']) / (point2['az'] - p1az)
                     b = point1['alt']
-                    if alt < (m*(az-p1az) + b):
+                    if alt < (m * (az - p1az) + b):
                         return True
                     else:
                         return False
@@ -139,7 +140,8 @@ DEFAULT_ELEVATION_M = 405.0
 
 def update_location():
     # print(settings.settings['location'])
-    if 'location' not in settings.settings or not settings.settings['location'] or not settings.settings['location']['lat']:
+    if 'location' not in settings.settings or not settings.settings['location'] or \
+            not settings.settings['location']['lat']:
         return
     if 'elevation' not in settings.settings['location']:
         elevation = DEFAULT_ELEVATION_M
@@ -181,7 +183,8 @@ def send_status():
     inhorizon = False
     if status['synced']:
         coord = steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                  AstroTime.now(), settings.settings['ra_track_rate'], settings.settings['dec_ticks_per_degree'])
+                                  AstroTime.now(), settings.settings['ra_track_rate'],
+                                  settings.settings['dec_ticks_per_degree'])
         status['ra'] = coord.icrs.ra.deg
         status['dec'] = coord.icrs.dec.deg
         # print('earth_location', runtime_settings['earth_location'])
@@ -223,7 +226,7 @@ def micro_update_settings():
 
 
 def init(osocketio, fruntime_settings):
-    global microserial, microseriallock, status_interval, horizon_check_interval, socketio, inited, runtime_settings
+    global microserial, microseriallock, status_interval, socketio, inited, runtime_settings
     if inited:
         return
     inited = True
@@ -232,7 +235,8 @@ def init(osocketio, fruntime_settings):
     socketio = osocketio
     # Load settings file
     # Open serial port
-    microserial = serial.Serial(settings.settings['microserial']['port'], settings.settings['microserial']['baud'], timeout=2)
+    microserial = serial.Serial(settings.settings['microserial']['port'], settings.settings['microserial']['baud'],
+                                timeout=2)
     update_location()
     if settings.settings['park_position'] and runtime_settings['earth_location']:
         coord = astropy.coordinates.SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
@@ -271,9 +275,12 @@ def manual_control(direction, speed):
                     with microseriallock:
                         status = get_status()
                         # print(status)
-                        if (runtime_settings['tracking'] and status['rs'] != settings.settings['ra_track_rate']) or status['rs'] != 0:
-                            sspeed = status['rs'] - math.copysign(settings.settings['ra_slew_fastest'] / 10.0, status['rs'])
-                            if status['rs'] == 0 or abs(sspeed) < settings.settings['ra_track_rate'] or sspeed / status['rs'] < 0:
+                        if (runtime_settings['tracking'] and status['rs'] != settings.settings['ra_track_rate']) or \
+                                status['rs'] != 0:
+                            sspeed = status['rs'] - math.copysign(settings.settings['ra_slew_fastest'] / 10.0,
+                                                                  status['rs'])
+                            if status['rs'] == 0 or abs(sspeed) < settings.settings['ra_track_rate'] or \
+                                    sspeed / status['rs'] < 0:
                                 if runtime_settings['tracking']:
                                     sspeed = settings.settings['ra_track_rate']
                                 else:
@@ -293,7 +300,8 @@ def manual_control(direction, speed):
                         status = get_status()
                         if status['ds'] != 0:
                             # print(status)
-                            sspeed = status['ds'] - math.copysign(settings.settings['dec_slew_fastest'] / 10.0, status['ds'])
+                            sspeed = status['ds'] - math.copysign(settings.settings['dec_slew_fastest'] / 10.0,
+                                                                  status['ds'])
                             if status['ds'] == 0 or sspeed / status['ds'] < 0:
                                 sspeed = 0
                                 done = True
@@ -347,14 +355,14 @@ def manual_control(direction, speed):
 def autoguide_disable():
     with microseriallock:
         microserial.reset_input_buffer()
-        microserial.write(('autoguide_disable\r').encode())
+        microserial.write('autoguide_disable\r'.encode())
         read_serial_until_prompt()
 
 
 def autoguide_enable():
     with microseriallock:
         microserial.reset_input_buffer()
-        microserial.write(('autoguide_enable\r').encode())
+        microserial.write('autoguide_enable\r'.encode())
         read_serial_until_prompt()
 
 
@@ -419,25 +427,25 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
 
             ra_delta = need_step_position['ra'] - status['rp']
             dec_delta = need_step_position['dec'] - status['dp']
-            #print(ra_delta, dec_delta)
+            # print(ra_delta, dec_delta)
             if abs(round(ra_delta)) <= ra_close_enough and abs(round(dec_delta)) <= dec_close_enough:
                 break
 
             if abs(ra_delta) < math.ceil(settings.settings['ra_track_rate']):
                 if not parking and runtime_settings['tracking']:
                     # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = settings.settings['ra_track_rate'] + ra_delta/dt
+                    ra_speed = settings.settings['ra_track_rate'] + ra_delta / dt
                 else:
                     # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = ra_delta/dt
-            elif abs(ra_delta) < settings.settings['ra_slew_fastest']/2.0:
+                    ra_speed = ra_delta / dt
+            elif abs(ra_delta) < settings.settings['ra_slew_fastest'] / 2.0:
                 if not parking and runtime_settings['tracking']:
-                    ra_speed = settings.settings['ra_track_rate'] + 2.0*ra_delta
+                    ra_speed = settings.settings['ra_track_rate'] + 2.0 * ra_delta
                 else:
-                    ra_speed = 2.0*ra_delta
+                    ra_speed = 2.0 * ra_delta
                 # Short slew otherwise we are slowing down
                 if abs(ra_speed) > abs(status['rs']):
-                    ra_speed = status['rs'] + ra_speed/loops_to_full_speed
+                    ra_speed = status['rs'] + ra_speed / loops_to_full_speed
                     if abs(ra_speed) > abs(status['rs']):
                         ra_speed = ra_delta
                 # speed = ((1.0-sleep_time)/sleep_time) * ra_delta
@@ -446,27 +454,28 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                 #     speed = speed2
                 # ra_speed = speed
             else:
-                speed = (total_time**2.0)*math.copysign(settings.settings['ra_slew_fastest']/9.0, ra_delta)
+                speed = (total_time ** 2.0) * math.copysign(settings.settings['ra_slew_fastest'] / 9.0, ra_delta)
                 if abs(speed) > settings.settings['ra_slew_fastest']:
                     speed = math.copysign(settings.settings['ra_slew_fastest'], ra_delta)
                 ra_speed = speed
 
             if abs(dec_delta) < dec_close_enough:
                 dec_speed = 0.0
-            elif abs(dec_delta) < settings.settings['dec_slew_fastest']/2.0:
-                dec_speed = dec_delta*2.0
+            elif abs(dec_delta) < settings.settings['dec_slew_fastest'] / 2.0:
+                dec_speed = dec_delta * 2.0
                 if abs(dec_speed) > abs(status['ds']):
-                    dec_speed = status['ds'] + dec_speed/loops_to_full_speed
+                    dec_speed = status['ds'] + dec_speed / loops_to_full_speed
                     if abs(dec_speed) > abs(status['ds']):
                         dec_speed = dec_delta
 
-                #speed = ((1.0-sleep_time)/sleep_time) * dec_delta
-                #speed2 = math.copysign(settings.settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
-                #if abs(speed2) < abs(speed):
+                # speed = ((1.0-sleep_time)/sleep_time) * dec_delta
+                # speed2 = math.copysign(settings.settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
+                # if abs(speed2) < abs(speed):
                 #    speed = speed2
-                #dec_speed = speed
+                # dec_speed = speed
             else:
-                speed = status['ds'] + math.copysign(settings.settings['dec_slew_fastest'] / loops_to_full_speed, dec_delta)
+                speed = status['ds'] + math.copysign(settings.settings['dec_slew_fastest'] / loops_to_full_speed,
+                                                     dec_delta)
                 if abs(speed) > settings.settings['dec_slew_fastest']:
                     speed = math.copysign(settings.settings['dec_slew_fastest'], dec_delta)
                 dec_speed = speed
@@ -476,7 +485,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             if not math.isclose(status['ds'], dec_speed, rel_tol=0.02):
                 dec_set_speed(dec_speed)
 
-            data['time'].append((now-started_slewing).total_seconds())
+            data['time'].append((now - started_slewing).total_seconds())
             data['rpv'].append(status['rp'])
             data['dpv'].append(status['dp'])
             data['rsp'].append(need_step_position['ra'])
@@ -508,6 +517,7 @@ def slew(ra, dec, parking=False):
 
     :param ra: float as deg
     :param dec: float as deg
+    :param parking: bool
     :return:
     """
     # TODO: Error conditions
@@ -528,15 +538,16 @@ def adjust_ra_dec_for_atmospheric_refraction(ra, dec, earth_location):
     radec_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     altaz = to_altaz_asdeg(radec_skycoord, True)
     adj_skycoord = astropy.coordinates.AltAz(alt=altaz['alt'] * u.deg, az=altaz['az'] * u.deg,
-                                             location=runtime_settings['earth_location'], obstime=AstroTime.now()).transform_to(astropy.coordinates.ICRS)
+                                             location=runtime_settings['earth_location'],
+                                             obstime=AstroTime.now()).transform_to(astropy.coordinates.ICRS)
     return {'ra': adj_skycoord.icrs.ra.deg, 'dec': adj_skycoord.icrs.dec.deg}
 
 
 def slew_to_steps(ra_steps, dec_steps):
     """
 
-    :param ra: float as deg
-    :param dec: float as deg
+    :param ra_steps: steps
+    :param dec_steps: steps
     :return:
     """
     # TODO: Error conditions
@@ -586,7 +597,7 @@ def elevation_to_pressure(elevation):
         26437.48946505586
     """
     # https://www.engineeringtoolbox.com/air-altitude-pressure-d_462.html
-    return 101325.0*((1.0-2.2557e-5 * elevation)**(5.25588))
+    return 101325.0 * ((1.0 - 2.2557e-5 * elevation) ** 5.25588)
 
 
 def clean_deg(deg, dec=False):
@@ -670,7 +681,7 @@ def ra_deg_time2(ra_deg, time1, time2):
         >>> from astropy.time import Time as AstroTime
         >>> from astropy.time import TimeDelta as AstroTimeDelta
         >>> time1 = AstroTime("2018-01-01T01:01:01Z", format='isot')
-        >>> ra1 = control.ra_deg_time2(1.0, time1, Time("2018-01-01T01:01:02Z", format='isot'))
+        >>> ra1 = control.ra_deg_time2(1.0, time1, AstroTime("2018-01-01T01:01:02Z", format='isot'))
         >>> td = AstroTimeDelta(23.9344699*60.0*60.0, format='sec')
         >>> ra2 = control.ra_deg_time2(1.0, time1, time1 + td)
         >>> ra1, ra2
@@ -697,7 +708,8 @@ def sync(ra, dec):
 
 def ra_deg_d(started_angle, end_angle):
     """
-    Finds the degree difference between two angles ang1-ang2, then returns shortest side that will take you there - or +.
+    Finds the degree difference between two angles ang1-ang2, then returns shortest side that will take you
+    there - or +.
     :param started_angle: First angle
     :type started_angle: float
     :param end_angle: Second angle
@@ -734,7 +746,8 @@ def ra_deg_d(started_angle, end_angle):
 
 
 def two_sync_calc_error(last_sync, current_sync):
-    steps = skycoord_to_steps(last_sync, current_sync['coords'], current_sync['time'], settings.settings['ra_track_rate'],
+    steps = skycoord_to_steps(last_sync, current_sync['coords'], current_sync['time'],
+                              settings.settings['ra_track_rate'],
                               settings.settings['dec_ticks_per_degree'])
     ra_ther = steps['ra'] - last_sync['steps']['ra']
     ra_exp = current_sync['steps']['ra'] - last_sync['steps']['ra']
@@ -758,7 +771,8 @@ def two_sync_calc_error(last_sync, current_sync):
 def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree):
     """
     Gives steps needed to be at wanted_skycoord right now.
-    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord, 'steps': {'ra': int, 'dec': int}
+    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord,
+    'steps': {'ra': int, 'dec': int}
     :type sync_info: dict
     :param wanted_skycoord: The sky coordinates wanted.
     :type wanted_skycoord: astropy.coordinates.SkyCoord
@@ -807,12 +821,13 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
 def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degree):
     """
     Gets sky coordinates if we are at steps right now.
-    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord, 'steps': [RA_int, DEC_int]
+    :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord,
+    'steps': [RA_int, DEC_int]
     :type sync_info: dict
     :param steps: {'ra': steps_int, 'dec': steps_int}
     :type steps: dict
-    :param time: Time that goes with steps
-    :type time: astropy.time.Time
+    :param stime: Time that goes with steps
+    :type stime: astropy.time.Time
     :return: the coordinates
     :rtype: astropy.coordinates.SkyCoord
     :Example:
