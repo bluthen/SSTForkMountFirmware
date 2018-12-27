@@ -1,7 +1,10 @@
+asn1crypto==0.24.0
 astropy==3.1
 certifi==2018.11.29
+cffi==1.11.5
 chardet==3.0.4
 Click==7.0
+cryptography==2.4.2
 dnspython==1.16.0
 eventlet==0.24.1
 fasteners==0.14.1
@@ -17,6 +20,8 @@ Jinja2==2.10
 MarkupSafe==1.1.0
 monotonic==1.5
 numpy==1.15.4
+pycparser==2.19
+pyOpenSSL==18.0.0
 pyserial==3.4
 python-engineio==3.1.2
 python-socketio==3.0.0

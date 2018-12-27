@@ -88,7 +88,7 @@ class SettingsMenuHorizonLimit {
             this._graph.points = points;
         });
 
-        $('#horizonLimitEnable', this._selfDiv).change(() => {
+        $('#horizonLimitEnable, #horizonLimitDisable', this._selfDiv).change(() => {
             const enabled = $('#horizonLimitEnable', this._selfDiv).is(':checked');
             $.ajax({
                 url: '../settings_horizon_limit',

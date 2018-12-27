@@ -5,8 +5,6 @@ from astropy.coordinates import solar_system_ephemeris
 import astropy.units as u
 import time
 
-from eventlet import monkey_patch
-monkey_patch()
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
 from flask_socketio import SocketIO, emit
 from functools import wraps, update_wrapper
@@ -28,6 +26,9 @@ import os
 import settings
 import sstchuck
 import network
+import sys
+
+from werkzeug.serving import make_ssl_devcert
 
 iers.conf.auto_download = False
 
@@ -39,12 +40,13 @@ power_thread_quit = False
 
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
-socketio = SocketIO(app, async_mode='eventlet', logger=False, engineio_logger=False)
+socketio = SocketIO(app, async_mode='threading', logger=False, engineio_logger=False)
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
 
-runtime_settings = {'time_been_set': False, 'earth_location': None, 'sync_info': None, 'tracking': True}
+runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
+                    'tracking': True}
 
 
 # Sets up power switch
@@ -62,7 +64,7 @@ def run_power_switch():
         while not power_thread_quit:
             time.sleep(0.1)
             if GPIO.input(SWITCH_PIN):
-                continue 
+                continue
             time.sleep(0.1)
             if not GPIO.input(SWITCH_PIN):
                 subprocess.run(['sudo', 'shutdown', '-h', 'now'])
@@ -298,7 +300,7 @@ def wifi_connect():
     if not found:
         n = {'bssid': mac, 'ssid': "\"%s\"" % ssid}
         if psk:
-            n['psk'] = '"'+psk+'"'
+            n['psk'] = '"' + psk + '"'
         else:
             n['key_mgmt'] = 'None'
         wpasup['networks'].append(n)
@@ -316,7 +318,7 @@ def wifi_connect():
 @nocache
 def unset_location():
     settings.settings['location'] = None
-    runtime_settings['earth_location'] = None
+    control.update_location()
     settings.write_settings(settings.settings)
     return 'Unset Location', 200
 
@@ -327,9 +329,11 @@ def set_location():
     location = request.form.get('location', None)
     location = json.loads(location)
     print(location)
-    if 'lat' not in location or 'long' not in location or 'elevation' not in location or ('name' not in location and location['name'].strip() != ''):
+    if 'lat' not in location or 'long' not in location or 'elevation' not in location or (
+            'name' not in location and location['name'].strip() != ''):
         return 'Missing arguments', 400
-    location = {'lat': float(location['lat']), 'long': float(location['long']), 'elevation': float(location['elevation']), 'name': str(location['name'])}
+    location = {'lat': float(location['lat']), 'long': float(location['long']),
+                'elevation': float(location['elevation']), 'name': str(location['name'])}
     old_location = settings.settings['location']
     settings.settings['location'] = location
     try:
@@ -350,20 +354,22 @@ def do_sync():
     alt = request.form.get('alt', None)
     az = request.form.get('az', None)
     if alt is not None and az is not None:
+        if not runtime_settings['earth_location_set']:
+            return 'Cant Alt/Az Sync if not location set', 400
         alt = float(alt)
         az = float(az)
         coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,
                                              az=az * u.deg, frame='altaz',
                                              obstime=astropy.time.Time.now(),
                                              location=runtime_settings['earth_location'])
-        ra = coord.icrs.ra.deg
-        dec = coord.icrs.dec.deg
-    ra = float(ra)
-    dec = float(dec)
+    else:
+        ra = float(ra)
+        dec = float(dec)
+        coord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     last_sync = None
     if 'sync_info' in runtime_settings:
         last_sync = runtime_settings['sync_info']
-    control.sync(ra, dec)
+    control.sync(coord)
     err = {'ra_error': None, 'dec_error': None}
     if last_sync:
         err = control.two_sync_calc_error(last_sync, runtime_settings['sync_info'])
@@ -388,6 +394,8 @@ def do_slewto():
         control.slew_to_steps(int(ra_steps), int(dec_steps))
         return 'Slewing', 200
     elif alt is not None and az is not None:
+        if not runtime_settings['earth_location_set']:
+            return 'Cant do alt/az slew if no location set.', 400
         alt = float(alt)
         az = float(az)
         coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,
@@ -399,10 +407,11 @@ def do_slewto():
         parking = True
     ra = float(ra)
     dec = float(dec)
-    if not control.slewtocheck(ra, dec):
+    radec = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+    if not control.slewtocheck(radec):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
-        control.slew(ra, dec, parking)
+        control.slew(radec, parking)
         return 'Slewing', 200
 
 
@@ -411,7 +420,8 @@ def do_slewto():
 def do_slewtocheck():
     ra = float(request.form.get('ra', None))
     dec = float(request.form.get('dec', None))
-    return jsonify({'slewcheck': control.slewtocheck(ra, dec)})
+    radec = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='ircs')
+    return jsonify({'slewcheck': control.slewtocheck(radec)})
 
 
 @app.route('/slewto', methods=['DELETE'])
@@ -452,14 +462,14 @@ def set_time():
 def set_park_position():
     if runtime_settings['sync_info'] is None:
         return 'You must have synced once before setting park position.', 400
-    if not runtime_settings['earth_location']:
+    if not runtime_settings['earth_location_set']:
         return 'You must set location before setting park position.', 400
     status = control.get_status()
     coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
                                       astropy.time.Time.now(), settings.settings['ra_track_rate'],
                                       settings.settings['dec_ticks_per_degree'])
-    altaz = control.to_altaz_asdeg(coord)
-    settings.settings['park_position'] = altaz
+    altaz = control.convert_to_altaz(coord)
+    settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
     settings.write_settings(settings.settings)
     return 'Park Position Set', 200
 
@@ -476,7 +486,7 @@ def unset_park_position():
 @nocache
 def do_park():
     # TODO: If started parked we can use 0,0
-    if not runtime_settings['earth_location']:
+    if not runtime_settings['earth_location_set']:
         return 'Location not set', 400
     if not settings.settings['park_position']:
         return 'No park position has been set.', 400
@@ -527,13 +537,17 @@ def search_object():
         if body.find('earth') != -1:
             continue
         if body.find(planet_search) != -1:
+            location = None
+            if runtime_settings['earth_location_set']:
+                location = runtime_settings['earth_location']
             coord = astropy.coordinates.get_body(body, astropy.time.Time.now(),
-                                                 location=runtime_settings['earth_location'])
+                                                 location=location)
             ra = coord.ra.deg
             dec = coord.dec.deg
             coord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
             if do_altaz:
-                altaz = control.to_altaz_asdeg(coord)
+                altaz = control.convert_to_altaz(coord)
+                altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
             else:
                 altaz = {'alt': None, 'az': None}
             planets.append(
@@ -561,7 +575,8 @@ def search_object():
         if do_altaz:
             coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg,
                                                  frame='icrs')
-            altaz = control.to_altaz_asdeg(coord)
+            altaz = control.convert_to_altaz(coord)
+            altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
             altaz = {'alt': None, 'az': None}
         ob.append(altaz['alt'])
@@ -570,7 +585,8 @@ def search_object():
         if do_altaz:
             coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg,
                                                  frame='icrs')
-            altaz = control.to_altaz_asdeg(coord)
+            altaz = control.convert_to_altaz(coord)
+            altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
             altaz = {'alt': None, 'az': None}
         ob.append(altaz['alt'])
@@ -759,7 +775,12 @@ def main():
 
     print('Running...')
     try:
-        socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False)
+        ssl_context = None
+        if len(sys.argv) == 2 and sys.argv[1] == '--https':
+            make_ssl_devcert('../key')
+            ssl_context = ('../key.crt', '../key.key')
+        socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False,
+                     ssl_context=ssl_context)
         power_thread_quit = True
         stellarium_server.terminate()
         sstchuck.terminate()

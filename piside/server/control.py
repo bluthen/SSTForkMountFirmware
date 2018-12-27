@@ -1,3 +1,30 @@
+"""
+control methods for the mount.
+Terminology
+
+
+Pointing:
+
+1) desired ra/dec
+2) if atmospheric refraction correction is enabled
+       convert to altaz accounting for atmospheric refraction
+   else
+       convert to altaz without accounting for atmospheric refraction
+
+3) if altaz inside a 3 point sync area, get nearest three points
+        altaz_cal = transform altaz with affine from 3 point sync area
+        ra_dec_cal = altaz_cal to ra dec
+   elif find nearest 2 point sync
+        altaz_cal = transform altaz with affine from 2 point sync
+        ra_dec_cal = altaz_cal to ra_dec
+   elif use nearest 1 point sync
+        ra_dec_cal = altaz to ra dec
+
+4) steps = ra_dec_cal to steps using degree delta and settings steps/degree
+   goto steps
+
+"""
+
 import threading
 import serial
 from functools import partial
@@ -89,12 +116,14 @@ def get_status():
 
 def below_horizon_limit(altaz):
     """
-
-    :param altaz:
-    :return:
+    If horizon limit is enabled and earth location is set, it will set if coordinates are below the horizon limits set.
+    :param altaz: SkyCoord in altaz frame.
+    :type altaz: astropy.coordinates.SkyCoord.
+    :return: true if below horizon limit
+    :rtype: bool
     """
-    az = altaz['az']
-    alt = altaz['alt']
+    az = altaz.az.deg
+    alt = altaz.alt.deg
     if settings.settings['horizon_limit_enabled'] and 'horizon_limit_points' in settings.settings and \
             settings.settings['horizon_limit_points']:
         if len(settings.settings['horizon_limit_points']) == 1:
@@ -124,24 +153,37 @@ def below_horizon_limit(altaz):
     return False
 
 
-def slewtocheck(ra, dec):
-    if not ra or not dec:
+def slewtocheck(skycoord):
+    """
+    Check if skycoordinate okay to slew or is below horizon limit.
+    :param skycoord:
+    :type skycoord: astropy.coordinates.SkyCoord
+    :return: true not slewing to a limit
+    :rtype: bool
+    """
+    if skycoord is None:
         return False
-    wanted_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    altaz = to_altaz_asdeg(wanted_skycoord)
+    altaz = convert_to_altaz(skycoord)
     if below_horizon_limit(altaz):
         return False
     else:
         return True
 
 
+# We are going to sync based on altaz coordinates, this will be the default location if not set. We'll
+# sync on pretend altaz locations.
 DEFAULT_ELEVATION_M = 405.0
+DEFAULT_LAT_DEG = 0
+DEFAULT_LON_DEG = 0
 
 
 def update_location():
     # print(settings.settings['location'])
     if 'location' not in settings.settings or not settings.settings['location'] or \
             not settings.settings['location']['lat']:
+        runtime_settings['earth_location'] = EarthLocation(lat=DEFAULT_LAT_DEG * u.deg, lon=DEFAULT_LON_DEG * u.deg,
+                                                           height=DEFAULT_ELEVATION_M * u.m)
+        runtime_settings['earth_location_set'] = False
         return
     if 'elevation' not in settings.settings['location']:
         elevation = DEFAULT_ELEVATION_M
@@ -150,24 +192,49 @@ def update_location():
     el = EarthLocation(lat=settings.settings['location']['lat'] * u.deg,
                        lon=settings.settings['location']['long'] * u.deg,
                        height=elevation * u.m)
+    runtime_settings['earth_location_set'] = True
     runtime_settings['earth_location'] = el
 
 
-def to_altaz_asdeg(coord, atmo_refraction=False):
-    if runtime_settings['earth_location']:
-        # altaz = SkyCoord(coord, obstime=astropy.time.Time.now(),
-        #                 location=runtime_settings['earth_location']).altaz
+def convert_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=False):
+    """
+    Convert a skycoordinate to altaz frame.
+    :param coord: The coordinates you would want to covert to altaz, probably icrs frame.
+    :type coord: astropy.coordinates.SkyCoord
+    :param earth_location: Location to base altaz on, defaults runtime_settings['earth_location']
+    :type earth_location: astropy.coordinates.EarthLocation
+    :param obstime: The observation time to get altaz coordinates, defaults to astropy.time.Time.now()
+    :type obstime: astropy.time.Time
+    :param atmo_refraction: if should adjust for atmospheric refraction
+    :type atmo_refraction: bool
+    :return: SkyCoord in altaz or None if unable to compute (missing earth_location)
+    :rtype: astropy.coordinates.SkyCoord
+    :Example:
+        >>> import control
+        >>> from astropy.coordinates import EarthLocation, SkyCoord
+        >>> import astropy.units as u
+        >>> from astropy.time import Time
+        >>> t = Time('2018-12-26T22:55:32.281', format='isot', scale='utc')
+        >>> earth_location = EarthLocation(lat=38.9369*u.deg, lon= -95.242*u.deg, height=266.0*u.m)
+        >>> radec = SkyCoord(ra=30*u.deg, dec=45*u.deg, frame='icrs')
+        >>> altaz = control.to_altaz(radec, earth_location, t)
+        >>> altaz.alt.deg, altaz.az.deg
+        (55.55803292036938, 64.41850910955343)
+    """
+    if obstime is None:
+        obstime = AstroTime.now()
+    if earth_location is None:
+        earth_location = runtime_settings['earth_location']
+    if earth_location is not None:
         pressure = None
         if atmo_refraction:
-            height = runtime_settings['earth_location'].height.to_value(u.m)
-            pressure = elevation_to_pressure(height) * usi.Pa
+            pressure = earth_location_to_pressure(earth_location)
         altaz = coord.transform_to(
-            astropy.coordinates.AltAz(obstime=AstroTime.now(), location=runtime_settings['earth_location'],
+            astropy.coordinates.AltAz(obstime=obstime, location=earth_location,
                                       pressure=pressure))
-        # print(altaz)
-        return {'alt': altaz.alt.deg, 'az': altaz.az.deg}
+        return altaz
     else:
-        return {'alt': None, 'az': None}
+        return None
 
 
 def send_status():
@@ -188,15 +255,18 @@ def send_status():
         status['ra'] = coord.icrs.ra.deg
         status['dec'] = coord.icrs.dec.deg
         # print('earth_location', runtime_settings['earth_location'])
-        altaz = to_altaz_asdeg(coord)
-        below_horizon = below_horizon_limit(altaz)
-        if below_horizon and runtime_settings['tracking']:
-            runtime_settings['tracking'] = False
-            ra_set_speed(0)
-            status['alert'] = 'In horizon limit, tracking stopped'
-        # print(altaz)
-        status['alt'] = altaz['alt']
-        status['az'] = altaz['az']
+        status['alt'] = None
+        status['az'] = None
+        if runtime_settings['earth_location_set']:
+            altaz = convert_to_altaz(coord)
+            below_horizon = below_horizon_limit(altaz)
+            if below_horizon and runtime_settings['tracking']:
+                runtime_settings['tracking'] = False
+                ra_set_speed(0)
+                status['alert'] = 'In horizon limit, tracking stopped'
+            # print(altaz)
+            status['alt'] = altaz.alt.deg
+            status['az'] = altaz.az.deg
     status['slewing'] = slewing
     status['tracking'] = runtime_settings['tracking']
     last_status = status
@@ -238,12 +308,12 @@ def init(osocketio, fruntime_settings):
     microserial = serial.Serial(settings.settings['microserial']['port'], settings.settings['microserial']['baud'],
                                 timeout=2)
     update_location()
-    if settings.settings['park_position'] and runtime_settings['earth_location']:
+    if settings.settings['park_position'] and runtime_settings['earth_location_set']:
         coord = astropy.coordinates.SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
                                              az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
                                              obstime=AstroTime.now(),
                                              location=runtime_settings['earth_location']).icrs
-        sync(coord.ra.deg, coord.dec.deg)
+        sync(coord)
     micro_update_settings()
     status_interval = SimpleInterval(send_status, 1)
 
@@ -512,35 +582,58 @@ class NotSyncedException(Exception):
     pass
 
 
-def slew(ra, dec, parking=False):
+def slew(radec, parking=False):
     """
-
-    :param ra: float as deg
-    :param dec: float as deg
-    :param parking: bool
+    Slew to coordinates.
+    :param radec: sky coordinate to slew to
+    :type radec: astropy.coordinates.SkyCoord
+    :param parking: If a parking slew
+    :type parking: bool
     :return:
     """
     # TODO: Error conditions
     if runtime_settings is None or 'sync_info' not in runtime_settings or runtime_settings['sync_info'] is None:
         raise NotSyncedException('Not Synced')
-    wanted_skycoord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    move_to_skycoord(runtime_settings['sync_info'], wanted_skycoord, parking)
+    move_to_skycoord(runtime_settings['sync_info'], radec, parking)
 
 
-def adjust_ra_dec_for_atmospheric_refraction(ra, dec, earth_location):
+def adjust_ra_dec_for_atmospheric_refraction(ra, dec, earth_location=None):
     """
     Gives you displacment ra, dec when adjusting with atmospheric_refraction
     :param ra: float as deg
     :param dec: float as deg
-    :param earth_location: EarthLocation
+    :param earth_location: EarthLocation defaults to runtime_settings['earth_location']
     :return: {ra: deg_float, dec: deg_float}
     """
+    if earth_location is None:
+        earth_location = runtime_settings['earth_location']
     radec_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    altaz = to_altaz_asdeg(radec_skycoord, True)
-    adj_skycoord = astropy.coordinates.AltAz(alt=altaz['alt'] * u.deg, az=altaz['az'] * u.deg,
-                                             location=runtime_settings['earth_location'],
+    altaz = convert_to_altaz(radec_skycoord, earth_location, obstime=True)
+    adj_skycoord = astropy.coordinates.AltAz(alt=altaz.alt, az=altaz.az,
+                                             location=earth_location,
                                              obstime=AstroTime.now()).transform_to(astropy.coordinates.ICRS)
     return {'ra': adj_skycoord.icrs.ra.deg, 'dec': adj_skycoord.icrs.dec.deg}
+
+
+def earth_location_to_pressure(earth_location=None):
+    """
+    Gives you expected absolute pressure at elevation.
+    :param earth_location: astropy.coordinates.EarthLocation defaults to runtime_settings['earth_location']
+    :return: pressure astropy.units.Quantity
+    :Example:
+        >>> import control
+        >>> from astropy.coordinates import EarthLocation
+        >>> import astropy.units as u
+        >>> from astropy.units import si as usi
+        >>> earth_location = EarthLocation(lat=38.9369*u.deg, lon= -95.242*u.deg, height=266.0*u.m)
+        >>> control.earth_location_to_pressure(earth_location).to_value(usi.Pa)
+        98170.13549856932
+    """
+    if earth_location is None:
+        earth_location = runtime_settings['earth_location']
+    height = earth_location.height.to_value(u.m)
+    # https://www.engineeringtoolbox.com/air-altitude-pressure-d_462.html
+    return 101325.0 * ((1.0 - 2.2557e-5 * height) ** 5.25588) * usi.Pa
 
 
 def slew_to_steps(ra_steps, dec_steps):
@@ -695,14 +788,19 @@ def ra_deg_time2(ra_deg, time1, time2):
     return ra_deg
 
 
-def sync(ra, dec):
+def sync(coord):
+    """
+    Sync telescope position
+    :param coord: Telescope position
+    :type coord: astropy.coordinates.SkyCord
+    :return:
+    """
     sync_info = {}
     status = get_status()
 
     sync_info['time'] = AstroTime.now()
     sync_info['steps'] = {'ra': status['rp'], 'dec': status['dp']}
-    coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    sync_info['coords'] = coords
+    sync_info['coords'] = coord
     runtime_settings['sync_info'] = sync_info
 
 
