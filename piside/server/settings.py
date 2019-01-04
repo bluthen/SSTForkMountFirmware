@@ -1,6 +1,9 @@
 import json
 import fasteners
 
+with open('default_settings.json') as f:
+    default_settings = json.load(f)
+
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
 def write_settings(settings):
@@ -12,10 +15,9 @@ def write_settings(settings):
 def read_settings():
     with open('settings.json') as f:
         s = json.load(f)
-        # TODO: Use a full hard coded defaults for keys for upgrades
-        if 'horizon_limit_enabled' not in s:
-            s['horizon_limit_enabled'] = False
-        return s
+        s1 = default_settings.copy()
+        s1.update(s)
+        return s1
 
 
 def is_simulation():

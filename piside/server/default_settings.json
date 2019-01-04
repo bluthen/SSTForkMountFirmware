@@ -1,0 +1,51 @@
+{
+  "dec_ticks_per_degree": 177.7777,
+  "microserial": {
+    "baud": 115200,
+    "port": "/dev/serial1"
+  },
+  "location": null,
+  "dec_max_accel_tpss": 10800,
+  "ra_max_accel_tpss": 10800,
+  "ra_slew_fastest": 10800,
+  "ra_slew_faster": 5000,
+  "ra_slew_slower": 400,
+  "ra_slew_slowest": 200,
+  "ra_slew_medium": 2700,
+  "ra_track_rate": 18.04928,
+  "dec_slew_fastest": 444.44,
+  "dec_slew_faster": 244.44,
+  "dec_slew_medium": 177.77,
+  "dec_slew_slower": 48.77,
+  "dec_slew_slowest": 15,
+  "park_position": null,
+  "micro": {
+    "ra_guide_rate": 72.19712,
+    "ra_direction": 1,
+    "dec_guide_rate": 2.962962962962963,
+    "dec_direction": 1,
+    "dec_max_tps": 15000,
+    "ra_max_tps": 15000
+  },
+  "simulation": false,
+  "network": {
+    "wifi_device": "wlp2s0",
+    "ssid": "ssteq25",
+    "wpa2key": null, 
+    "channel": "6",
+    "ip": "192.168.23.23",
+    "netmask": "255.255.255.0",
+    "dhcp_server": true 
+  },
+  "polar_align_camera_rotation_x": 1000,
+  "polar_align_camera_rotation_y": 800,
+  "horizon_limit_points": [
+    {
+      "alt": 0,
+      "az": 0
+    }
+  ],
+  "horizon_limit_enabled": false,
+  "color_scheme": "default",
+  "atmos_refract": true
+}

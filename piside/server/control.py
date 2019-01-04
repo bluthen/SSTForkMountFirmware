@@ -227,7 +227,7 @@ def convert_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=F
         earth_location = runtime_settings['earth_location']
     if earth_location is not None:
         pressure = None
-        if atmo_refraction:
+        if atmo_refraction and runtime_settings['earth_location_set']:
             pressure = earth_location_to_pressure(earth_location)
         altaz = coord.transform_to(
             astropy.coordinates.AltAz(obstime=obstime, location=earth_location,
@@ -977,3 +977,85 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
     # offset_lon.wrap_angle = Angle(360.0 * u.deg)
     # coord = SkyCoord(ra=offset_lon, dec=offset.lat, frame='icrs')
     return coord
+
+
+def new_slew(coord):
+    if hasattr(coord, 'ra'):
+        altaz = convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
+    elif hasattr(coord, 'alt'):
+        altaz = coord
+
+
+#Finding point in triangle
+# xaedes answer
+# https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+# https://www.gamedev.net/forums/topic/295943-is-this-a-better-point-in-triangle-test-2d/
+def tr_sign(p1, p2, p3):
+    return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1])
+
+
+def tr_point_in_triangle(pt, t1, t2, t3):
+    """
+    :param pt: Point checking
+    :type pt: array [float, float]
+    :param t1: first point of triangle
+    :type t1: array [float, float]
+    :param t2: second point of triangle
+    :type t2: array [float, float]
+    :param t3: third point of triangle
+    :type t3: array [float, float]
+    :return: true if point in triangle
+    :rtype: bool
+    """
+    d1 = tr_sign(pt, t1, t2)
+    d2 = tr_sign(pt, t2, t3)
+    d3 = tr_sign(pt, t3, t1)
+
+    h_neg = d1 < 0 or d2 < 0 or d3 < 0
+    h_pos = d1 > 0 or d2 > 0 or d3 > 0
+
+    return not (h_neg and h_pos)
+
+
+sync_points = []
+distance_matrix = []
+triangles = []
+
+def add_sync_point(coord):
+    """
+
+    :param coord:
+    :return:
+    """
+    if not hasattr(coord, 'alt'):
+        raise AssertionError('coord should be an alt-az coordinate')
+    # TODO: Check if coord already in sync_points first and don't add if so.
+    row = []
+    for i in range(len(sync_points)):
+        distance_matrix[i].append(coord.separation(sync_points[i]).deg)
+        row.append(coord.separation(sync_points[i]).deg)
+    row.append(0.0)
+    sync_points.append(coord)
+    distance_matrix.append(row)
+
+    for i in range(len(sync_points)):
+        min_v1 = 999999999.0
+        min_idx1 = -1
+        min_v2 = 999999999.0
+        min_idx2 = -1
+        for j in range(len(sync_points)):
+            if i == j:
+                continue
+            if distance_matrix[i][j] < min_v1:
+                min_v2 = min_v1
+                min_idx2 = min_idx1
+                min_v1 = distance_matrix[i][j]
+                min_idx1 = j
+        #TODO: Finish
+
+
+def find_triangle(coord):
+    #TODO finish
+    pass
+
+

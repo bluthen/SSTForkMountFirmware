@@ -151,9 +151,20 @@ def settings_put():
                 settings_buffer['micro'] = {}
             settings_buffer['micro'][key] = float(args[key])
 
-    keys = ["ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium", "ra_slew_slower", "ra_slew_slowest",
-            "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
-            "dec_ticks_per_degree", "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"]
+    keys = ["atmos_refract"]
+    for key in keys:
+        if key in args:
+            settings_buffer[key] = bool(args[key])
+
+    keys = ["color_scheme"]
+    for key in keys:
+        if key in args:
+            settings_buffer[key] = str(args[key])
+
+    keys = ["color_scheme", "atmos_refract", "ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
+            "ra_slew_slower", "ra_slew_slowest", "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium",
+            "dec_slew_slower", "dec_slew_slowest", "dec_ticks_per_degree", "time_autosync",
+            "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"]
     for key in keys:
         if key in args:
             settings.settings[key] = settings_buffer[key]
@@ -468,7 +479,7 @@ def set_park_position():
     coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
                                       astropy.time.Time.now(), settings.settings['ra_track_rate'],
                                       settings.settings['dec_ticks_per_degree'])
-    altaz = control.convert_to_altaz(coord)
+    altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
     settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
     settings.write_settings(settings.settings)
     return 'Park Position Set', 200
@@ -546,7 +557,7 @@ def search_object():
             dec = coord.dec.deg
             coord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
             if do_altaz:
-                altaz = control.convert_to_altaz(coord)
+                altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settins['atmos_refract'])
                 altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
             else:
                 altaz = {'alt': None, 'az': None}
@@ -575,7 +586,7 @@ def search_object():
         if do_altaz:
             coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg,
                                                  frame='icrs')
-            altaz = control.convert_to_altaz(coord)
+            altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
             altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
             altaz = {'alt': None, 'az': None}
@@ -585,7 +596,7 @@ def search_object():
         if do_altaz:
             coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg,
                                                  frame='icrs')
-            altaz = control.convert_to_altaz(coord)
+            altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
             altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
             altaz = {'alt': None, 'az': None}
