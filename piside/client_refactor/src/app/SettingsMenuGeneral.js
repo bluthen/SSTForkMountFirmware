@@ -149,9 +149,35 @@ class SettingsMenuGeneral {
             if ($('#settings-color-scheme-default', this._selfDiv).is(':checked')) {
                 $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.css');
                 $('#maincss').attr('href', 'main.css');
+                $.ajax({
+                    url: '/settings',
+                    method: 'PUT',
+                    data: {'settings': JSON.stringify({color_scheme: 'default'})}
+                });
             } else {
                 $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.redlights.css');
                 $('#maincss').attr('href', 'main.redlights.css');
+                $.ajax({
+                    url: '/settings',
+                    method: 'PUT',
+                    data: {'settings': JSON.stringify({color_scheme: 'redlights'})}
+                });
+            }
+        });
+
+        $('#settings-atmospheric-refraction-enabled, #settings-atmospheric-refraction-disabled', this._selfDiv).change(() => {
+            if($('#settings-atmospheric-refraction-enabled', this._selfDiv).is(':checked')) {
+                $.ajax({
+                    url: '/settings',
+                    method: 'PUT',
+                    data: {'settings': JSON.stringify({atmos_refract: true})}
+                });
+            } else {
+                $.ajax({
+                    url: '/settings',
+                    method: 'PUT',
+                    data: {'settings': JSON.stringify({atmos_refract: false})}
+                });
             }
         });
 
@@ -178,6 +204,8 @@ class SettingsMenuGeneral {
                 });
             }
         });
+
+        this.updateSettings();
 
     }
 
@@ -212,6 +240,19 @@ class SettingsMenuGeneral {
                 $('#settings_dec_slew_medium', this._selfDiv).val(data.dec_slew_medium);
                 $('#settings_dec_slew_slower', this._selfDiv).val(data.dec_slew_slower);
                 $('#settings_dec_slew_slowest', this._selfDiv).val(data.dec_slew_slowest);
+
+                if (data.color_scheme === 'default') {
+                    $('#settings-color-scheme-default', this._selfDiv).click();
+                } else {
+                    $('#settings-color-scheme-nightvision', this._selfDiv).click();
+                }
+
+                if (data.atmos_refract) {
+                    $('#settings-atmospheric-refraction-enabled', this._selfDiv).click();
+                } else {
+                    $('#settings-atmospheric-refraction-disabled', this._selfDiv).click();
+                }
+
 
                 if (data.park_position) {
                     $('#settings_park_position', this._selfDiv).html(Formating.dec(data.park_position.alt) + '/' + Formating.dec(data.park_position.az));
