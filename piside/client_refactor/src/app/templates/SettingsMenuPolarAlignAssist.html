@@ -1,6 +1,7 @@
 <div class="settings-menu-polaralignassist container-fluid">
     <canvas></canvas>
     <div name="paa_status"></div>
+    <div name="paa_select"></div>
     <div><a href="/paa_image">Direct link to last camera image</a></div>
     <div class="form-group">
         <div class="row">
@@ -35,7 +36,7 @@
             Exposure
         </label>
         <div class="col-sm-10">
-            <input type="number" value="10" data-decimals="1" min="0.5" max="10" step="0.1"
+            <input type="number" value="10" data-decimals="2" min="0.01" max="10" step="0.01"
                    id="settings_polar_align_assist_exposure_time"/>
         </div>
     </div>
@@ -96,83 +97,12 @@
     <div class="collapse" id="polarAlignConfig">
 
 
-        <div class="form-group">
-            <div class="row">
-                <div class="col">
-                    <div class="btn-group" data-toggle="buttons">
-                        <label class="btn btn-primary active">
-                            <input type="radio" id="settings_polar_align_assist_calibrate_left"
-                                   name="settings_polar_align_assist_calibrate_dir"
-                                   value="left"
-                                   autocomplete="off" checked> Left
-                        </label>
-                        <label class="btn btn-primary">
-                            <input type="radio" id="settings_polar_align_assist_calibrate_right"
-                                   name="settings_polar_align_assist_calibrate_dir"
-                                   value="right"
-                                   autocomplete="off"> Right
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group row" id="settings_polar_align_assist_speed">
-            <div class="btn-group" data-toggle="buttons">
-                <label class="btn btn-primary active">
-                    <input type="radio" class="direction-controls-speed-fastest"
-                           name="pa-direction-controls-speed"
-                           value="fastest"
-                           autocomplete="off" checked><i class="fas fa-angle-double-left"></i><i
-                        class="fas fa-angle-double-left" style="margin-left:-2px"></i>
-                    Speed Fastest
-                </label>
-                <label class="btn btn-primary">
-                    <input type="radio" class="direction-controls-speed-faster"
-                           name="pa-direction-controls-speed"
-                           value="faster"
-                           autocomplete="off"><i class="fas fa-angle-double-left"></i><i
-                        class="fas fa-angle-left"
-                        style="margin-left:-2px"></i>
-                    Faster
-                </label>
-                <label class="btn btn-primary">
-                    <input type="radio" class="direction-controls-speed-medium"
-                           name="pa-direction-controls-speed"
-                           value="medium"
-                           autocomplete="off"><i class="fas fa-angle-double-left"></i> Medium
-                </label>
-                <label class="btn btn-primary">
-                    <input type="radio" class="direction-controls-speed-slower"
-                           name="pa-direction-controls-speed"
-                           value="slower"
-                           autocomplete="off"><i class="fas fa-angle-left"></i> Slower
-                </label>
-                <label class="btn btn-primary">
-                    <input type="radio" class="direction-controls-speed-slowest"
-                           name="pa-direction-controls-speed"
-                           value="slowest" autocomplete="off">Speed Slowest
-                </label>
-            </div>
-        </div>
-
-
-        <div class="form-group row">
-            <label class="col-sm-2 col-form-label" for="settings_polar_align_assist_calibrate_rotate_time">
-                Rotate Time
-            </label>
-            <div class="col-sm-10">
-                <input type="number" value="120" data-decimals="0" min="0" max="100" step="5"
-                       id="settings_polar_align_assist_calibrate_rotate_time"/>
-            </div>
-        </div>
-
-
         <div class="form-group row">
             <div class="form-group">
-                <button id="settings_polar_align_assist_make_calibration_image" type="button"
+                <textarea id="settings_polar_align_assist_dev_coords"></textarea><br/>
+                <button id="settings_polar_align_assist_find_rotation_axis" type="button"
                         class="btn btn-warning"><i
-                        class="fas fa-cog"></i>Make Calibration Image
+                        class="fas fa-cog"></i>Find Rotation Axis
                 </button>
             </div>
         </div>

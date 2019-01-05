@@ -27,6 +27,7 @@ import settings
 import sstchuck
 import network
 import sys
+import fcntl
 
 from werkzeug.serving import make_ssl_devcert
 
@@ -709,16 +710,23 @@ def paa_capture():
     delay = float(request.form.get('delay'))
     calibration = request.form.get('calibration')
     with paa_process_lock:
+        print('Staring paa process')
         if not paa_process or paa_process.poll() is not None:
             paa_process = subprocess.Popen(
-                ['/usr/bin/python3', 'polar_align_assist.py'],
+                ['/usr/bin/python3', '-u', 'polar_align_assist.py'],
+                bufsize=0,
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+                stderr=subprocess.STDOUT)
+            #    stderr=subprocess.PIPE)
+            #set_nonblock(paa_process.stdout.fileno())
+            #set_nonblock(paa_process.stderr.fileno())
             t = threading.Thread(target=listen_paa_stdout, args=(paa_process,))
             t.start()
-            t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
-            t.start()
+            #t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
+            #t.start()
+        time.sleep(2)
+        print('Writing to paa process')
         paa_process.stdin.write(('%d %d %d %f %s\n' % (exposure, iso, count, delay, str(calibration))).encode())
     return "Capturing", 200
 
@@ -747,7 +755,8 @@ def paa_image():
 def listen_paa_stdout(process):
     global paa_count
     while process.poll() is None:
-        sline = process.stdout.readline().decode().strip().split(' ', 1)
+        line = process.stdout.readline().decode().strip()
+        sline = line.split(' ', 1)
         if len(sline) == 2 and sline[0] == 'CAPTURED':
             paa_count = int(sline[1])
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
@@ -755,13 +764,8 @@ def listen_paa_stdout(process):
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
         elif sline[0] == 'STATUS':
             socketio.emit('paa_capture_response', {'status': sline[1]})
-
-
-def listen_paa_stderr(process):
-    global paa_count
-    while process.poll() is None:
-        line = process.stderr.readline().decode().strip()
-        print('polar_align_assist.py:', line)
+        else:
+            print('polar_align_assist.py:', line)
 
 
 def main():

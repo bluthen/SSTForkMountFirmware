@@ -84,10 +84,10 @@ def ramtmp_generator(camera, count, delay, calibrate_mode):
             os.remove(old_file)
         if calibrate_mode:
             shutil.copyfile(RAMTMP + "/%d.jpg" % (ramtmp_count - 1), CALTMP + "/%d.jpg" % (ramtmp_count - 1))
-        print('ramtmp_generator', file=sys.stderr, flush=True)
+        print('LOG ramtmp_generator', flush=True)
         print('CAPTURED ' + str(ramtmp_count - 1), flush=True)
         dt = delay - (datetime.datetime.now() - last).total_seconds()
-        print(dt, file=sys.stderr, flush=True)
+        print('LOG ', dt, flush=True)
         if dt > 0:
             sleep(dt)
         # queue.put(RAMTMP+'/%d.jpg' % (paa_count-1,))
@@ -111,7 +111,7 @@ def ramtmp_generator(camera, count, delay, calibrate_mode):
             stop_capture = True
     print("CAPTUREDONE", flush=True)
     if calibrate_mode:
-        print('ramtmp_generator calibrating', ramtmp_count, file=sys.stderr, flush=True)
+        print('LOG ramtmp_generator calibrating', ramtmp_count, flush=True)
         print("STATUS Averaging images", flush=True)
         img_average.average(CALTMP)
         shutil.copyfile(CALTMP + '/average.jpg', RAMTMP + '/%d.jpg' % (ramtmp_count,))
@@ -122,7 +122,7 @@ def ramtmp_generator(camera, count, delay, calibrate_mode):
             os.remove(old_file)
         print('CAPTURED ' + str(ramtmp_count - 1), flush=True)
     print('STATUS Done capturing', flush=True)
-    print('ramtmp_generator done', file=sys.stderr, flush=True)
+    print('LOG ramtmp_generator done', flush=True)
 
 
 def capture(exposure_time=100000, iso=800, count=1, delay=0.25, calibrate_mode=False, camera=None,
@@ -178,7 +178,7 @@ def main():
         while line != '':
             cmd = parse_cmd(line)
             if cmd:
-                print('cmd:', cmd, file=sys.stderr, flush=True)
+                print('LOG cmd:', cmd, flush=True)
                 capture(cmd['exposure_time'], cmd['iso'], cmd['count'], cmd['delay'], cmd['calibrate_mode'], camera)
             if line.strip() == 'QUIT':
                 return

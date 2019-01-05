@@ -34,10 +34,10 @@ class PiCamera:
 
     def capture_sequence(self, outputs, format='jpeg', use_video_port=False, resize=None, splitter_port=0, burst=False,
                          bayer=False, **options):
-        time.sleep(2000000.0 / self.shutter_speed)
+        time.sleep(4 * self.shutter_speed/1000000.0)
         for output in outputs:
             shutil.copyfile('./sim_cam.jpg', output)
-            time.sleep(1000000.0 / self.shutter_speed)
+            time.sleep(self.shutter_speed/1000000.0)
 
 
 def iw_scan_decode():
