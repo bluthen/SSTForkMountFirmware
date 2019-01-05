@@ -122,7 +122,7 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.6"})
+    return jsonify({"version": "0.0.9"})
 
 
 @app.route('/settings')
