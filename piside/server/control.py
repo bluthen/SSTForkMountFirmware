@@ -30,13 +30,14 @@ import serial
 from functools import partial
 import time
 
+import numpy
 import datetime
-import astropy
-from astropy.coordinates import EarthLocation, SkyCoord, Angle
+from astropy.coordinates import EarthLocation, SkyCoord, Angle, AltAz, ICRS
 from astropy.time import Time as AstroTime
 import astropy.units as u
 import astropy.units.si as usi
 import math
+import affine_fit
 
 import settings
 
@@ -217,9 +218,9 @@ def convert_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=F
         >>> t = Time('2018-12-26T22:55:32.281', format='isot', scale='utc')
         >>> earth_location = EarthLocation(lat=38.9369*u.deg, lon= -95.242*u.deg, height=266.0*u.m)
         >>> radec = SkyCoord(ra=30*u.deg, dec=45*u.deg, frame='icrs')
-        >>> altaz = control.to_altaz(radec, earth_location, t)
+        >>> altaz = control.convert_to_altaz(radec, earth_location, t)
         >>> altaz.alt.deg, altaz.az.deg
-        (55.55803292036938, 64.41850910955343)
+        (55.558034184006516, 64.41850865846912)
     """
     if obstime is None:
         obstime = AstroTime.now()
@@ -229,9 +230,7 @@ def convert_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=F
         pressure = None
         if atmo_refraction and runtime_settings['earth_location_set']:
             pressure = earth_location_to_pressure(earth_location)
-        altaz = coord.transform_to(
-            astropy.coordinates.AltAz(obstime=obstime, location=earth_location,
-                                      pressure=pressure))
+        altaz = coord.transform_to(AltAz(obstime=obstime, location=earth_location, pressure=pressure))
         return altaz
     else:
         return None
@@ -309,10 +308,10 @@ def init(osocketio, fruntime_settings):
                                 timeout=2)
     update_location()
     if settings.settings['park_position'] and runtime_settings['earth_location_set']:
-        coord = astropy.coordinates.SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                                             az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
-                                             obstime=AstroTime.now(),
-                                             location=runtime_settings['earth_location']).icrs
+        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
+                         obstime=AstroTime.now(),
+                         location=runtime_settings['earth_location']).icrs
         sync(coord)
     micro_update_settings()
     status_interval = SimpleInterval(send_status, 1)
@@ -346,11 +345,11 @@ def manual_control(direction, speed):
                         status = get_status()
                         # print(status)
                         if (runtime_settings['tracking'] and status['rs'] != settings.settings['ra_track_rate']) or \
-                                status['rs'] != 0:
+                                        status['rs'] != 0:
                             sspeed = status['rs'] - math.copysign(settings.settings['ra_slew_fastest'] / 10.0,
                                                                   status['rs'])
                             if status['rs'] == 0 or abs(sspeed) < settings.settings['ra_track_rate'] or \
-                                    sspeed / status['rs'] < 0:
+                                                    sspeed / status['rs'] < 0:
                                 if runtime_settings['tracking']:
                                     sspeed = settings.settings['ra_track_rate']
                                 else:
@@ -518,11 +517,11 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                     ra_speed = status['rs'] + ra_speed / loops_to_full_speed
                     if abs(ra_speed) > abs(status['rs']):
                         ra_speed = ra_delta
-                # speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                # speed2 = math.copysign(settings.settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
-                # if abs(speed2) < abs(speed):
-                #     speed = speed2
-                # ra_speed = speed
+                        # speed = ((1.0-sleep_time)/sleep_time) * ra_delta
+                        # speed2 = math.copysign(settings.settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
+                        # if abs(speed2) < abs(speed):
+                        #     speed = speed2
+                        # ra_speed = speed
             else:
                 speed = (total_time ** 2.0) * math.copysign(settings.settings['ra_slew_fastest'] / 9.0, ra_delta)
                 if abs(speed) > settings.settings['ra_slew_fastest']:
@@ -538,11 +537,11 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
                     if abs(dec_speed) > abs(status['ds']):
                         dec_speed = dec_delta
 
-                # speed = ((1.0-sleep_time)/sleep_time) * dec_delta
-                # speed2 = math.copysign(settings.settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
-                # if abs(speed2) < abs(speed):
-                #    speed = speed2
-                # dec_speed = speed
+                        # speed = ((1.0-sleep_time)/sleep_time) * dec_delta
+                        # speed2 = math.copysign(settings.settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
+                        # if abs(speed2) < abs(speed):
+                        #    speed = speed2
+                        # dec_speed = speed
             else:
                 speed = status['ds'] + math.copysign(settings.settings['dec_slew_fastest'] / loops_to_full_speed,
                                                      dec_delta)
@@ -595,24 +594,6 @@ def slew(radec, parking=False):
     if runtime_settings is None or 'sync_info' not in runtime_settings or runtime_settings['sync_info'] is None:
         raise NotSyncedException('Not Synced')
     move_to_skycoord(runtime_settings['sync_info'], radec, parking)
-
-
-def adjust_ra_dec_for_atmospheric_refraction(ra, dec, earth_location=None):
-    """
-    Gives you displacment ra, dec when adjusting with atmospheric_refraction
-    :param ra: float as deg
-    :param dec: float as deg
-    :param earth_location: EarthLocation defaults to runtime_settings['earth_location']
-    :return: {ra: deg_float, dec: deg_float}
-    """
-    if earth_location is None:
-        earth_location = runtime_settings['earth_location']
-    radec_skycoord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    altaz = convert_to_altaz(radec_skycoord, earth_location, obstime=True)
-    adj_skycoord = astropy.coordinates.AltAz(alt=altaz.alt, az=altaz.az,
-                                             location=earth_location,
-                                             obstime=AstroTime.now()).transform_to(astropy.coordinates.ICRS)
-    return {'ra': adj_skycoord.icrs.ra.deg, 'dec': adj_skycoord.icrs.dec.deg}
 
 
 def earth_location_to_pressure(earth_location=None):
@@ -700,29 +681,28 @@ def clean_deg(deg, dec=False):
     :type deg: float
     :param dec: True if dec, false if ra.
     :type dec: bool
-    :return: Cleaned up value.
-    :rtype: float
+    :return: Cleaned up value. Second argument exists only when dec is True.
+    :rtype: float, (int)
     :Example:
-
         >>> import control
         >>> control.clean_deg(91.0, True)
-        89.0
+        (89.0, 1)
 
         >>> import control
         >>> control.clean_deg(-91.0, True)
-        -89.0
+        (-89.0, 1)
 
         >>> import control
         >>> control.clean_deg(-190.0, True)
-        10.0
+        (10.0, 1)
 
         >>> import control
         >>> control.clean_deg(190.0, True)
-        -10.0
+        (-10.0, 1)
 
         >>> import control
         >>> control.clean_deg(390.0, True)
-        30.0
+        (30.0, 2)
 
         >>> import control
         >>> control.clean_deg(390.0, False)
@@ -735,7 +715,6 @@ def clean_deg(deg, dec=False):
         >>> import control
         >>> control.clean_deg(20.0, False)
         20.0
-
     """
     if dec:
         pole_count = 0
@@ -768,8 +747,6 @@ def ra_deg_time2(ra_deg, time1, time2):
     :return: adjusted ra
     :rtype: float
     :Example:
-
-
         >>> import control
         >>> from astropy.time import Time as AstroTime
         >>> from astropy.time import TimeDelta as AstroTimeDelta
@@ -779,7 +756,6 @@ def ra_deg_time2(ra_deg, time1, time2):
         >>> ra2 = control.ra_deg_time2(1.0, time1, time1 + td)
         >>> ra1, ra2
         (1.0041780745685391, 1.0000000000000568)
-
     """
     td = time2 - time1
     td.format = 'sec'
@@ -815,7 +791,6 @@ def ra_deg_d(started_angle, end_angle):
     :return: The shortest difference between started_angle, end_angle.
     :rtype: float
     :Example:
-
         >>> import control
         >>> control.ra_deg_d(359.0, 370.0)
         11.0
@@ -831,7 +806,6 @@ def ra_deg_d(started_angle, end_angle):
         >>> import control
         >>> control.ra_deg_d(-20.0, -5.0)
         15.0
-
     """
     end_angle = clean_deg(end_angle)
     started_angle = clean_deg(started_angle)
@@ -882,7 +856,6 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
     :type dec_ticks_per_degree: float
     :return: {'ra': steps_int, 'dec': steps_int}
     :Example:
-
         >>> import control
         >>> from astropy.coordinates import SkyCoord
         >>> from astropy.time import Time as AstroTime
@@ -891,12 +864,12 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
         ... 'coords': SkyCoord(ra=180.0*u.deg, dec=-20.0 * u.deg, frame='icrs'),
         ... 'steps': {'ra': 2000, 'dec': 2000} }
         >>> wanted_skycoord = SkyCoord(ra=181.0*u.deg, dec=-10.0*u.deg, frame='icrs')
-        >>> wanted_time = AstroTime("2018-01-01T01:01:01Z", format='isot')
+        >>> wanted_time = AstroTime("2018-01-01T01:01:02Z", format='isot')
         >>> dec_ticks_per_degree=177.7777
         >>> ra_track_rate=18.04928
-        >>> control.skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree)
-        {'dec': 3777.2464047949525, 'ra': -2319.959811492603}
-
+        >>> steps = control.skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree)
+        >>> int(steps['dec']), int(steps['ra'])
+        (3777, -2301)
     """
     d_ra = ra_deg_d(ra_deg_time2(sync_info['coords'].icrs.ra.deg, sync_info['time'], wanted_time),
                     wanted_skycoord.icrs.ra.deg)
@@ -929,8 +902,6 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
     :return: the coordinates
     :rtype: astropy.coordinates.SkyCoord
     :Example:
-
-
         >>> import control
         >>> from astropy.coordinates import SkyCoord
         >>> from astropy.time import Time as AstroTime
@@ -945,8 +916,6 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
         >>> coord = control.steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degree)
         >>> coord.ra.deg, coord.dec.deg
         (181.0, -10.0)
-
-
     """
 
     d_ra = (steps['ra'] - sync_info['steps']['ra']) / (ra_track_rate / SIDEREAL_RATE)
@@ -979,14 +948,102 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
     return coord
 
 
-def new_slew(coord):
+def get_projection_coords_from_list(triangle, sync_points, sync_point_key):
+    ret = []
+    for idx in triangle:
+        ret.append([sync_points[idx][sync_point_key]['x'], sync_points[sync_point_key][1]['y']])
+    return ret
+
+
+def get_two_closest_sync_points_idx(coord, sync_points):
+    one = None
+    two = None
+    for i in range(len(sync_points)):
+        sep = coord.separation(sync_points[i]['real_coord']).deg
+        if one is None:
+            one = [i, sep]
+        elif one[1] > sep:
+            two = one
+            one = [i, sep]
+    return [one[0], two[0]]
+
+
+def convert_to_icrs(altaz_coord, earth_location=None, obstime=None, atmo_refraction=False):
+    """
+
+    :param altaz_coord:
+    :param earth_location:
+    :param obstime:
+    :param atmo_refraction:
+    :return:
+    :Example:
+        >>> import control
+        >>> from astropy.coordinates import EarthLocation, AltAz
+        >>> from astropy.time import Time as AstroTime
+        >>> import astropy.units as u
+        >>> el = EarthLocation(lat=38.9369*u.deg, lon=-95.242*u.deg, height=266.0*u.m)
+        >>> t = AstroTime('2018-12-26T22:55:32.281', format='isot', scale='utc')
+        >>> b = AltAz(alt=80*u.deg, az=90*u.deg)
+        >>> c = control.convert_to_icrs(b, earth_location=el, obstime=t, atmo_refraction=False)
+        >>> c.ra.deg, c.dec.deg
+        (356.5643249365523, 38.12981040209684)
+    """
+    if obstime is None:
+        obstime = AstroTime.now()
+    if earth_location is None:
+        earth_location = runtime_settings['earth_location']
+    if earth_location is not None:
+        pressure = None
+        if atmo_refraction and runtime_settings['earth_location_set']:
+            pressure = earth_location_to_pressure(earth_location)
+        coord = AltAz(alt=altaz_coord.alt.deg * u.deg, az=altaz_coord.az.deg * u.deg,
+                      obstime=obstime, location=earth_location, pressure=pressure).transform_to(ICRS)
+        return coord
+
+
+def get_altaz_stepper_coord(coord, sync_points, triangles):
     if hasattr(coord, 'ra'):
         altaz = convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
     elif hasattr(coord, 'alt'):
         altaz = coord
+    proj_coord = alt_az_projection(altaz)
+    triangle = None
+    if len(sync_points) >= 3:
+        triangle = find_triangle(proj_coord, sync_points, triangles)
+    # Find trangle it is in
+    if triangle:
+        # TODO: Or should affine be done in sync?
+        # Calculate affine function from triangle
+        # TODO: Can this fail?
+        from_npa = numpy.array(get_projection_coords_from_list(triangle, sync_points, 'coord_projection'))
+        to_npa = numpy.array(get_projection_coords_from_list(triangle, sync_points, 'stepper_projection'))
+        transform, A = affine_fit.affine_fit_np(from_npa, to_npa)
+        stepper_coord = inverse_altaz_projection(transform(proj_coord))
+        return stepper_coord
+    else:
+        if len(sync_points) >= 2:
+            # Get nearest two_points
+            near_two = get_two_closest_sync_points_idx(coord, sync_points)
+            from_npa = numpy.array(get_projection_coords_from_list(near_two, sync_points, 'coord_projection'))
+            to_npa = numpy.array(get_projection_coords_from_list(near_two, sync_points, 'stepper_projection'))
+            transform, A = affine_fit.affine_fit_np(from_npa, to_npa)
+            stepper_coord = inverse_altaz_projection(transform(proj_coord))
+            return stepper_coord
+        elif len(sync_points) == 1:
+            # TODO: Or two point failed
+            # Just normal stepper slew using point as sync_point
+            return coord
+        else:
+            raise ValueError('No sync points.')
 
 
-#Finding point in triangle
+def new_slew(coord, sync_points, triangles, parking=False):
+    stepper_coord = get_altaz_stepper_coord(coord, sync_points, triangles)
+    icrs = convert_to_icrs(stepper_coord)
+    slew(icrs, parking)
+
+
+# Finding point in triangle
 # xaedes answer
 # https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
 # https://www.gamedev.net/forums/topic/295943-is-this-a-better-point-in-triangle-test-2d/
@@ -996,6 +1053,7 @@ def tr_sign(p1, p2, p3):
 
 def tr_point_in_triangle(pt, t1, t2, t3):
     """
+    Tests if point is in a triangle that is defined by three points.
     :param pt: Point checking
     :type pt: array [float, float]
     :param t1: first point of triangle
@@ -1006,6 +1064,13 @@ def tr_point_in_triangle(pt, t1, t2, t3):
     :type t3: array [float, float]
     :return: true if point in triangle
     :rtype: bool
+    :Example:
+        >>> import control
+        >>> t1=control.tr_point_in_triangle([95., 50.], [90., 10.], [95., 60.0], [100, 20.0])
+        >>> t2=control.tr_point_in_triangle([90., 50.], [90., 10.], [95., 60.0], [100, 20.0])
+        >>> t3=control.tr_point_in_triangle([90., 30.], [45., 20.], [135., 20.0], [175, 80.0])
+        >>> t1, t2, t3
+        (True, False, True)
     """
     d1 = tr_sign(pt, t1, t2)
     d2 = tr_sign(pt, t2, t3)
@@ -1017,45 +1082,208 @@ def tr_point_in_triangle(pt, t1, t2, t3):
     return not (h_neg and h_pos)
 
 
+def alt_az_projection(altaz_coord):
+    """
+    Convert alt-az coordinate to x, y coordinates through azimuthal projection
+    :param altaz_coord: A skyCoord with a arrow of coords inside or just one in altaz frame.
+    :type altaz_coord: astropy.coordiantes.SkyCord
+    :return: projected x, y coordinates, array if given array, otherwise single values.
+    :rtype: dict with keys x, y
+    :Example:
+        >>> import control
+        >>> from astropy.coordinates import SkyCoord
+        >>> a=SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        >>> xy = control.alt_az_projection(a)
+        >>> xy
+        {'x': 0.8888888888888888, 'y': 0.0}
+        >>> a=SkyCoord(alt=[10, 60, 20], az=[90, 95, 100], unit='deg', frame='altaz')
+        >>> xy = control.alt_az_projection(a)
+        >>> xy
+        {'x': array([0.88888889, 0.3320649 , 0.76596159]), 'y': array([ 0.        , -0.02905191, -0.13505969])}
+    """
+    alt = numpy.array(altaz_coord.alt.deg)
+    az = numpy.array(altaz_coord.az.deg)
+    caz = -az + 90.0
+    r = 1.0 - alt / 90.0
+    x = r * numpy.cos(caz * math.pi / 180.0)
+    y = r * numpy.sin(caz * math.pi / 180.0)
+    return {'x': x, 'y': y}
+
+
+def inverse_altaz_projection(xy_coord):
+    """
+    Convert x-y azimuthal project coord back to altaz SkyCoord
+    :param xy_coord: projected x, y values to go back to altaz coordinates.
+    :type xy_coord: dict with keys x, y
+    :return: Coordinates projected back to altaz frame.
+    :rtype: astropy.coordinates.SkyCoord
+    :Example:
+        >>> import control
+        >>> import numpy
+        >>> xy = {'x': 0.8888888888888888, 'y': 0.0}
+        >>> b = control.inverse_altaz_projection(xy)
+        >>> b.alt.deg, b.az.deg
+        (10.000000000000004, 90.0)
+        >>> xy = {'x': numpy.array([0.88888889, 0.3320649 , 0.76596159]), 'y': numpy.array([0., -0.02905191, -0.13505969])}
+        >>> b = control.inverse_altaz_projection(xy)
+        >>> b.alt.deg, b.az.deg
+        (array([ 9.9999999 , 59.99999998, 19.99999968]), array([90.        , 94.99999926, 99.99999967]))
+    """
+    x = numpy.array(xy_coord['x'])
+    y = numpy.array(xy_coord['y'])
+    caz = numpy.arctan2(y, x) * 180.0 / math.pi
+    az = 90 - caz
+    r = x / numpy.cos(caz * math.pi / 180.0)
+    alt = 90.0 * (1.0 - r)
+    return SkyCoord(alt=alt, az=az, unit='deg', frame='altaz')
+
+
+# TODO Steps: for point in triangle
+# make a projection function from alt az to Zenithal/azimuthal
+# with x, y projection coordinates can find if point is in triangle.
+
+#: sync_point is list of tuples in a tuple is (actual_skyCoord, actual_projection_coord, raw_skycoord)
 sync_points = []
+
+# Distance matrix for sync_points
+# https://en.wikipedia.org/wiki/Distance_matrix
+#: distance matrix created with sync_points actual_skyCoord
 distance_matrix = []
+
+#: list of sets of sync_point indexes that make up smallest triangle
 triangles = []
 
-def add_sync_point(coord):
+
+def add_sync_point(coord, stepper_altaz, sync_points, distance_matrix):
+    """
+    Updates parameters sync_points, distance_matrix and returns new triangles.
+    :param coord: Alt Az coordinates associated with stepper_values parameter
+    :type coord: astropy.coordinates.SkyCoord in AltAz frame.
+    :param stepper_altaz: Without adjustment what altaz it thinks it is at through stepper values.
+    :type stepper_altaz: astropy.coordinates.SkyCoord
+    :param sync_points: Gets updated with coord, stepper_altaz info.
+    :type sync_points: list
+    :param distance_matrix: current distance_matrix already populated with distances of sync_points, gets updated
+    :type distance_matrix: list
+    :return: list of sets of indexes for sync_points of minimal triangles.
+    :rtype: list
+    :Example:
+        >>> import control
+        >>> from astropy.coordinates import SkyCoord
+        >>> sync_points = []
+        >>> distance_matrix = []
+        >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=10.1, az=90.1, unit='deg', frame='altaz')
+        >>> triangle = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=60.1, az=95.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=20.1, az=100.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> triangles
+        [{0, 1, 2}]
+        >>> sync_point = SkyCoord(alt=12, az=80, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=12.1, az=80.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> triangles
+        [{0, 2, 3}, {0, 1, 2}]
     """
 
-    :param coord:
-    :return:
-    """
     if not hasattr(coord, 'alt'):
-        raise AssertionError('coord should be an alt-az coordinate')
+        raise ValueError('coord should be an alt-az coordinate')
     # TODO: Check if coord already in sync_points first and don't add if so.
+
+    # Add on to distance matrix
     row = []
     for i in range(len(sync_points)):
-        distance_matrix[i].append(coord.separation(sync_points[i]).deg)
-        row.append(coord.separation(sync_points[i]).deg)
+        sep = coord.separation(sync_points[i]['real_coord']).deg
+        distance_matrix[i].append(sep)
+        row.append(sep)
+    if 0.0 in row:
+        raise ValueError('coord already in sync_points')
     row.append(0.0)
-    sync_points.append(coord)
+    sync_points.append(
+        {'real_coord': coord, 'real_projection': alt_az_projection(coord), 'stepper_coord': stepper_altaz,
+         'stepper_projection': alt_az_projection(stepper_altaz)})
     distance_matrix.append(row)
 
-    for i in range(len(sync_points)):
-        min_v1 = 999999999.0
-        min_idx1 = -1
-        min_v2 = 999999999.0
-        min_idx2 = -1
-        for j in range(len(sync_points)):
-            if i == j:
-                continue
-            if distance_matrix[i][j] < min_v1:
-                min_v2 = min_v1
-                min_idx2 = min_idx1
-                min_v1 = distance_matrix[i][j]
-                min_idx1 = j
-        #TODO: Finish
+    # Create traingles again
+    # For each point find two other points that are near by.
+    if len(sync_points) > 2:
+        new_triangles = []
+        for i in range(len(sync_points)):
+            min_v1 = 999999999.0
+            min_idx1 = -1
+            min_v2 = 999999999.0
+            min_idx2 = -1
+            for j in range(len(sync_points)):
+                if i == j:
+                    continue
+                if distance_matrix[i][j] < min_v1:
+                    min_v2 = min_v1
+                    min_idx2 = min_idx1
+                    min_v1 = distance_matrix[i][j]
+                    min_idx1 = j
+            # check if triangle is already in there or not.
+            triangle = {i, min_idx1, min_idx2}
+            if triangle not in new_triangles and -1 not in triangle:
+                new_triangles.append(triangle)
+        return new_triangles
+    return []
 
 
-def find_triangle(coord):
-    #TODO finish
-    pass
-
-
+def find_triangle(coord, sync_points, triangles):
+    """
+    Find a set of sync points that make up a triangle in which the coord is inside the triangle.
+    :param coord: The coordinate you want to find a triangle that it is in.
+    :type coord: astropy.coordinates.SkyCoord or xy project coordinates
+    :param sync_points: A list of dicts of (real_coord, real_projection, ...)
+    :type sync_points: list[dict['real_coord': astropy.coordinates.SkyCoord, 'real_projection': dict[x, y]]
+    :param triangles: A list of sets of indexes of sync_points that make minimal triangles.
+    :return: Tuple of 3 sync_point indexes representing the triangle.
+    :rtype: tuple
+    :Example:
+        >>> import control
+        >>> from astropy.coordinates import SkyCoord
+        >>> sync_points = []
+        >>> distance_matrix = []
+        >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=10.1, az=90.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=60.1, az=95.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=20.1, az=100.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> sync_point = SkyCoord(alt=12, az=80, unit='deg', frame='altaz')
+        >>> stepper_point = SkyCoord(alt=12.1, az=80.1, unit='deg', frame='altaz')
+        >>> triangles = control.add_sync_point(sync_point, stepper_point, sync_points, distance_matrix)
+        >>> control.find_triangle(SkyCoord(alt=59, az=95, unit='deg', frame='altaz'), sync_points, triangles)
+        {0, 1, 2}
+        >>> control.find_triangle(SkyCoord(alt=12.1, az=85, unit='deg', frame='altaz'), sync_points, triangles)
+        {0, 2, 3}
+        >>> control.find_triangle(SkyCoord(alt=12, az=79, unit='deg', frame='altaz'), sync_points, triangles) is None
+        True
+        >>> xy = control.alt_az_projection(SkyCoord(alt=12.1, az=85, unit='deg', frame='altaz'))
+        >>> control.find_triangle(xy, sync_points, triangles)
+        {0, 2, 3}
+    """
+    if not hasattr(coord, 'alt') and (not isinstance(coord, dict) or ('x' not in coord and 'y' not in coord)):
+        raise AssertionError('coord should be an alt-az coordinate or xy projection coordinate')
+    if len(triangles) == 0:
+        return None
+    if hasattr(coord, 'alt'):
+        pt = alt_az_projection(coord)
+    else:
+        pt = coord
+    pt = [pt['x'], pt['y']]
+    for triangle in triangles:
+        tri = []
+        for idx in triangle:
+            tri.append([sync_points[idx]['real_projection']['x'], sync_points[idx]['real_projection']['y']])
+        if tr_point_in_triangle(pt, tri[0], tri[1], tri[2]):
+            return triangle
+    # Outside any triangle sync.
+    return None

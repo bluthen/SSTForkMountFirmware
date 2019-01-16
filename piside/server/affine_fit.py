@@ -1,3 +1,6 @@
+import numpy as np
+
+
 # https://elonen.iki.fi/code/misc-notes/affine-fit/
 def affine_fit(from_pts, to_pts):
     """
