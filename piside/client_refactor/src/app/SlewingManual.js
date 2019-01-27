@@ -133,6 +133,10 @@ class SlewingManual {
         this._selfDiv = $(template);
         parentDiv.append(this._selfDiv);
 
+        $('#clear_sync', this._selfDiv).on('click', () => {
+            slewing.clearsync();
+        });
+
         $('#manual_sync', this._selfDiv).on('click', () => {
             let coords;
             if ($('#goto_manual_coord_select-radec', this._selfDiv).is(':checked')) {

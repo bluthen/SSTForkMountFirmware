@@ -38,6 +38,23 @@ class Slewing {
         });
 
     }
+    clearsync () {
+        $.ajax({
+            url: '/sync',
+            method: 'DELETE',
+            success: function (d) {
+                $('#errorInfoModalTitle').text('Info');
+                $('#errorInfoModalBody').html('Sync Points Cleared');
+                $('#errorInfoModal').modal();
+            },
+            error: function (jq, errorstatus, errortxt) {
+                console.error(errortxt);
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text(jq.responseText);
+                $('#errorInfoModal').modal();
+            }
+        });
+    }
     sync (ra, dec) {
         $.ajax({
             url: '/sync',

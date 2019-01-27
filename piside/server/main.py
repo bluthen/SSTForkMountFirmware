@@ -17,7 +17,6 @@ import sqlite3
 import iso8601
 import subprocess
 import datetime
-import sys
 import traceback
 import tempfile
 import zipfile
@@ -28,7 +27,6 @@ import settings
 import sstchuck
 import network
 import sys
-import fcntl
 
 from werkzeug.serving import make_ssl_devcert
 
@@ -359,6 +357,13 @@ def set_location():
     return 'Set Location', 200
 
 
+@app.route('/sync', methods=['DELETE'])
+@nocache
+def clear_sync():
+    control.clear_sync()
+    return 'Cleared', 200
+
+
 @app.route('/sync', methods=['PUT'])
 @nocache
 def do_sync():
@@ -409,18 +414,17 @@ def do_slewto():
             return 'Cant do alt/az slew if no location set.', 400
         alt = float(alt)
         az = float(az)
-        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz', obstime=AstroTime.now(),
-                         location=runtime_settings['earth_location'])
-        ra = coord.icrs.ra.deg
-        dec = coord.icrs.dec.deg
-        parking = True
-    ra = float(ra)
-    dec = float(dec)
-    radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+        #parking = True
+    else:
+        ra = float(ra)
+        dec = float(dec)
+        radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        altaz = control.convert_to_altaz(radec)
     if not control.slewtocheck(radec):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
-        control.slew(radec, parking)
+        control.slew(altaz, parking)
         return 'Slewing', 200
 
 
@@ -473,7 +477,7 @@ def set_park_position():
         return 'You must have synced once before setting park position.', 400
     if not runtime_settings['earth_location_set']:
         return 'You must set location before setting park position.', 400
-    status = control.get_status()
+    status = control.stepper.get_status()
     coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
                                       AstroTime.now(), settings.settings['ra_track_rate'],
                                       settings.settings['dec_ticks_per_degree'])
@@ -502,12 +506,11 @@ def do_park():
     if not runtime_settings['sync_info']:
         return 'No sync info has been set.', 400
     runtime_settings['tracking'] = False
-    control.ra_set_speed(0)
+    control.stepper.set_speed_ra(0)
     coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
                      az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
                      obstime=AstroTime.now(), location=runtime_settings['earth_location'])
-    coord = SkyCoord(ra=coord.icrs.ra, dec=coord.icrs.dec, frame='icrs')
-    control.move_to_skycoord(runtime_settings['sync_info'], coord.icrs, True)
+    control.slew(coord, parking=True)
     return 'Parking.', 200
 
 
@@ -515,7 +518,7 @@ def do_park():
 @nocache
 def start_tracking():
     runtime_settings['tracking'] = True
-    control.ra_set_speed(settings.settings['ra_track_rate'])
+    control.stepper.set_speed_ra(settings.settings['ra_track_rate'])
     return 'Tracking', 200
 
 
@@ -523,7 +526,7 @@ def start_tracking():
 @nocache
 def stop_tracking():
     runtime_settings['tracking'] = False
-    control.ra_set_speed(0)
+    control.stepper.set_speed_ra(0)
     return 'Stopped Tracking', 200
 
 
