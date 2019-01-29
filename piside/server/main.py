@@ -700,13 +700,15 @@ def manual_control(message):
 
 @app.route('/paa_capture', methods=['POST'])
 @nocache
-def paa_capture():
-    global paa_process
+def paa_capture_post():
     exposure = int(request.form.get('exposure'))
     iso = int(request.form.get('iso'))
-    count = int(request.form.get('count'))
-    delay = float(request.form.get('delay'))
-    calibration = request.form.get('calibration')
+    paa_capture(exposure, iso)
+    return "Capturing", 200
+
+
+def paa_capture(exposure, iso):
+    global paa_process
     with paa_process_lock:
         print('Staring paa process')
         if not paa_process or paa_process.poll() is not None:
@@ -725,8 +727,7 @@ def paa_capture():
             # t.start()
         time.sleep(2)
         print('Writing to paa process')
-        paa_process.stdin.write(('%d %d %d %f %s\n' % (exposure, iso, count, delay, str(calibration))).encode())
-    return "Capturing", 200
+        paa_process.stdin.write(('%d %d %d %f\n' % (exposure, iso, -1, 0.25)).encode())
 
 
 @app.route('/paa_capture', methods=['DELETE'])
@@ -785,6 +786,7 @@ def main():
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
+    paa_capture(1000000*10, 800)
 
     print('Running...')
     try:
