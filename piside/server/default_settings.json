@@ -47,5 +47,6 @@
   ],
   "horizon_limit_enabled": false,
   "color_scheme": "default",
-  "atmos_refract": true
+  "atmos_refract": true,
+  "power_switch": true
 }

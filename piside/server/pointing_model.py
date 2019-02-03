@@ -228,6 +228,7 @@ class PointingModel:
         # Add on to distance matrix
         row = []
         for i in range(len(self.__sync_points)):
+            # print("add_point", from_point, self.__sync_points[i]['from_point'])
             sep = from_point.separation(self.__sync_points[i]['from_point']).deg
             self.__distance_matrix[i].append(sep)
             row.append(sep)
@@ -267,6 +268,7 @@ class PointingModel:
         one = None
         two = None
         for i in range(len(self.__sync_points)):
+            # print("__get_two_closest_sync_points_idx loop", coord, self.__sync_points[i]['from_point'])
             sep = coord.separation(self.__sync_points[i]['from_point']).deg
             if one is None:
                 one = [i, sep]
@@ -316,7 +318,7 @@ class PointingModel:
                                  [to_npa[1][1]]])
                 x = numpy.linalg.solve(A, b)
                 # print(proj_coord, x)
-                transformed_projection = [proj_coord['x']*x[0][0]+x[2][0], proj_coord['y']*x[1][0]+x[3][0]]
+                transformed_projection = [proj_coord['x'] * x[0][0] + x[2][0], proj_coord['y'] * x[1][0] + x[3][0]]
                 to_point = inverse_altaz_projection({'x': transformed_projection[0], 'y': transformed_projection[1]})
                 return to_point
             elif len(self.__sync_points) == 1:

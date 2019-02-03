@@ -69,7 +69,7 @@ def run_power_switch():
             if not GPIO.input(SWITCH_PIN):
                 subprocess.run(['sudo', 'shutdown', '-h', 'now'])
 
-    except ModuleNotFoundError:
+    except ImportError:
         # We are probably in simulation
         print("Warning: Can't use power switch.")
 
@@ -121,13 +121,23 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.9"})
+    return jsonify({"version": "0.0.11"})
 
 
 @app.route('/settings')
 @nocache
 def settings_get():
     return jsonify(settings.settings)
+
+
+@app.route('/shutdown', methods=['PUT'])
+@nocache
+def shutdown_put():
+    control.stepper.set_speed_ra(0.0)
+    control.stepper.set_speed_dec(0.0)
+    time.sleep(0.25)
+    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+    return 'Shutdown', 204
 
 
 @app.route('/settings', methods=['PUT'])
@@ -341,7 +351,7 @@ def set_location():
     location = json.loads(location)
     print(location)
     if 'lat' not in location or 'long' not in location or 'elevation' not in location or (
-                    'name' not in location and location['name'].strip() != ''):
+            'name' not in location and location['name'].strip() != ''):
         return 'Missing arguments', 400
     location = {'lat': float(location['lat']), 'long': float(location['long']),
                 'elevation': float(location['elevation']), 'name': str(location['name'])}
@@ -376,24 +386,13 @@ def do_sync():
             return 'Cant Alt/Az Sync if not location set', 400
         alt = float(alt)
         az = float(az)
-        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz', obstime=AstroTime.now(),
-                         location=runtime_settings['earth_location'])
+        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
     else:
         ra = float(ra)
         dec = float(dec)
         coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    last_sync = None
-    if 'sync_info' in runtime_settings:
-        last_sync = runtime_settings['sync_info']
     control.sync(coord)
-    err = {'ra_error': None, 'dec_error': None}
-    if last_sync:
-        err = control.two_sync_calc_error(last_sync, runtime_settings['sync_info'])
-    if err['ra_error'] is not None and math.isnan(err['ra_error']):
-        err['ra_error'] = None
-    if err['dec_error'] is not None and math.isnan(err['dec_error']):
-        err['dec_error'] = None
-    return jsonify(err)
+    return jsonify({'text': 'Sync Points: ' + str(control.pm_real_stepper.size())})
 
 
 @app.route('/slewto', methods=['PUT'])
@@ -415,13 +414,13 @@ def do_slewto():
         alt = float(alt)
         az = float(az)
         altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
-        #parking = True
+        # parking = True
     else:
         ra = float(ra)
         dec = float(dec)
         radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
         altaz = control.convert_to_altaz(radec)
-    if not control.slewtocheck(radec):
+    if not control.slewtocheck(altaz):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
         control.slew(altaz, parking)
@@ -508,8 +507,7 @@ def do_park():
     runtime_settings['tracking'] = False
     control.stepper.set_speed_ra(0)
     coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                     az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
-                     obstime=AstroTime.now(), location=runtime_settings['earth_location'])
+                     az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
     control.slew(coord, parking=True)
     return 'Parking.', 200
 
@@ -517,6 +515,7 @@ def do_park():
 @app.route('/start_tracking', methods=['PUT'])
 @nocache
 def start_tracking():
+    settings.not_parked()
     runtime_settings['tracking'] = True
     control.stepper.set_speed_ra(settings.settings['ra_track_rate'])
     return 'Tracking', 200
@@ -770,6 +769,8 @@ def listen_paa_stdout(process):
 def main():
     global st_queue, power_thread_quit
     power_thread_quit = False
+    if not settings.settings['power_switch']:
+        power_thread_quit = True
     power_thread = threading.Thread(target=run_power_switch)
     power_thread.start()
     wifiinfo = network.hostapd_read()
@@ -786,7 +787,7 @@ def main():
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
-    paa_capture(1000000*10, 800)
+    paa_capture(1000000 * 10, 800)
 
     print('Running...')
     try:

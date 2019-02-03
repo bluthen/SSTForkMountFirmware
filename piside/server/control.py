@@ -29,6 +29,8 @@ import threading
 from functools import partial
 import time
 
+from sstutil import ProfileTimer as PT
+
 import datetime
 from astropy.coordinates import EarthLocation, SkyCoord, AltAz, ICRS
 from astropy.time import Time as AstroTime
@@ -131,7 +133,10 @@ def slewtocheck(skycoord):
     """
     if skycoord is None:
         return False
-    altaz = convert_to_altaz(skycoord)
+    if hasattr(skycoord, 'ra'):
+        altaz = convert_to_altaz(skycoord)
+    elif hasattr(skycoord, 'alt'):
+        altaz = skycoord
     if below_horizon_limit(altaz):
         return False
     else:
@@ -203,6 +208,10 @@ def convert_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=F
         return None
 
 
+def clean_altaz(altaz):
+    return SkyCoord(alt=altaz.alt.deg*u.deg, az=altaz.az.deg*u.deg, frame='altaz')
+
+
 def send_status():
     global slewing, last_status
     status = stepper.get_status()
@@ -218,6 +227,7 @@ def send_status():
                                   AstroTime.now(), settings.settings['ra_track_rate'],
                                   settings.settings['dec_ticks_per_degree'])
         stepper_altaz = convert_to_altaz(coord, atmo_refraction=False)
+        stepper_altaz = clean_altaz(stepper_altaz)
         real_altaz = pm_stepper_real.transform_point(stepper_altaz)
         radec = convert_to_icrs(real_altaz, atmo_refraction=settings.settings['atmos_refract'])
 
@@ -273,12 +283,14 @@ def init(osocketio, fruntime_settings):
     pm_real_stepper = pointing_model.PointingModel()
     pm_stepper_real = pointing_model.PointingModel()
     update_location()
-    if settings.settings['park_position'] and runtime_settings['earth_location_set']:
+    if settings.settings['park_position'] and runtime_settings['earth_location_set'] and settings.last_parked():
+        settings.not_parked()
         coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
                          az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
                          obstime=AstroTime.now(),
                          location=runtime_settings['earth_location']).icrs
         sync(coord)
+    settings.not_parked()
     micro_update_settings()
     status_interval = SimpleInterval(send_status, 1)
 
@@ -502,6 +514,8 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         else:
             stepper.set_speed_ra(0)
         stepper.set_speed_dec(0.0)
+        if not cancel_slew and parking:
+            settings.parked()
     finally:
         stepper.autoguide_enable()
         slewing = False
@@ -712,21 +726,34 @@ def sync(coord):
     :type coord: astropy.coordinates.SkyCord
     :return:
     """
+    pt = PT('control.sstutil')
     status = stepper.get_status()
 
     # coord to altaz
     obstime = AstroTime.now()
-    altaz = convert_to_altaz(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
+    if hasattr(coord, 'alt'):
+        altaz=coord
+    else:
+        altaz = convert_to_altaz(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
     if pm_real_stepper.size() > 0:
+        altaz=clean_altaz(altaz)
+        pt.mark('control.sstutil 1a')
         stepper_altaz = get_stepper_altaz(status, obstime)
+        stepper_altaz = clean_altaz(stepper_altaz)
+        pt.mark('control.sstutil 1b')
         pm_real_stepper.add_point(altaz, stepper_altaz)
+        pt.mark('control.sstutil 1c')
         pm_stepper_real.add_point(stepper_altaz, altaz)
     else:
-        sync_info = {'time': AstroTime.now(), 'steps': {'ra': status['rp'], 'dec': status['dp']}, 'coords': coord}
+        if hasattr(coord, 'alt'):
+            coord = convert_to_icrs(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
+        pt.mark('control.sstutil 2')
+        sync_info = {'time': obstime, 'steps': {'ra': status['rp'], 'dec': status['dp']}, 'coords': coord}
         runtime_settings['sync_info'] = sync_info
-
+        altaz = clean_altaz(altaz)
         pm_real_stepper.add_point(altaz, altaz)
         pm_stepper_real.add_point(altaz, altaz)
+    pt.mark('control.sstutil done')
 
 
 def ra_deg_d(started_angle, end_angle):
@@ -936,6 +963,8 @@ def convert_to_icrs(altaz_coord, earth_location=None, obstime=None, atmo_refract
 def slew(coord, parking=False):
     if runtime_settings is None or 'sync_info' not in runtime_settings or runtime_settings['sync_info'] is None:
         raise NotSyncedException('Not Synced')
+    settings.not_parked()
+    coord = clean_altaz(coord)
     stepper_coord = pm_real_stepper.transform_point(coord)
     icrs_stepper = convert_to_icrs(stepper_coord)
     move_to_skycoord(runtime_settings['sync_info'], icrs_stepper, parking)
