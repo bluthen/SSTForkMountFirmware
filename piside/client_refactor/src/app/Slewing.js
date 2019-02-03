@@ -63,15 +63,12 @@ class Slewing {
             data: {ra: ra, dec: dec},
             success: function (d) {
                 console.log('synced');
-                let errstr = '';
-                if (d.ra_error) {
-                    errstr += 'RAErr: ' + (d.ra_error * 100.0).toFixed(2) + '%';
-                }
-                if (d.dec_error) {
-                    errstr += ' DECErr: ' + (d.dec_error * 100.0).toFixed(2) + '%';
+                let info = '';
+                if (d.hasOwnProperty('text')) {
+                    info = d.text;
                 }
                 $('#errorInfoModalTitle').text('Info');
-                $('#errorInfoModalBody').html('The mount is now synced.<br>' + errstr);
+                $('#errorInfoModalBody').html('The mount is now synced.<br>' + info);
                 $('#errorInfoModal').modal();
             },
             error: function (jq, errorstatus, errortxt) {
@@ -112,8 +109,12 @@ class Slewing {
             data: {alt: alt, az: az},
             success: function (d) {
                 console.log('synced');
+                let info = '';
+                if (d.hasOwnProperty('text')) {
+                    info = d.text;
+                }
                 $('#errorInfoModalTitle').text('Info');
-                $('#errorInfoModalBody').text('The mount is now synced.');
+                $('#errorInfoModalBody').text('The mount is now synced.<br>' + info);
                 $('#errorInfoModal').modal();
             },
             error: function (jq, errorstatus, errortxt) {
