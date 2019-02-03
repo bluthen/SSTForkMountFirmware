@@ -114,7 +114,7 @@ class Slewing {
                     info = d.text;
                 }
                 $('#errorInfoModalTitle').text('Info');
-                $('#errorInfoModalBody').text('The mount is now synced.<br>' + info);
+                $('#errorInfoModalBody').html('The mount is now synced.<br>' + info);
                 $('#errorInfoModal').modal();
             },
             error: function (jq, errorstatus, errortxt) {

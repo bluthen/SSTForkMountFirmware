@@ -298,6 +298,7 @@ def init(osocketio, fruntime_settings):
 def manual_control(direction, speed):
     global slew_lock, manual_lock
     # print('manual_control', direction, speed)
+    settings.not_parked()
     with manual_lock:
         got_lock = slew_lock.acquire(blocking=False)
         if not got_lock:
@@ -514,9 +515,11 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         else:
             stepper.set_speed_ra(0)
         stepper.set_speed_dec(0.0)
-        if not cancel_slew and parking:
-            settings.parked()
     finally:
+        if parking and not cancel_slew:
+            settings.parked()
+        else:
+            settings.not_parked()
         stepper.autoguide_enable()
         slewing = False
         slew_lock.release()

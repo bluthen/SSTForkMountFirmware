@@ -50,7 +50,7 @@ def parked():
     if not os.path.isfile('last_parked'):
         try:
             with _plock:
-                with open('last_parked') as f:
+                with open('last_parked', 'a') as f:
                     pass
         except:
             pass
