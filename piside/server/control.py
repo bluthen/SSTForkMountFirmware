@@ -57,6 +57,8 @@ runtime_settings = None
 slewing = False
 stepper = None
 
+park_sync = False
+
 cancel_slew = False
 last_status = None
 
@@ -269,7 +271,7 @@ def micro_update_settings():
 
 
 def init(osocketio, fruntime_settings):
-    global stepper, status_interval, socketio, inited, runtime_settings, pm_real_stepper, pm_stepper_real
+    global stepper, status_interval, socketio, inited, runtime_settings, pm_real_stepper, pm_stepper_real, park_sync
     if inited:
         return
     inited = True
@@ -290,6 +292,7 @@ def init(osocketio, fruntime_settings):
                          obstime=AstroTime.now(),
                          location=runtime_settings['earth_location']).icrs
         sync(coord)
+        park_sync = True
     settings.not_parked()
     micro_update_settings()
     status_interval = SimpleInterval(send_status, 1)
@@ -729,7 +732,8 @@ def sync(coord):
     :type coord: astropy.coordinates.SkyCord
     :return:
     """
-    pt = PT('control.sstutil')
+    global park_sync
+    pt = PT('control.sync')
     status = stepper.get_status()
 
     # coord to altaz
@@ -738,25 +742,28 @@ def sync(coord):
         altaz=coord
     else:
         altaz = convert_to_altaz(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
-    if pm_real_stepper.size() > 0:
+    if not park_sync and pm_real_stepper.size() > 0:
         altaz=clean_altaz(altaz)
-        pt.mark('control.sstutil 1a')
+        pt.mark('control.sync 1a')
         stepper_altaz = get_stepper_altaz(status, obstime)
         stepper_altaz = clean_altaz(stepper_altaz)
-        pt.mark('control.sstutil 1b')
+        pt.mark('control.sync 1b')
         pm_real_stepper.add_point(altaz, stepper_altaz)
-        pt.mark('control.sstutil 1c')
+        pt.mark('control.sync 1c')
         pm_stepper_real.add_point(stepper_altaz, altaz)
     else:
         if hasattr(coord, 'alt'):
             coord = convert_to_icrs(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
-        pt.mark('control.sstutil 2')
+        park_sync = False
+        pt.mark('control.sync 2')
         sync_info = {'time': obstime, 'steps': {'ra': status['rp'], 'dec': status['dp']}, 'coords': coord}
         runtime_settings['sync_info'] = sync_info
         altaz = clean_altaz(altaz)
+        pm_real_stepper.clear()
+        pm_stepper_real.clear()
         pm_real_stepper.add_point(altaz, altaz)
         pm_stepper_real.add_point(altaz, altaz)
-    pt.mark('control.sstutil done')
+    pt.mark('control.sync done')
 
 
 def ra_deg_d(started_angle, end_angle):
