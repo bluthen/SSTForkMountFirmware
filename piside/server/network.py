@@ -18,14 +18,14 @@ def valid_ip(address):
 
 
 def root_file_open(path):
+    stemp = tempfile.mkstemp(suffix='sstneworktmp')
+    os.close(stemp[0])
     if settings.is_simulation():
         path = './simulation_files' + path
-        results = subprocess.run(['/bin/cat', path], stdout=subprocess.PIPE)
+        subprocess.check_call(['/bin/cp', path, stemp[1]], stdout=subprocess.PIPE)
     else:
-        results = subprocess.run(['/usr/bin/sudo', '/bin/cat', path], stdout=subprocess.PIPE)
-    stemp = tempfile.mkstemp(suffix='sstneworktmp')
-    stemp = [os.fdopen(stemp[0], 'a+'), stemp[1], path]
-    stemp[0].write(results.stdout.decode())
+        subprocess.check_call(['/usr/bin/sudo', '/bin/cp', path, stemp[1]])
+    stemp = [open(stemp[1], 'a+'), stemp[1], path]
     stemp[0].seek(0)
     return stemp
 
@@ -192,12 +192,15 @@ def wpa_supplicant_read(wpa_file):
 
 def wpa_supplicant_write(wpa_file, other, networks):
     wpa_file.truncate(0)
-    wpa_file.write(other)
+    wpa_file.write("""update_config=0
+country=US
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+""")
     wpa_file.write('\n')
     for network in networks:
         wpa_file.write('network={\n')
         for key, value in network.items():
-            wpa_file.write("    %s=%s\n" % (key, value))
+            wpa_file.write("%s=%s\n" % (key, value))
         wpa_file.write('}\n')
 
 

@@ -62,11 +62,9 @@ sudo mount /ramtmp
 
 #Edit dnsmasq
 bogus-priv
-no-resolv
-address=/#/192.168.45.1
-server=8.8.4.4
 interface=wlan0
 dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
+
 log-facility=/var/log/dnsmasq.log
 log-async
 log-dhcp
@@ -75,6 +73,8 @@ log-dhcp
 #Add to rc.local
 /usr/local/bin/supervisord -c /etc/supervisord.conf
 /root/networkstartup.sh
+
+cp autohotspot /usr/bin/autohotspot
 
 #Put in /root/networkstartup.sh
 #!/bin/sh
@@ -92,13 +92,6 @@ denyinterfaces eth0
 denyinterfaces wlan0
 
 
-
-
-ntpdate in sudoers
-Change to country=US in wpa_supplicant.conf
-
-
-
 mkdir /ramtmp
 mkdir /caltmp
 chown pi /caltmp
@@ -108,3 +101,5 @@ tmpfs /ramtmp tmpfs defaults,size=20m,mode=1777 0 0
 
 
 ln -s /home/pi/SSTForkMountFirmware/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
+
+systemctl disable hostapd

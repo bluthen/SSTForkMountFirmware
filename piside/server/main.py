@@ -253,8 +253,8 @@ def settings_network_wifi():
     # Stop hostapd and dnsmasq let autohotspot go
     if not settings.is_simulation():
         subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
-        subprocess.run(['sudo', '/usr/sbin/service', 'hostapd', 'stop'])
-        subprocess.run(['sudo', '/root/autohotspotcron'])
+        subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
+        subprocess.run(['sudo', '/usr/bin/autohotspotcron'])
     settings.settings['network']['ssid'] = ssid
     settings.settings['network']['wpa2key'] = wpa2key
     settings.settings['network']['channel'] = channel
@@ -278,7 +278,7 @@ def wifi_connect_delete():
     wificon = network.current_wifi_connect()
     if wificon['ssid'] == ssid or wificon['mac'] == mac:
         if not settings.is_simulation():
-            subprocess.run(['sudo', '/root/autohotspotcron'])
+            subprocess.run(['sudo', '/usr/bin/autohotspot'])
     return 'Removed', 200
 
 
@@ -331,7 +331,7 @@ def wifi_connect():
     # TODO: Maybe we do this after responding for user feedback?
     if not settings.is_simulation():
         subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
-        subprocess.run(['sudo', '/root/autohotspotcron'])
+        subprocess.run(['sudo', '/usr/bin/autohotspot'])
     return '', 204
 
 
