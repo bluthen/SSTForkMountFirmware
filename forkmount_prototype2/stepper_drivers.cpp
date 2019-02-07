@@ -214,18 +214,15 @@ void dec_stepper_backwardstep_fast() {
 
 static float RASpeed = 0.0;
 static long RACounts = 0;
-static long RACountsAG = 0;
 static unsigned long RAClock = 0;
 static long RAPosition = 0;
 
 static float DECSpeed = 0.0;
 static long DECCounts = 0;
-static long DECCountsAG = 0;
 static unsigned long DECClock = 0;
 static long DECPosition = 0;
 
 static float count;
-static float count_ag;
 
 boolean ra_autoguiding = false;
 boolean dec_autoguiding = false;
@@ -264,8 +261,7 @@ void setRASpeed(float speed) {
     RASpeed = speed;
   }
   RACounts = 0;
-  RACountsAG = 0;
-  RAClock = millis();  
+  // RAClock = millis();
   // For if speed gets set more often than it can do a step
   if(speed == 0.0 || (millis() - RAClock) > 1000.0* (1.0/speed)) {
     RAClock = millis();
@@ -288,7 +284,6 @@ void setDECSpeed(float speed) {
     DECSpeed = speed;
   }
   DECCounts = 0;
-  DECCountsAG = 0;
   // For if speed gets set more often than it can do a step
   if(speed == 0.0 || (millis() - DECClock) > 1000.0* (1.0/speed)) {
     DECClock = millis();
@@ -310,12 +305,7 @@ elapsedMicros minDelayRA = 0;
 elapsedMicros minDelayDEC = 0;
 
 void runSteppers() {
-  // When we are autoguiding we want the position to be as if we were not, so continue at previous speeds.
-  
   count = RACounts - (RASpeed*((float)(millis() - RAClock))/1000.0);
-  if (ra_autoguiding) {
-    count_ag = RACountsAG - (prevRASpeed*((float)(millis() - RAClock))/1000.0);
-  }
   //Serial.println(RASpeed);
   //Serial.println(RAClock);
   //Serial.println(RACounts);
@@ -326,16 +316,12 @@ void runSteppers() {
       if (count < -MICROSTEPS) {
         ra_stepper_backwardstep_fast();
         RACounts += MICROSTEPS;
-        if(!ra_autoguiding) {
-          RAPosition += MICROSTEPS;
-        }
+        RAPosition += MICROSTEPS;
       } else if (count > MICROSTEPS) {
         ra_stepper_forwardstep_fast();    
         RACounts -= MICROSTEPS;
-        if(!ra_autoguiding) {
-          RAPosition -= MICROSTEPS;
-        }
-      }    
+        RAPosition -= MICROSTEPS;
+      }
     }
   } else {
     if (minDelayRA > 500000/RASpeed) {
@@ -343,43 +329,16 @@ void runSteppers() {
       if (count < -1.0) {
         ra_stepper_backwardstep();
         RACounts++;
-        if(!ra_autoguiding) {
-          RAPosition++;
-        }
+        RAPosition++;
       } else if (count > 1.0) {
         ra_stepper_forwardstep();    
         RACounts--;
-        if(!ra_autoguiding) {
-          RAPosition--;
-        }
-      }
-    }
-  }
-
-  if(ra_autoguiding) {
-    if(abs(prevRASpeed) > MICROSTEP_TO_FULL_THRES) {
-      if (count_ag < -MICROSTEPS) {
-          RACountsAG += MICROSTEPS;
-          RAPosition += MICROSTEPS;
-      } else if (count_ag > MICROSTEPS) {
-          RACountsAG -= MICROSTEPS;
-          RAPosition -= MICROSTEPS;
-      }    
-    } else {
-      if (count_ag < -1.0) {
-          RACountsAG++;
-          RAPosition++;
-      } else if (count_ag > 1.0) {
-          RACountsAG--;
-          RAPosition--;
+        RAPosition--;
       }
     }
   }
 
   count = DECCounts - (DECSpeed*((float)(millis() - DECClock))/1000.0);
-  if (dec_autoguiding) {
-    count_ag = DECCountsAG - (prevDECSpeed*((float)(millis() - DECClock))/1000.0);
-  }
   serialLimit++;
   if(serialLimit > 10000) {
     serialLimit = 0;
@@ -402,16 +361,12 @@ void runSteppers() {
       if (count < -MICROSTEPS) {
         dec_stepper_backwardstep_fast();
         DECCounts+=MICROSTEPS;
-        if(!dec_autoguiding) {
-          DECPosition+=MICROSTEPS;
-        }
+        DECPosition+=MICROSTEPS;
       } else if (count > MICROSTEPS) {
         dec_stepper_forwardstep_fast();    
         DECCounts-=MICROSTEPS;
-        if(!dec_autoguiding) {
-          DECPosition-=MICROSTEPS;
-        }
-      }    
+        DECPosition-=MICROSTEPS;
+      }
     }
   } else {
     if (minDelayDEC > 500000/DECSpeed) {
@@ -419,38 +374,13 @@ void runSteppers() {
       if (count < -1.0) {
         dec_stepper_backwardstep();
         DECCounts++;
-        if(!dec_autoguiding) {
-          DECPosition++;
-        }
+        DECPosition++;
       } else if (count > 1.0) {
         dec_stepper_forwardstep();    
         DECCounts--;
-        if(!dec_autoguiding) {
-          DECPosition--;
-        }
-      }
-    }
-  }
-
-  if(dec_autoguiding) {
-    if(abs(DECSpeed) > MICROSTEP_TO_FULL_THRES) {
-      if (count_ag < -MICROSTEPS) {
-        DECCountsAG+=MICROSTEPS;
-        DECPosition+=MICROSTEPS;
-      } else if (count_ag > MICROSTEPS) {
-        DECCountsAG-=MICROSTEPS;
-        DECPosition-=MICROSTEPS;
-      }    
-    } else {
-      if (count_ag < -1.0) {
-        DECCountsAG++;
-        DECPosition++;
-      } else if (count_ag > 1.0) {
-        DECCountsAG--;
         DECPosition--;
       }
     }
   }
-  
 }
 
