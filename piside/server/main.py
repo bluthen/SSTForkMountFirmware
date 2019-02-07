@@ -1,8 +1,9 @@
 from astropy.utils import iers
 import astropy.time
 import astropy.coordinates
-from astropy.coordinates import solar_system_ephemeris
+from astropy.coordinates import solar_system_ephemeris, SkyCoord
 import astropy.units as u
+from astropy.time import Time as AstroTime
 import time
 
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
@@ -16,7 +17,6 @@ import sqlite3
 import iso8601
 import subprocess
 import datetime
-import sys
 import traceback
 import tempfile
 import zipfile
@@ -27,7 +27,6 @@ import settings
 import sstchuck
 import network
 import sys
-import fcntl
 
 from werkzeug.serving import make_ssl_devcert
 
@@ -70,7 +69,7 @@ def run_power_switch():
             if not GPIO.input(SWITCH_PIN):
                 subprocess.run(['sudo', 'shutdown', '-h', 'now'])
 
-    except ModuleNotFoundError:
+    except ImportError:
         # We are probably in simulation
         print("Warning: Can't use power switch.")
 
@@ -122,13 +121,23 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.9"})
+    return jsonify({"version": "0.0.11"})
 
 
 @app.route('/settings')
 @nocache
 def settings_get():
     return jsonify(settings.settings)
+
+
+@app.route('/shutdown', methods=['PUT'])
+@nocache
+def shutdown_put():
+    control.stepper.set_speed_ra(0.0)
+    control.stepper.set_speed_dec(0.0)
+    time.sleep(0.25)
+    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+    return 'Shutdown', 204
 
 
 @app.route('/settings', methods=['PUT'])
@@ -244,8 +253,8 @@ def settings_network_wifi():
     # Stop hostapd and dnsmasq let autohotspot go
     if not settings.is_simulation():
         subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
-        subprocess.run(['sudo', '/usr/sbin/service', 'hostapd', 'stop'])
-        subprocess.run(['sudo', '/root/autohotspotcron'])
+        subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
+        subprocess.run(['sudo', '/usr/bin/autohotspotcron'])
     settings.settings['network']['ssid'] = ssid
     settings.settings['network']['wpa2key'] = wpa2key
     settings.settings['network']['channel'] = channel
@@ -269,7 +278,7 @@ def wifi_connect_delete():
     wificon = network.current_wifi_connect()
     if wificon['ssid'] == ssid or wificon['mac'] == mac:
         if not settings.is_simulation():
-            subprocess.run(['sudo', '/root/autohotspotcron'])
+            subprocess.run(['sudo', '/usr/bin/autohotspot'])
     return 'Removed', 200
 
 
@@ -322,7 +331,7 @@ def wifi_connect():
     # TODO: Maybe we do this after responding for user feedback?
     if not settings.is_simulation():
         subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
-        subprocess.run(['sudo', '/root/autohotspotcron'])
+        subprocess.run(['sudo', '/usr/bin/autohotspot'])
     return '', 204
 
 
@@ -358,6 +367,13 @@ def set_location():
     return 'Set Location', 200
 
 
+@app.route('/sync', methods=['DELETE'])
+@nocache
+def clear_sync():
+    control.clear_sync()
+    return 'Cleared', 200
+
+
 @app.route('/sync', methods=['PUT'])
 @nocache
 def do_sync():
@@ -370,26 +386,13 @@ def do_sync():
             return 'Cant Alt/Az Sync if not location set', 400
         alt = float(alt)
         az = float(az)
-        coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,
-                                             az=az * u.deg, frame='altaz',
-                                             obstime=astropy.time.Time.now(),
-                                             location=runtime_settings['earth_location'])
+        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
     else:
         ra = float(ra)
         dec = float(dec)
-        coord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    last_sync = None
-    if 'sync_info' in runtime_settings:
-        last_sync = runtime_settings['sync_info']
+        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     control.sync(coord)
-    err = {'ra_error': None, 'dec_error': None}
-    if last_sync:
-        err = control.two_sync_calc_error(last_sync, runtime_settings['sync_info'])
-    if err['ra_error'] is not None and math.isnan(err['ra_error']):
-        err['ra_error'] = None
-    if err['dec_error'] is not None and math.isnan(err['dec_error']):
-        err['dec_error'] = None
-    return jsonify(err)
+    return jsonify({'text': 'Sync Points: ' + str(control.pm_real_stepper.size())})
 
 
 @app.route('/slewto', methods=['PUT'])
@@ -410,20 +413,17 @@ def do_slewto():
             return 'Cant do alt/az slew if no location set.', 400
         alt = float(alt)
         az = float(az)
-        coord = astropy.coordinates.SkyCoord(alt=alt * u.deg,
-                                             az=az * u.deg, frame='altaz',
-                                             obstime=astropy.time.Time.now(),
-                                             location=runtime_settings['earth_location'])
-        ra = coord.icrs.ra.deg
-        dec = coord.icrs.dec.deg
-        parking = True
-    ra = float(ra)
-    dec = float(dec)
-    radec = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    if not control.slewtocheck(radec):
+        altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+        # parking = True
+    else:
+        ra = float(ra)
+        dec = float(dec)
+        radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        altaz = control.convert_to_altaz(radec)
+    if not control.slewtocheck(altaz):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
-        control.slew(radec, parking)
+        control.slew(altaz, parking)
         return 'Slewing', 200
 
 
@@ -432,7 +432,7 @@ def do_slewto():
 def do_slewtocheck():
     ra = float(request.form.get('ra', None))
     dec = float(request.form.get('dec', None))
-    radec = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='ircs')
+    radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='ircs')
     return jsonify({'slewcheck': control.slewtocheck(radec)})
 
 
@@ -476,9 +476,9 @@ def set_park_position():
         return 'You must have synced once before setting park position.', 400
     if not runtime_settings['earth_location_set']:
         return 'You must set location before setting park position.', 400
-    status = control.get_status()
+    status = control.stepper.get_status()
     coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                      astropy.time.Time.now(), settings.settings['ra_track_rate'],
+                                      AstroTime.now(), settings.settings['ra_track_rate'],
                                       settings.settings['dec_ticks_per_degree'])
     altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
     settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
@@ -505,20 +505,19 @@ def do_park():
     if not runtime_settings['sync_info']:
         return 'No sync info has been set.', 400
     runtime_settings['tracking'] = False
-    control.ra_set_speed(0)
-    coord = astropy.coordinates.SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
-                                         obstime=astropy.time.Time.now(), location=runtime_settings['earth_location'])
-    coord = astropy.coordinates.SkyCoord(ra=coord.icrs.ra, dec=coord.icrs.dec, frame='icrs')
-    control.move_to_skycoord(runtime_settings['sync_info'], coord.icrs, True)
+    control.stepper.set_speed_ra(0)
+    coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                     az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
+    control.slew(coord, parking=True)
     return 'Parking.', 200
 
 
 @app.route('/start_tracking', methods=['PUT'])
 @nocache
 def start_tracking():
+    settings.not_parked()
     runtime_settings['tracking'] = True
-    control.ra_set_speed(settings.settings['ra_track_rate'])
+    control.stepper.set_speed_ra(settings.settings['ra_track_rate'])
     return 'Tracking', 200
 
 
@@ -526,7 +525,7 @@ def start_tracking():
 @nocache
 def stop_tracking():
     runtime_settings['tracking'] = False
-    control.ra_set_speed(0)
+    control.stepper.set_speed_ra(0)
     return 'Stopped Tracking', 200
 
 
@@ -552,13 +551,13 @@ def search_object():
             location = None
             if runtime_settings['earth_location_set']:
                 location = runtime_settings['earth_location']
-            coord = astropy.coordinates.get_body(body, astropy.time.Time.now(),
+            coord = astropy.coordinates.get_body(body, AstroTime.now(),
                                                  location=location)
             ra = coord.ra.deg
             dec = coord.dec.deg
-            coord = astropy.coordinates.SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+            coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
             if do_altaz:
-                altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settins['atmos_refract'])
+                altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
                 altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
             else:
                 altaz = {'alt': None, 'az': None}
@@ -585,8 +584,7 @@ def search_object():
     # Alt az
     for ob in dso:
         if do_altaz:
-            coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg,
-                                                 frame='icrs')
+            coord = SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg, frame='icrs')
             altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
             altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
@@ -595,8 +593,7 @@ def search_object():
         ob.append(altaz['az'])
     for ob in stars:
         if do_altaz:
-            coord = astropy.coordinates.SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg,
-                                                 frame='icrs')
+            coord = SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg, frame='icrs')
             altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
             altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
@@ -702,13 +699,15 @@ def manual_control(message):
 
 @app.route('/paa_capture', methods=['POST'])
 @nocache
-def paa_capture():
-    global paa_process
+def paa_capture_post():
     exposure = int(request.form.get('exposure'))
     iso = int(request.form.get('iso'))
-    count = int(request.form.get('count'))
-    delay = float(request.form.get('delay'))
-    calibration = request.form.get('calibration')
+    paa_capture(exposure, iso)
+    return "Capturing", 200
+
+
+def paa_capture(exposure, iso):
+    global paa_process
     with paa_process_lock:
         print('Staring paa process')
         if not paa_process or paa_process.poll() is not None:
@@ -719,16 +718,15 @@ def paa_capture():
                 stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
             #    stderr=subprocess.PIPE)
-            #set_nonblock(paa_process.stdout.fileno())
-            #set_nonblock(paa_process.stderr.fileno())
+            # set_nonblock(paa_process.stdout.fileno())
+            # set_nonblock(paa_process.stderr.fileno())
             t = threading.Thread(target=listen_paa_stdout, args=(paa_process,))
             t.start()
-            #t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
-            #t.start()
+            # t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
+            # t.start()
         time.sleep(2)
         print('Writing to paa process')
-        paa_process.stdin.write(('%d %d %d %f %s\n' % (exposure, iso, count, delay, str(calibration))).encode())
-    return "Capturing", 200
+        paa_process.stdin.write(('%d %d %d %f\n' % (exposure, iso, -1, 0.25)).encode())
 
 
 @app.route('/paa_capture', methods=['DELETE'])
@@ -771,6 +769,8 @@ def listen_paa_stdout(process):
 def main():
     global st_queue, power_thread_quit
     power_thread_quit = False
+    if not settings.settings['power_switch']:
+        power_thread_quit = True
     power_thread = threading.Thread(target=run_power_switch)
     power_thread.start()
     wifiinfo = network.hostapd_read()
@@ -787,6 +787,7 @@ def main():
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
+    paa_capture(1000000 * 10, 800)
 
     print('Running...')
     try:

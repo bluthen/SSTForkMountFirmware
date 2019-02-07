@@ -41,17 +41,18 @@ createAdHocNetwork()
     ip a add 192.168.45.1/24 brd + dev "$wifidev"
     ip link set dev "$wifidev" up
     /root/ctrl_dnsmasq.py wlan0 enable
-    systemctl start hostapd
+    /usr/sbin/hostapd -B /etc/hostapd/hostapd.conf
 }
 
 KillHotspot()
 {
     echo "Shutting Down Hotspot"
-    ip link set dev "$wifidev" down
-    systemctl stop hostapd
+    killall hostapd
     /root/ctrl_dnsmasq.py wlan0 disable 
+    ip link set dev "$wifidev" down
     ip addr flush dev "$wifidev"
     ip link set dev "$wifidev" up
+	sleep 5
 }
 
 ChkWifiUp()
@@ -106,6 +107,7 @@ NoDevice()
 	#if no wifi device,ie usb wifi removed, activate wifi so when it is
 	#reconnected wifi to a router will be available
 	echo "No wifi device connected"
+        killall wpa_supplicant
 	wpa_supplicant -B -i "$wifidev" -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1
 	exit 1
 }
@@ -115,10 +117,11 @@ FindSSID
 #Create Hotspot or connect to valid wifi networks
 if [ "$ssidChk" != "NoSSid" ] 
 then
-       if systemctl status hostapd | grep "(running)" >/dev/null 2>&1
+       if ps auxww | grep hostapd | grep -v grep >/dev/null 2>&1
        then #hotspot running and ssid in range
               KillHotspot
               echo "Hotspot Deactivated, Bringing Wifi Up"
+              killall wpa_supplicant
               wpa_supplicant -B -i "$wifidev" -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1
 	      sleep 10
 	      dhclient -r "$wifidev"; dhclient "$wifidev"
@@ -128,13 +131,14 @@ then
               echo "Wifi already connected to a network"
        else #ssid exists and no hotspot running connect to wifi network
               echo "Connecting to the WiFi Network"
+              killall wpa_supplicant
               wpa_supplicant -B -i "$wifidev" -c /etc/wpa_supplicant/wpa_supplicant.conf >/dev/null 2>&1
 	      sleep 10
 	      dhclient -r "$wifidev"; dhclient "$wifidev"
               ChkWifiUp
        fi
 else #ssid or MAC address not in range
-       if systemctl status hostapd | grep "(running)" >/dev/null 2>&1
+       if ps auxww | grep hostapd | grep -v grep >/dev/null 2>&1
        then
               echo "Hostspot already active"
        elif { wpa_cli status | grep "$wifidev"; } >/dev/null 2>&1

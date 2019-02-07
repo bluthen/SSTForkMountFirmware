@@ -10,8 +10,6 @@ import os
 import sys
 import select
 import datetime
-import shutil
-import img_average
 
 # Version 2 Camera resolution 3280x2464 max 10s exposure
 # Version 1 Camera resolution 2592x1944 max 6s exposure
@@ -22,11 +20,9 @@ CAMERAUNKNOWN = {'version': -1, 'resolution': (0, 0), 'max_exposure': 100}
 ramtmp_count = 0
 
 RAMTMP = '/ramtmp'
-CALTMP = '/caltmp'
 
 if settings.is_simulation():
     RAMTMP = './simulation_files' + RAMTMP
-    CALTMP = './simulation_files' + CALTMP
 
 
 def detect_camera_hardware():
@@ -63,11 +59,8 @@ def delete_files(path):
             pass
 
 
-def ramtmp_generator(camera, count, delay, calibrate_mode):
+def ramtmp_generator(camera, count, delay):
     global ramtmp_count
-
-    if calibrate_mode:
-        delete_files(CALTMP)
 
     stop_capture = False
     i = 0
@@ -76,14 +69,13 @@ def ramtmp_generator(camera, count, delay, calibrate_mode):
         if i == 0:
             print('STATUS First Exposure...', flush=True)
         else:
-            print('STATUS Capturing image %d' % (i + 1,), flush=True)
+            pass
+            # print('STATUS Capturing image %d' % (i + 1,), flush=True)
         yield RAMTMP + '/%d.jpg' % (ramtmp_count)
         ramtmp_count += 1
         old_file = RAMTMP + "/%d.jpg" % (ramtmp_count - 2,)
         if os.path.exists(old_file):
             os.remove(old_file)
-        if calibrate_mode:
-            shutil.copyfile(RAMTMP + "/%d.jpg" % (ramtmp_count - 1), CALTMP + "/%d.jpg" % (ramtmp_count - 1))
         print('LOG ramtmp_generator', flush=True)
         print('CAPTURED ' + str(ramtmp_count - 1), flush=True)
         dt = delay - (datetime.datetime.now() - last).total_seconds()
@@ -105,27 +97,15 @@ def ramtmp_generator(camera, count, delay, calibrate_mode):
                 i = 0
                 count = cmd['count']
                 delay = cmd['delay']
-                calibrate_mode = cmd['calibrate_mode']
         i += 1
         if (count != -1 and i >= count) or line == 'stop':
             stop_capture = True
     print("CAPTUREDONE", flush=True)
-    if calibrate_mode:
-        print('LOG ramtmp_generator calibrating', ramtmp_count, flush=True)
-        print("STATUS Averaging images", flush=True)
-        img_average.average(CALTMP)
-        shutil.copyfile(CALTMP + '/average.jpg', RAMTMP + '/%d.jpg' % (ramtmp_count,))
-        delete_files(CALTMP)
-        ramtmp_count += 1
-        old_file = RAMTMP + "/%d.jpg" % (ramtmp_count - 2,)
-        if os.path.exists(old_file):
-            os.remove(old_file)
-        print('CAPTURED ' + str(ramtmp_count - 1), flush=True)
     print('STATUS Done capturing', flush=True)
     print('LOG ramtmp_generator done', flush=True)
 
 
-def capture(exposure_time=100000, iso=800, count=1, delay=0.25, calibrate_mode=False, camera=None,
+def capture(exposure_time=100000, iso=800, count=1, delay=0.25, camera=None,
             camerainfo=detect_camera_hardware()):
     print('STATUS Setting up camera', flush=True)
     created_camera = False
@@ -146,7 +126,7 @@ def capture(exposure_time=100000, iso=800, count=1, delay=0.25, calibrate_mode=F
         camera.shutter_speed = exposure_time
         camera.framerate = framerate
         print('Starting capture_sequence')
-        camera.capture_sequence(ramtmp_generator(camera, count, delay, calibrate_mode), use_video_port=True)
+        camera.capture_sequence(ramtmp_generator(camera, count, delay), use_video_port=True)
         print('capture sequence done')
         # camera.stop_preview()
     finally:
@@ -160,14 +140,12 @@ def parse_cmd(line):
     # Arg 2: ISO
     # Arg 3: num of exposures (-1 for inf)
     # Arg 4: Delay between exposures (s)
-    # Arg 5: If calibrate mode
     ret = {}
-    if len(sline) == 5:
+    if len(sline) == 4:
         ret['exposure_time'] = int(sline[0])
         ret['iso'] = int(sline[1])
         ret['count'] = int(sline[2])
         ret['delay'] = float(sline[3])
-        ret['calibrate_mode'] = sline[4].lower() == 'true'
         return ret
     return None
 
@@ -179,7 +157,7 @@ def main():
             cmd = parse_cmd(line)
             if cmd:
                 print('LOG cmd:', cmd, flush=True)
-                capture(cmd['exposure_time'], cmd['iso'], cmd['count'], cmd['delay'], cmd['calibrate_mode'], camera)
+                capture(cmd['exposure_time'], cmd['iso'], cmd['count'], cmd['delay'], camera)
             if line.strip() == 'QUIT':
                 return
             line = sys.stdin.readline()

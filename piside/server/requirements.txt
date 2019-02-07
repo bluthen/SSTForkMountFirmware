@@ -1,5 +1,5 @@
 asn1crypto==0.24.0
-astropy==3.1
+astropy==3.1.1
 certifi==2018.11.29
 cffi==1.11.5
 chardet==3.0.4
@@ -19,7 +19,7 @@ itsdangerous==1.1.0
 Jinja2==2.10
 MarkupSafe==1.1.0
 monotonic==1.5
-numpy==1.15.4
+numpy==1.16.1
 pycparser==2.19
 pyOpenSSL==18.0.0
 pyserial==3.4
@@ -30,3 +30,4 @@ six==1.12.0
 urllib3==1.24.1
 Werkzeug==0.14.1
 zeroconf==0.21.3
+picamera==1.13

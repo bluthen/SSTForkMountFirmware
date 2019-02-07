@@ -145,6 +145,20 @@ class SettingsMenuGeneral {
             });
         });
 
+        $('#shutdown_button', this._selfDiv).click(function() {
+            $.ajax({
+                url: '/shutdown',
+                method: 'PUT',
+                success: function () {
+                },
+                error: function (jq, errorstatus, errortxt) {
+                    $('#errorInfoModalTitle').text('Error');
+                    $('#errorInfoModalBody').text(jq.responseText);
+                    $('#errorInfoModal').modal();
+                }
+            });
+        });
+
         $('#settings-color-scheme-default, #settings-color-scheme-nightvision', this._selfDiv).change(() => {
             if ($('#settings-color-scheme-default', this._selfDiv).is(':checked')) {
                 $('#bootstrapcss').attr('href', 'bootstrap/css/bootstrap.min.css');
