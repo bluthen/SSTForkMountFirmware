@@ -21,7 +21,7 @@ sudo raspi-config
 
 sudo reboot
 
-sudo apt install -y python3-pip 
+sudo apt install -y python3-pip git 
 sudo apt install -y libblas-common libblas3 libgfortran3 liblapack3
 apt install -y libatlas3-base
 
@@ -31,7 +31,7 @@ apt install -y libatlas3-base
 
 # in server folder
 sudo pip3 install --upgrade -r requirements.txt 
-sudo easy_install supervisor
+sudo pip3 install pip3 install git+https://github.com/Supervisor/supervisor.git#a0ee8f1026c929ae4d9fc84741924414e8008f49
 # udev teensy files for controller
 sudo cp 49-teensy.rules /etc/udev/rules.d
 
@@ -71,6 +71,7 @@ log-dhcp
 
 
 #Add to rc.local
+
 /usr/local/bin/supervisord -c /etc/supervisord.conf
 /root/networkstartup.sh
 
@@ -80,6 +81,7 @@ cp autohotspot /usr/bin/autohotspot
 #!/bin/sh
 /root/ctrl_dnsmasq.py wlan0 disable
 /root/ctrl_dnsmasq.py check_and_restart
+sleep 5
 /root/autohotspotcron
 
 
@@ -103,3 +105,6 @@ tmpfs /ramtmp tmpfs defaults,size=20m,mode=1777 0 0
 ln -s /home/pi/SSTForkMountFirmware/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
 
 systemctl disable hostapd
+systemctl disable dnsmasq
+/etc/dhcp/dhclient.conf
+  timeout 15

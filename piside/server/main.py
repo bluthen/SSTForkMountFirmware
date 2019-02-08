@@ -32,6 +32,15 @@ from werkzeug.serving import make_ssl_devcert
 
 iers.conf.auto_download = False
 
+
+def correct_dir():
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
+
+
+correct_dir()
+
 paa_process_lock = threading.RLock()
 paa_process = None
 paa_count = 0

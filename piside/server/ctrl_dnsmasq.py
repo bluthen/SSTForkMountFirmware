@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 import sys
-import fileinput
+import shutil
 import subprocess
+import tempfile
+import os
 
 
 def check_and_restart():
@@ -13,6 +15,14 @@ def check_and_restart():
         subprocess.call(['/usr/sbin/service', 'dnsmasq', 'restart'])
     except subprocess.CalledProcessError:
         subprocess.call(['/usr/sbin/service', 'dnsmasq', 'stop'])
+
+
+def check_if_not_started():
+    try:
+        subprocess.check_call(['/usr/bin/pgrep', 'dnsmasq'])
+    except:
+        subprocess.call(['/usr/sbin/service', 'dnsmasq', 'restart'])
+
 
 
 def usage():
@@ -30,24 +40,55 @@ def main():
     if len(sys.argv) == 2 and iface == 'check_and_restart':
         check_and_restart()
     elif len(sys.argv) == 3 and iface in ('wlan0', 'eth0'):
+        dnsmasq="""
+bogus-priv
+%s
+dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
+dhcp-mac=set:client_is_a_pi,B8:27:EB:*:*:*
+dhcp-reply-delay=tag:client_is_a_pi,2
+"""
         enable = sys.argv[2] == 'enable'
-        changed = False
-        for line in fileinput.input('/etc/dnsmasq.conf', inplace=True):
-            line = line.rstrip('\n')
-            findret = line.find('interface=%s' % (iface,))
-            if findret in (0, 1):
-                if findret == 1 and enable:
-                    print('interface=%s' % (iface,))
-                    changed = True
-                elif findret == 0 and not enable:
-                    print('#interface=%s' % (iface,))
-                    changed = True
-                else:
-                    print(line)
-            else:
-                print(line)
-        if changed:
+        if enable:
+            with open('/etc/dnsmasq_iface.%s' % iface, 'w') as f:
+                pass
+        else:
+            try:
+                os.remove('/etc/dnsmasq_iface.%s' % iface)
+            except:
+                pass
+
+        currently_enabled = []
+        with open('/etc/dnsmasq.conf', 'r') as f:
+            for line in f:
+                line = line.strip()
+                findret = line.find('interface=')
+                if findret == 0:
+                    currently_enabled.append(line.split('=')[1])
+
+        wanted_enabled = []
+        for iface2 in ('wlan0', 'eth0'):
+            if os.path.isfile('/etc/dnsmasq_iface.%s' % iface2):
+                wanted_enabled.append(iface2)
+
+        wanted_enabled = set(wanted_enabled)
+        currently_enabled = set(currently_enabled)
+
+        print(wanted_enabled, currently_enabled)
+
+        if wanted_enabled != currently_enabled:
+            s = ''
+            for iface2 in wanted_enabled:
+                s = s+'interface='+iface2+'\n'
+            stemp = tempfile.mkstemp(suffix='dnsmasq')
+            os.close(stemp[0])
+            stemp = [open(stemp[1], 'w'), stemp[1]]
+            stemp[0].write(dnsmasq % s)
+            stemp[0].close()
+            shutil.copyfile(stemp[1], '/etc/dnsmasq.conf')
+            os.remove(stemp[1])
             check_and_restart()
+        elif wanted_enabled:
+            check_if_not_started()
     else:
         usage()
 
