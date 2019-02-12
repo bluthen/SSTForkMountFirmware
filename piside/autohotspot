@@ -40,19 +40,20 @@ createAdHocNetwork()
     ip link set dev "$wifidev" down
     ip a add 192.168.45.1/24 brd + dev "$wifidev"
     ip link set dev "$wifidev" up
-    /root/ctrl_dnsmasq.py wlan0 enable
+    sleep 1
     /usr/sbin/hostapd -B /etc/hostapd/hostapd.conf
+    /root/ctrl_dnsmasq.py wlan0 enable
 }
 
 KillHotspot()
 {
     echo "Shutting Down Hotspot"
+    ip link set dev "$wifidev" down
     killall hostapd
     /root/ctrl_dnsmasq.py wlan0 disable 
-    ip link set dev "$wifidev" down
     ip addr flush dev "$wifidev"
     ip link set dev "$wifidev" up
-	sleep 5
+    sleep 5
 }
 
 ChkWifiUp()
@@ -63,6 +64,7 @@ ChkWifiUp()
         then #Failed to connect to wifi (check your wifi settings, password etc)
 	       echo 'Wifi failed to connect, falling back to Hotspot.'
                wpa_cli terminate "$wifidev" >/dev/null 2>&1
+	       killall wpa_supplicant
 	       createAdHocNetwork
 	fi
 }
@@ -117,7 +119,7 @@ FindSSID
 #Create Hotspot or connect to valid wifi networks
 if [ "$ssidChk" != "NoSSid" ] 
 then
-       if ps auxww | grep hostapd | grep -v grep >/dev/null 2>&1
+       if pgrep hostapd >/dev/null 2>&1
        then #hotspot running and ssid in range
               KillHotspot
               echo "Hotspot Deactivated, Bringing Wifi Up"
@@ -138,7 +140,7 @@ then
               ChkWifiUp
        fi
 else #ssid or MAC address not in range
-       if ps auxww | grep hostapd | grep -v grep >/dev/null 2>&1
+       if pgrep hostapd && pgrep dnsmasq >/dev/null 2>&1
        then
               echo "Hostspot already active"
        elif { wpa_cli status | grep "$wifidev"; } >/dev/null 2>&1

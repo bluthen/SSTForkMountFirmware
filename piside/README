@@ -31,7 +31,7 @@ apt install -y libatlas3-base
 
 # in server folder
 sudo pip3 install --upgrade -r requirements.txt 
-sudo pip3 install pip3 install git+https://github.com/Supervisor/supervisor.git#a0ee8f1026c929ae4d9fc84741924414e8008f49
+
 # udev teensy files for controller
 sudo cp 49-teensy.rules /etc/udev/rules.d
 
@@ -104,7 +104,19 @@ tmpfs /ramtmp tmpfs defaults,size=20m,mode=1777 0 0
 
 ln -s /home/pi/SSTForkMountFirmware/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
 
-systemctl disable hostapd
-systemctl disable dnsmasq
 /etc/dhcp/dhclient.conf
   timeout 15
+
+
+systemctl disable ntp-client.service
+systemctl disable apt-daily.service
+systemctl disable apt-daily-upgrade.service
+systemctl disable dnsmasq.service
+systemctl disable hostapd.service
+systemctl disable bluetooth.service
+
+cp ssteq25.service and autohotspot.service to /etc/systemd/system/
+
+systemctl enable ssteq25
+systemctl enable autohotspot
+

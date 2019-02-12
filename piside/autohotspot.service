@@ -1,0 +1,13 @@
+[Unit]
+Description=Run custom autohotspot service
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root
+ExecStart=/root/networkstartup.sh
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
