@@ -233,8 +233,8 @@ def settings_network_ethernet():
         network.set_ethernet_dhcp_server(dhcp_server)
         network.set_ethernet_static(ip, netmask)
         settings.settings['network']['ip'] = ip
-        settings.settings['network']['netmask'] = ip
-        settings.settings['network']['dhcp_server'] = ip
+        settings.settings['network']['netmask'] = netmask
+        settings.settings['network']['dhcp_server'] = dhcp_server
     return 'Saved', 204
 
 

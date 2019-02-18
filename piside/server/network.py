@@ -3,6 +3,7 @@ import socket
 import re
 import tempfile
 import os
+import time
 
 import simulation_helper
 import settings
@@ -125,6 +126,12 @@ def set_ethernet_dhcp_server(enabled):
             subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
         else:
             subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
+        subprocess.run(['sudo', '/usr/bin/killall', 'wpa_supplicant'])
+        subprocess.run(['sudo', '/bin/systemctl', 'daemon-reload'])
+        subprocess.run(['sudo', '/bin/systemctl', 'restart', 'networking'])
+        time.sleep(25)
+        subprocess.run(['sudo', '/usr/bin/autohotspot'])
+
 
 
 def hostapd_write(ssid, channel, password=None):

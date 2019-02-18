@@ -97,20 +97,22 @@
         </div>
         <div class="tab-pane fade" id="networkSettingsEthernetTab" role="tabpanel">
             <br/>
-            <h3>Ethernet Mode</h3>
-            <div class="btn-group d-flex" role="group" data-toggle="buttons">
-                <label class="btn btn-primary active">
-                    <input type="radio" id="networkSettingsEthernetDHCPServerDisabled"
-                           name="networkSettingsEthernetDHCPServer"
-                           value="false"
-                           autocomplete="off" checked> Disable DHCP Server
-                </label>
-                <label class="btn btn-primary active">
-                    <input type="radio" id="networkSettingsEthernetDHCPServerEnabled"
-                           name="networkSettingsEthernetDHCPServer"
-                           value="true"
-                           autocomplete="off">Enable DHCP Server
-                </label>
+            <div style="display: none">
+                <h3>Ethernet Mode</h3>
+                <div class="btn-group d-flex" role="group" data-toggle="buttons">
+                    <label class="btn btn-primary active">
+                        <input type="radio" id="networkSettingsEthernetDHCPServerDisabled"
+                               name="networkSettingsEthernetDHCPServer"
+                               value="false"
+                               autocomplete="off" checked> Disable DHCP Server
+                    </label>
+                    <label class="btn btn-primary active">
+                        <input type="radio" id="networkSettingsEthernetDHCPServerEnabled"
+                               name="networkSettingsEthernetDHCPServer"
+                               value="true"
+                               autocomplete="off">Enable DHCP Server
+                    </label>
+                </div>
             </div>
             <div>
                 DHCP Client is always enabled but you can also set a static IP.

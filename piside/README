@@ -120,3 +120,7 @@ cp ssteq25.service and autohotspot.service to /etc/systemd/system/
 systemctl enable ssteq25
 systemctl enable autohotspot
 
+
+apt-get install astrometry.net imagemagick
+# copy index-41* data to /usr/share/astrometry
+

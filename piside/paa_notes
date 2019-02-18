@@ -1,0 +1,26 @@
+convert paa_image\ \(1\).jpeg -gravity center -crop 820x616+0+0 crop_half.jpg
+
+time solve-field -D paa_tmp -u degw -L 30 -H 36 crop_half.jpg
+
+time solve-field -D paa_tmp -z 2 crop_half.jpg
+
+time solve-field -D paa_tmp -u degw -H 36 -L 34 -z 2 crop_half.jpg
+
+time solve-field -D paa_tmp -u degw -L 64 -H 66 -E 3 -c 0.03 small.jpg
+
+
+Note down sampling change width
+-z 1 crop_half.jpg gives 33.8
+-z 2 crop_half.jpg gives 35.5
+
+#PLOTTING z1
+
+edit wcs:
+Add 410 to CRPIX1 = 637.199615479
+Add 308 to CRPIX2 = 637.045033773
+
+Set ImageW to 1640
+Set ImageH to 1232
+
+
+plot-constellations -w crop_half.wcs -C -B -b 10 -o test.png

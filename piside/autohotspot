@@ -12,6 +12,8 @@
 #Other setup required find out more at
 #http://www.raspberryconnect.com
 
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 wifidev="wlan0" #device name to use. Default is wlan0.
 #use the command: iw dev ,to see wifi interface name 
 
@@ -36,6 +38,7 @@ ssidsmac=("${ssids[@]}" "${mac[@]}") #combines ssid and MAC for checking
 
 createAdHocNetwork()
 {
+    echo "createAdHocNetwork"
     ip addr flush dev "$wifidev"
     ip link set dev "$wifidev" down
     ip a add 192.168.45.1/24 brd + dev "$wifidev"
@@ -71,20 +74,26 @@ ChkWifiUp()
 
 FindSSID()
 {
+echo "FindSSID"
 #Check to see what SSID's and MAC addresses are in range
 ssidChk=('NoSSid')
 i=0; j=0
 until [ $i -eq 1 ] #wait for wifi if busy, usb wifi is slower.
 do
-        ssidreply=$((iw dev "$wifidev" scan ap-force | egrep "^BSS|SSID:") 2>&1) >/dev/null 2>&1 
+        ssidreply=$((/sbin/iw dev "$wifidev" scan ap-force | egrep "^BSS|SSID:") 2>&1) >/dev/null 2>&1 
+        echo "ssid reply: $ssidreply"
 	if echo "$ssidreply" | grep "No such device (-19)" >/dev/null 2>&1; then
+                echo "NoDevice"
 		NoDevice
 	elif ! echo "$ssidreply" | grep "resource busy (-16)"  >/dev/null 2>&1 ;then
+                echo "resource busy"
 		i=1
 	elif (($j >= 5)); then #if busy 5 times goto hotspot
+                 echo "busy count max"
                  ssidreply=""
 		 i=1
 	else #see if device not busy in 2 seconds
+                echo "busy count"
 		j=$((j + 1))
 		sleep 2
 	fi
@@ -94,10 +103,12 @@ for ssid in "${ssidsmac[@]}"
 do
      if (echo "$ssidreply" | grep "$ssid") >/dev/null 2>&1
      then
+              echo "valid ssid with mac"
 	      #Valid SSid found, passing to script
               ssidChk=$ssid
               return 0
       else
+              echo "no network"
 	      #No Network found, NoSSid issued"
               ssidChk='NoSSid'
      fi
@@ -128,7 +139,7 @@ then
 	      sleep 10
 	      dhclient -r "$wifidev"; dhclient "$wifidev"
               ChkWifiUp
-       elif { wpa_cli -i "$wifidev" status | grep 'ip_address'; } >/dev/null 2>&1
+       elif { wpa_cli -i "$wifidev" status | grep 'ip_address' | grep -v 192.168.45.1$; } >/dev/null 2>&1
        then #Already connected
               echo "Wifi already connected to a network"
        else #ssid exists and no hotspot running connect to wifi network
