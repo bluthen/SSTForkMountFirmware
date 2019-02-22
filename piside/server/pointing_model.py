@@ -184,12 +184,23 @@ class PointingModel:
             (50.08108010292904, 94.4534133318961)
         """
         self.__sync_points = []
+        self.__model = '3point'
         # Distance matrix for sync_points
         # https://en.wikipedia.org/wiki/Distance_matrix
         #: distance matrix created with sync_points
         self.__distance_matrix = []
         self.__triangles = []
         self.debug = False
+
+    def get_from_points(self):
+        ret = []
+        for point in self.__sync_points:
+            ret.append(point['from_point'])
+        return ret
+
+    def set_model(self, model):
+        if model in ['single', '1point', '2point', '3point']:
+            self.__model = model
 
     def add_point(self, from_point, to_point):
         """
@@ -290,7 +301,7 @@ class PointingModel:
         if len(self.__sync_points) >= 3:
             triangle = find_triangle(proj_coord, self.__sync_points, self.__triangles)
         # Find trangle it is in
-        if triangle:
+        if self.__model == '3point' and triangle:
             # TODO: Or should affine be done in sync?
             # Calculate affine function from triangle
             # TODO: Can this fail?
@@ -304,23 +315,44 @@ class PointingModel:
             if len(self.__sync_points) >= 2:
                 # Get nearest two_points
                 near_two = self.__get_two_closest_sync_points_idx(point)
-                # Just use scale and offset.
-                from_npa = numpy.array(get_projection_coords(near_two, self.__sync_points, 'from_projection'))
-                to_npa = numpy.array(get_projection_coords(near_two, self.__sync_points, 'to_projection'))
 
-                A = numpy.array([[from_npa[0][0], 0, 1.0, 0],
-                                 [from_npa[1][0], 0, 1, 0],
-                                 [0, from_npa[0][1], 0, 1],
-                                 [0, from_npa[1][1], 0, 1.0]])
-                b = numpy.array([[to_npa[0][0]],
-                                 [to_npa[1][0]],
-                                 [to_npa[0][1]],
-                                 [to_npa[1][1]]])
-                x = numpy.linalg.solve(A, b)
-                # print(proj_coord, x)
-                transformed_projection = [proj_coord['x'] * x[0][0] + x[2][0], proj_coord['y'] * x[1][0] + x[3][0]]
-                to_point = inverse_altaz_projection({'x': transformed_projection[0], 'y': transformed_projection[1]})
-                return to_point
+                if self.__model in ['2point', '3point']:
+                    # Just use scale and offset.
+                    from_npa = numpy.array(get_projection_coords(near_two, self.__sync_points, 'from_projection'))
+                    to_npa = numpy.array(get_projection_coords(near_two, self.__sync_points, 'to_projection'))
+
+                    A = numpy.array([[from_npa[0][0], 0, 1.0, 0],
+                                     [from_npa[1][0], 0, 1, 0],
+                                     [0, from_npa[0][1], 0, 1],
+                                     [0, from_npa[1][1], 0, 1.0]])
+                    b = numpy.array([[to_npa[0][0]],
+                                     [to_npa[1][0]],
+                                     [to_npa[0][1]],
+                                     [to_npa[1][1]]])
+                    x = numpy.linalg.solve(A, b)
+                    # print(proj_coord, x)
+                    transformed_projection = [proj_coord['x'] * x[0][0] + x[2][0], proj_coord['y'] * x[1][0] + x[3][0]]
+                    to_point = inverse_altaz_projection(
+                        {'x': transformed_projection[0], 'y': transformed_projection[1]})
+                    return to_point
+                else:
+                    # for 1 point use simple offsets
+                    fp = self.__sync_points[near_two[0]]['from_point']
+                    tp = self.__sync_points[near_two[0]]['to_point']
+                    dalt = tp.alt.deg - fp.alt.deg
+                    daz = tp.az.deg - fp.az.deg
+                    new_alt = point.alt.deg + dalt
+                    if new_alt > 90.0:
+                        new_alt = 180.0 - new_alt
+                    elif new_alt < -90.0:
+                        new_alt = -180.0 - new_alt
+                    new_az = point.az.deg + daz
+                    if new_az > 360.0:
+                        new_az = new_az - 360.0
+                    elif new_az < 0:
+                        new_az = 360 + new_az
+                    return SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
+
             elif len(self.__sync_points) == 1:
                 # TODO: Or two point failed get nearest point
                 # Just normal stepper slew using point as sync_point

@@ -5,6 +5,7 @@ import SettingsMenuLocation from './SettingsMenuLocation.js'
 import SettingsMenuNetwork from './SettingsMenuNetwork.js'
 import SettingsMenuPolarAlignAssist from './SettingsMenuPolarAlignAssist';
 import SettingsMenuHorizonLimit from './SettingsMenuHorizonLimit';
+import SettingsMenuPointModel from './SettingsMenuPointModel';
 
 import template from './templates/SettingsMenu.html'
 
@@ -22,6 +23,7 @@ class SettingsMenu {
         this.settingsMenuNetwork = new SettingsMenuNetwork(settingsMenuDiv);
         this.settingsMenuHorizonLimit = new SettingsMenuHorizonLimit(App, settingsMenuDiv);
         this.settingsMenuPolarAlignAssist = new SettingsMenuPolarAlignAssist(App, settingsMenuDiv, directionsControls);
+        this.settingsMenuPointModel = new SettingsMenuPointModel(this.settingsMenuControls.slewing, settingsMenuDiv);
 
         const hideAll = () => {
             $('#settings_menu_content li', _selfDiv).removeClass('active');
@@ -31,6 +33,7 @@ class SettingsMenu {
             this.settingsMenuNetwork.hide();
             this.settingsMenuHorizonLimit.hide();
             this.settingsMenuPolarAlignAssist.hide();
+            this.settingsMenuPointModel.hide();
         };
 
         // Controls
@@ -83,6 +86,14 @@ class SettingsMenu {
             this.settingsMenuPolarAlignAssist.show();
         };
 
+        const pointingmodel = () => {
+            hideAll();
+            $('#settings_menu_pointingmodel', _selfDiv).parent().addClass('active');
+            $('#settings_menu_content', _selfDiv).collapse('hide');
+            menuHeader.text('Pointing Model');
+            this.settingsMenuPointModel.show();
+        };
+
         const hashChange = (e) => {
             const hash = location.hash;
             if (hash === '#settings_menu_controls') {
@@ -97,6 +108,8 @@ class SettingsMenu {
                 horizon();
             } else if (hash === '#settings_menu_polaralignassist') {
                 polaralignassist();
+            } else if (hash === '#settings_menu_pointingmodel') {
+                pointingmodel();
             } else {
                 controls();
             }

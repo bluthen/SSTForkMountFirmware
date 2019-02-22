@@ -211,7 +211,7 @@ def convert_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=F
 
 
 def clean_altaz(altaz):
-    return SkyCoord(alt=altaz.alt.deg*u.deg, az=altaz.az.deg*u.deg, frame='altaz')
+    return SkyCoord(alt=altaz.alt.deg * u.deg, az=altaz.az.deg * u.deg, frame='altaz')
 
 
 def send_status():
@@ -739,11 +739,11 @@ def sync(coord):
     # coord to altaz
     obstime = AstroTime.now()
     if hasattr(coord, 'alt'):
-        altaz=coord
+        altaz = coord
     else:
         altaz = convert_to_altaz(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
-    if not park_sync and pm_real_stepper.size() > 0:
-        altaz=clean_altaz(altaz)
+    if settings.settings['pointing_model'] != 'single' and not park_sync and pm_real_stepper.size() > 0:
+        altaz = clean_altaz(altaz)
         pt.mark('control.sync 1a')
         stepper_altaz = get_stepper_altaz(status, obstime)
         stepper_altaz = clean_altaz(stepper_altaz)
@@ -761,6 +761,8 @@ def sync(coord):
         altaz = clean_altaz(altaz)
         pm_real_stepper.clear()
         pm_stepper_real.clear()
+        pm_real_stepper.set_model(settings.settings['pointing_model'])
+        pm_stepper_real.set_model(settings.settings['pointing_model'])
         pm_real_stepper.add_point(altaz, altaz)
         pm_stepper_real.add_point(altaz, altaz)
     pt.mark('control.sync done')
@@ -857,8 +859,8 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_steps_per_degr
         >>> int(steps['dec']), int(steps['ra'])
         (3777, -2301)
     """
-    d_ra = ra_deg_d(ra_deg_time2(sync_info['coords'].ra.deg, sync_info['time'], wanted_time),
-                    wanted_skycoord.ra.deg)
+    d_ra = ra_deg_d(
+        ra_deg_time2(sync_info['coords'].ra.deg, sync_info['time'], wanted_time), wanted_skycoord.ra.deg)
     d_dec = wanted_skycoord.dec.deg - sync_info['coords'].dec.deg
 
     steps_ra = sync_info['steps']['ra'] - (d_ra * ra_steps_per_degree)
@@ -869,7 +871,7 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_steps_per_degr
     #                           dec=sync_info['coords'].dec.deg * u.deg, frame='icrs')
     # dra, ddec = adj_sync_coord.spherical_offsets_to(wanted_skycoord)
 
-    # steps_ra = sync_info['steps']['ra'] - (dra.deg * (ra_track_rate / SIDEREAL_RATE))
+    # steps_ra = sync_info['steps']['ra'] - (dra.deg * (ra_steps_per_degree))
     # steps_dec = sync_info['steps']['dec'] + (ddec.deg * dec_ticks_per_degree)
 
     return {'ra': steps_ra, 'dec': steps_dec}

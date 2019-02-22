@@ -1,0 +1,19 @@
+<div class="settings-menu-horizon-limit container-fluid">
+    <div class="form-group">
+        <div>Changing the model will also clear sync points.</div>
+        <label for="pointModelSelect">Pointing Model</label>
+        <select class="form-control" id="pointModelSelect">
+            <option value="single">Single sync point</option>
+            <option value="1point">Nearest one sync point</option>
+            <option value="2point">Nearest two sync Point</option>
+            <option value="3point">Inside three sync point</option>
+        </select>
+        <br/>
+        <button id="pointModelSave" type="button" class="btn btn-warn">Change Model</button>&nbsp;
+        <br/><br/>
+        <button id="pointModelClearSync" type="button" class="btn btn-error"><i class="fas fa-sync" alt="Clear Sync Points"></i>Clear Sync Points
+        </button>&nbsp;
+    </div>
+    <br/>
+    <canvas id="pointModelCanvas" width="620" height="620"></canvas>
+</div>

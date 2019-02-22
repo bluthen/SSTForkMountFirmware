@@ -1,6 +1,7 @@
 {
   "dec_ticks_per_degree": 177.7777,
   "ra_ticks_per_degree": 4320.00188221,
+  "pointing_model": "3point",
   "microserial": {
     "baud": 115200,
     "port": "/dev/serial1"

@@ -377,6 +377,15 @@ def set_location():
     return 'Set Location', 200
 
 
+@app.route('/sync', methods=['GET'])
+@nocache
+def get_sync_points():
+    ret = []
+    for point in control.pm_real_stepper.get_from_points():
+        ret.append({'alt': point.alt.deg, 'az': point.az.deg})
+    return jsonify(ret)
+
+
 @app.route('/sync', methods=['DELETE'])
 @nocache
 def clear_sync():
@@ -403,6 +412,19 @@ def do_sync():
         coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     control.sync(coord)
     return jsonify({'text': 'Sync Points: ' + str(control.pm_real_stepper.size())})
+
+
+@app.route('/sync', methods=['POST'])
+@nocache
+def post_sync():
+    model = request.form.get('model', None)
+    if model not in ['single', '1point', '2point', '3point']:
+        return 'Invalid model', 400
+    # Set models
+    control.clear_sync()
+    settings.settings['pointing_model'] = model
+    settings.write_settings(settings.settings)
+    return 'Pointing Model Set', 200
 
 
 @app.route('/slewto', methods=['PUT'])

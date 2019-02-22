@@ -1,4 +1,5 @@
 import settings
+import subprocess
 
 if settings.is_simulation():
     from simulation_helper import PiCamera
@@ -150,7 +151,18 @@ def parse_cmd(line):
     return None
 
 
+def rm_in_dir(dir):
+    for the_file in os.listdir(dir):
+        file_path = os.path.join(dir, the_file)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print(e)
+
+
 def main():
+    rm_in_dir(RAMTMP)
     line = sys.stdin.readline()
     with get_camera() as camera:
         while line != '':
