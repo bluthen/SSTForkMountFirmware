@@ -22,6 +22,33 @@ function calculateCircle(A, B, C) {
     return {center: center, radius: radius};
 }
 
+function forwardEvents(from, to) {
+    from.addEventListener('mousedown', function (e) {
+        const new_e = new e.constructor(e.type, e);
+        to.dispatchEvent(new_e);
+    });
+    from.addEventListener('mouseup', function (e) {
+        const new_e = new e.constructor(e.type, e);
+        to.dispatchEvent(new_e);
+    });
+    from.addEventListener('touchstart', function (e) {
+        const new_e = new e.constructor(e.type, e);
+        to.dispatchEvent(new_e);
+    });
+    from.addEventListener('touchend', function (e) {
+        const new_e = new e.constructor(e.type, e);
+        to.dispatchEvent(new_e);
+    });
+    from.addEventListener('keyup', function (e) {
+        const new_e = new e.constructor(e.type, e);
+        to.dispatchEvent(new_e);
+    });
+    from.addEventListener('keydown', function (e) {
+        const new_e = new e.constructor(e.type, e);
+        to.dispatchEvent(new_e);
+    });
+}
+
 
 class SettingsMenuPolarAlignAssist {
     constructor(App, parentDiv, directionControls) {
@@ -51,13 +78,26 @@ class SettingsMenuPolarAlignAssist {
         this._circles = [];
         this._dataCanvas = document.createElement('canvas');
         this._dataCanvasContext = this._dataCanvas.getContext('2d');
-        this._overlayImage = new createjs.Bitmap("1533416531_work.png");
+        this._overlayImage = new createjs.Bitmap("paa_overlay.png");
         this._overlayImageReg = [906, 728];
+        this._overlayImagePolarisTheta = null;
+        fetch('paa_overlay.json').then((response) => {
+            return response.json();
+        }).then((j) => {
+            this._overlayImageReg = j.ncp_xy;
+            this._overlayImagePolarisTheta = j.polaris_theta;
+        }, (err) => {
+            console.error(err);
+        });
+        this._solveImage = null;
+        this._solveImageCount = 0;
+        this._solveImageInfo = null;
+        this._lastSolveImageCount = 0;
         this._stage = new createjs.Stage(this._$canvas[0]);
         this._stage.update();
         $('#settings_polar_align_assist_exposure_time', this._selfDiv).change(_.debounce(this._exposureTimeChange_event.bind(this), 500));
         $('#settings_polar_align_assist_iso', this._selfDiv).change(_.debounce(this._isoChange_event.bind(this), 500));
-        $('#settings_polar_align_assist_zoom, #settings_polar_align_assist_rotation, #settings_polar_align_assist_overlay_opacity', this._selfDiv).change(this._update.bind(this));
+        $('#settings_polar_align_assist_zoom, #settings_polar_align_assist_rotation, #settings_polar_align_assist_overlay_opacity, #settings_polar_align_assist_solve_opacity', this._selfDiv).change(this._update.bind(this));
         $('#settings_polar_align_assist_save', this._selfDiv).click(this._saveClick_event.bind(this));
         $('#settings_polar_align_assist_find_rotation_axis', this._selfDiv).click(() => {
             const coords = JSON.parse($('#settings_polar_align_assist_dev_coords', this._selfDiv).val());
@@ -76,7 +116,61 @@ class SettingsMenuPolarAlignAssist {
                 this.show();
             }
         });
+
+        //Canvas side buttons
+        forwardEvents($('#polar_align_canvas_zoom_plus', this._selfDiv)[0], $('.btn-increment', $('#settings_polar_align_assist_zoom', this._selfDiv).parent())[0]);
+        forwardEvents($('#polar_align_canvas_zoom_minus', this._selfDiv)[0], $('.btn-decrement', $('#settings_polar_align_assist_zoom', this._selfDiv).parent())[0]);
+        forwardEvents($('#polar_align_canvas_rotation_plus', this._selfDiv)[0], $('.btn-increment', $('#settings_polar_align_assist_rotation', this._selfDiv).parent())[0]);
+        forwardEvents($('#polar_align_canvas_rotation_minus', this._selfDiv)[0], $('.btn-decrement', $('#settings_polar_align_assist_rotation', this._selfDiv).parent())[0]);
+
+        setInterval(() => {
+            if (this._selfDiv.is(':visible')) {
+                this._solve();
+            }
+        }, 25000);
         App.socket.on('paa_capture_response', this._socketCaptureResponse_event.bind(this));
+        App.socket.on('paa_solve_done', this._solveDone.bind(this));
+
+    }
+
+    _solve() {
+        $.ajax({
+            url: '/paa_solve',
+            method: 'POST',
+            data: {
+                low: $('#settings_polar_align_assist_solve_width_low', this._selfDiv).val(),
+                high: $('#settings_polar_align_assist_solve_width_high', this._selfDiv).val(),
+                pixel_error: $('#settings_polar_align_assist_solve_pixel_error', this._selfDiv).val(),
+                code_tolerance: $('#settings_polar_align_assist_solve_code_tolerance', this._selfDiv).val()
+            }
+        });
+    }
+
+    _solveDone() {
+        $.ajax({
+            url: '/paa_solve_info', dataType: 'json', method: 'GET', success: (d) => {
+                const image = new Image();
+                const sic = this._solveImageCount;
+                image.onload = () => {
+                    if (sic === this._solveImageCount) {
+                        this._solveImageCount++;
+                        this._solveImageInfo = d;
+                        if ($('#settings_polar_align_assist_solve_auto_rotate', this._selfDiv).is(':checked') && this._overlayImagePolarisTheta && d.polaris_theta) {
+                            let rdegrees = 180.0 / Math.PI * (d.polaris_theta - this._overlayImagePolarisTheta);
+                            if (rdegrees < 0) {
+                                rdegrees += 360.0;
+                            }
+                            //TODO: Set rotation input to rdegrees if option is checked to do that.
+                            $('#settings_polar_align_assist_rotation', this._selfDiv).val(rdegrees);
+                        }
+                        this._solveImage = new createjs.Bitmap(image);
+                        $('div[name="paa_solve"]', this._selfDiv).text('Last Solve: ' + parseFloat(d.solve_time).toFixed(1) + 's, ' + d.last_solve)
+                        this._update();
+                    }
+                };
+                image.src = "/paa_solve_image?ts=" + new Date().getTime();
+            }
+        });
     }
 
     _exposureTimeChange_event() {
@@ -162,7 +256,7 @@ class SettingsMenuPolarAlignAssist {
         }, 2000);
         // console.log('got socket paa_capture_response', msg);
         if (msg.hasOwnProperty('status')) {
-            $('[name="paa_status"]', this._selfDiv).text('Last Status: ' + msg.status+ ', ' + new Date());
+            $('[name="paa_status"]', this._selfDiv).text('Last Status: ' + msg.status + ', ' + new Date());
         } else {
             $('[name="paa_status"]', this._selfDiv).text('Last Status: Exposure ' + msg.paa_count + ', ' + new Date());
             const image = new Image();
@@ -208,6 +302,9 @@ class SettingsMenuPolarAlignAssist {
     }
 
     _update() {
+        $('#polar_align_canvas_rotation_label', this._selfDiv).text(parseFloat($('#settings_polar_align_assist_rotation', this._selfDiv).val()).toFixed(1) + '%');
+        $('#polar_align_canvas_zoom_label', this._selfDiv).html($('#settings_polar_align_assist_zoom', this._selfDiv).val() + '&deg;');
+
         this._stage.removeAllChildren();
         this._stage.clear();
         this._canvasSize = [this._$canvas.width(), this._$canvas.height()];
@@ -232,11 +329,18 @@ class SettingsMenuPolarAlignAssist {
             this._cameraImage.x = this._canvasSize[0] / 2;
             this._cameraImage.y = this._canvasSize[1] / 2;
         }
+        if (this._solveImage) {
+            this._solveImage.setTransform(0, 0, transform.scale, transform.scale, 0, 0, 0, this._cameraRotationXY[0], this._cameraRotationXY[1]);
+            this._solveImage.x = this._canvasSize[0] / 2;
+            this._solveImage.y = this._canvasSize[1] / 2;
+            this._solveImage.alpha = parseFloat($('#settings_polar_align_assist_solve_opacity', this._selfDiv).val()) / 100.0;
+        }
         this._overlayImage.setTransform(0, 0, transform.scale, transform.scale, transform.rotation, 0, 0, this._overlayImageReg[0], this._overlayImageReg[1]);
         this._overlayImage.x = this._canvasSize[0] / 2.0;
         this._overlayImage.y = this._canvasSize[1] / 2.0;
         this._overlayImage.alpha = parseFloat($('#settings_polar_align_assist_overlay_opacity', this._selfDiv).val()) / 100.0;
         this._stage.addChild(this._cameraImage);
+        this._stage.addChild(this._solveImage);
         for (let i = 0; i < markers.length; i++) {
             this._stage.addChild(markers[i]);
         }

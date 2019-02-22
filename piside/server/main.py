@@ -27,6 +27,7 @@ import settings
 import sstchuck
 import network
 import sys
+from solver import Solver
 
 from werkzeug.serving import make_ssl_devcert
 
@@ -715,6 +716,35 @@ def paa_capture_post():
     return "Capturing", 200
 
 
+@app.route('/paa_solve', methods=['POST'])
+@nocache
+def paa_solve_post():
+    global solver
+    solver.low = float(request.form.get('low'))
+    solver.high = float(request.form.get('high'))
+    solver.pixel_error = int(request.form.get('pixel_error'))
+    solver.code_tolerance = float(request.form.get('code_tolerance'))
+    solver.queue = True
+    return "Solving Queued", 200
+
+
+@app.route('/paa_solve_image', methods=['GET'])
+@nocache
+def paa_solve_image():
+    img = 'solved.png'
+    if settings.is_simulation():
+        return send_from_directory('./simulation_files/ramtmp', img)
+    else:
+        return send_from_directory('/ramtmp', img)
+
+
+@app.route('/paa_solve_info', methods=['GET'])
+@nocache
+def paa_solve_info():
+    ret = solver.get_last_solved_info()
+    return jsonify(ret)
+
+
 def paa_capture(exposure, iso):
     global paa_process
     with paa_process_lock:
@@ -747,6 +777,15 @@ def paa_capture_stop():
     return 'Stopping', 200
 
 
+def paa_image_path():
+    global paa_count
+    img = '%d.jpg' % (paa_count,)
+    if settings.is_simulation():
+        return os.path.join('./simulation_files/ramtmp', img)
+    else:
+        return os.path.join('/ramtmp', img)
+
+
 @app.route('/paa_image', methods=['GET'])
 @nocache
 def paa_image():
@@ -767,6 +806,8 @@ def listen_paa_stdout(process):
         if len(sline) == 2 and sline[0] == 'CAPTURED':
             paa_count = int(sline[1])
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
+            if solver.queue and not solver.running():
+                solver.solve(paa_image_path())
         elif sline[0] == 'CAPTUREDONE':
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
         elif sline[0] == 'STATUS':
@@ -775,8 +816,23 @@ def listen_paa_stdout(process):
             print('polar_align_assist.py:', line)
 
 
+def solver_log_cb(msg):
+    socketio.emit('paa_solve_log', {'msg': msg})
+
+
+def solver_done_cb(status):
+    socketio.emit('paa_solve_done', {'status': status})
+
+
 def main():
-    global st_queue, power_thread_quit
+    global st_queue, power_thread_quit, solver
+    if settings.is_simulation():
+        solver_tmp = './simulation_files/ramtmp/solver'
+        solved_plot_path = './simulation_files/ramtmp/solved.png'
+    else:
+        solver_tmp = '/ramtmp/solver'
+        solved_plot_path = '/ramtmp/solved.png'
+    solver = Solver(solver_tmp, solver_log_cb, solver_done_cb, solved_plot_path)
     power_thread_quit = False
     if not settings.settings['power_switch']:
         power_thread_quit = True
