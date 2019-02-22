@@ -156,7 +156,7 @@ def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
+    keys = ["ra_track_rate", "ra_ticks_per_degree", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
             "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"
@@ -183,7 +183,7 @@ def settings_put():
 
     keys = ["color_scheme", "atmos_refract", "ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest", "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium",
-            "dec_slew_slower", "dec_slew_slowest", "dec_ticks_per_degree", "time_autosync",
+            "dec_slew_slower", "dec_slew_slowest", "ra_ticks_per_degree", "dec_ticks_per_degree", "time_autosync",
             "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"]
     for key in keys:
         if key in args:
@@ -488,7 +488,7 @@ def set_park_position():
         return 'You must set location before setting park position.', 400
     status = control.stepper.get_status()
     coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                      AstroTime.now(), settings.settings['ra_track_rate'],
+                                      AstroTime.now(), settings.settings['ra_ticks_per_degree'],
                                       settings.settings['dec_ticks_per_degree'])
     altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
     settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}

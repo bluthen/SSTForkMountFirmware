@@ -226,7 +226,7 @@ def send_status():
     status['synced'] = runtime_settings['sync_info'] is not None
     if status['synced']:
         coord = steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                  AstroTime.now(), settings.settings['ra_track_rate'],
+                                  AstroTime.now(), settings.settings['ra_ticks_per_degree'],
                                   settings.settings['dec_ticks_per_degree'])
         stepper_altaz = convert_to_altaz(coord, atmo_refraction=False)
         stepper_altaz = clean_altaz(stepper_altaz)
@@ -420,7 +420,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             dec_close_enough = 0
         else:
             need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
-                                                   settings.settings['ra_track_rate'],
+                                                   settings.settings['ra_ticks_per_degree'],
                                                    settings.settings['dec_ticks_per_degree'])
         last_datetime = datetime.datetime.now()
         started_slewing = last_datetime
@@ -429,7 +429,7 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
         while not cancel_slew:
             if not parking:
                 need_step_position = skycoord_to_steps(sync_info, wanted_skycoord, AstroTime.now(),
-                                                       settings.settings['ra_track_rate'],
+                                                       settings.settings['ra_ticks_per_degree'],
                                                        settings.settings['dec_ticks_per_degree'])
             now = datetime.datetime.now()
             status = stepper.get_status()
@@ -709,7 +709,7 @@ def ra_deg_time2(ra_deg, time1, time2):
 def get_stepper_altaz(status, obstime=AstroTime.now()):
     if runtime_settings['sync_info']:
         coord = steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                  obstime, settings.settings['ra_track_rate'],
+                                  obstime, settings.settings['ra_ticks_per_degree'],
                                   settings.settings['dec_ticks_per_degree'])
         altaz = convert_to_altaz(coord)
         return altaz
@@ -805,7 +805,7 @@ def ra_deg_d(started_angle, end_angle):
 
 def two_sync_calc_error(last_sync, current_sync):
     steps = skycoord_to_steps(last_sync, current_sync['coords'], current_sync['time'],
-                              settings.settings['ra_track_rate'],
+                              settings.settings['ra_ticks_per_degree'],
                               settings.settings['dec_ticks_per_degree'])
     ra_ther = steps['ra'] - last_sync['steps']['ra']
     ra_exp = current_sync['steps']['ra'] - last_sync['steps']['ra']
@@ -826,7 +826,7 @@ def two_sync_calc_error(last_sync, current_sync):
     }
 
 
-def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree):
+def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_steps_per_degree, dec_ticks_per_degree):
     """
     Gives steps needed to be at wanted_skycoord right now.
     :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord,
@@ -836,8 +836,8 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
     :type wanted_skycoord: astropy.coordinates.SkyCoord
     :param wanted_time: Time when wanting to be at wanted_skycoord
     :type wanted_time: astropy.time.Time
-    :param ra_track_rate: The track rate in steps per second.
-    :type ra_track_rate: float
+    :param ra_steps_per_degree: The number of steps per degree for RA.
+    :type ra_steps_per_degree: float
     :param dec_ticks_per_degree: The steps per degree for dec.
     :type dec_ticks_per_degree: float
     :return: {'ra': steps_int, 'dec': steps_int}
@@ -852,8 +852,8 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
         >>> wanted_skycoord = SkyCoord(ra=181.0*u.deg, dec=-10.0*u.deg, frame='icrs')
         >>> wanted_time = AstroTime("2018-01-01T01:01:02Z", format='isot')
         >>> dec_ticks_per_degree=177.7777
-        >>> ra_track_rate=18.04928
-        >>> steps = control.skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, dec_ticks_per_degree)
+        >>> ra_steps_per_degree=18.04928*control.SIDEREAL_RATE
+        >>> steps = control.skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_steps_per_degree, dec_ticks_per_degree)
         >>> int(steps['dec']), int(steps['ra'])
         (3777, -2301)
     """
@@ -861,7 +861,7 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
                     wanted_skycoord.ra.deg)
     d_dec = wanted_skycoord.dec.deg - sync_info['coords'].dec.deg
 
-    steps_ra = sync_info['steps']['ra'] - (d_ra * (ra_track_rate / SIDEREAL_RATE))
+    steps_ra = sync_info['steps']['ra'] - (d_ra * ra_steps_per_degree)
     steps_dec = sync_info['steps']['dec'] + (d_dec * dec_ticks_per_degree)
 
     # astropy way
@@ -875,7 +875,7 @@ def skycoord_to_steps(sync_info, wanted_skycoord, wanted_time, ra_track_rate, de
     return {'ra': steps_ra, 'dec': steps_dec}
 
 
-def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degree):
+def steps_to_skycoord(sync_info, steps, stime, ra_ticks_per_degree, dec_ticks_per_degree):
     """
     Gets sky coordinates if we are at steps right now.
     :param sync_info: has keys 'time': astropy.time.Time, 'coords': astropy.coordinates.SkyCoord,
@@ -885,8 +885,8 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
     :type steps: dict
     :param stime: Time that goes with steps
     :type stime: astropy.time.Time
-    :param ra_track_rate: Calculate using steps per sidereal second.
-    :type: ra_track_rate: float
+    :param ra_ticks_per_degree: Amount of steps in RA per degree.
+    :type: ra_ticks_per_degree: float
     :param dec_ticks_per_degree: Calculate using steps per degree
     :type: float
     :return: the coordinates
@@ -901,14 +901,14 @@ def steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degr
         ... 'steps': {'ra': 2000, 'dec': 2000} }
         >>> stime = AstroTime("2018-01-01T01:01:01Z", format='isot')
         >>> dec_ticks_per_degree=177.7777
-        >>> ra_track_rate=18.04928
+        >>> ra_steps_per_degree=18.04928*control.SIDEREAL_RATE
         >>> steps = {'dec': 3777.777, 'ra': -2319.99948876672}
-        >>> coord = control.steps_to_skycoord(sync_info, steps, stime, ra_track_rate, dec_ticks_per_degree)
+        >>> coord = control.steps_to_skycoord(sync_info, steps, stime, ra_steps_per_degree, dec_ticks_per_degree)
         >>> coord.ra.deg, coord.dec.deg
         (181.0, -10.0)
     """
 
-    d_ra = (steps['ra'] - sync_info['steps']['ra']) / (ra_track_rate / SIDEREAL_RATE)
+    d_ra = (steps['ra'] - sync_info['steps']['ra']) / ra_ticks_per_degree
     d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_ticks_per_degree
     ra_deg = ra_deg_time2(sync_info['coords'].ra.deg, sync_info['time'], stime) - d_ra
     ra_deg = clean_deg(ra_deg)
