@@ -1,5 +1,5 @@
-const color = "#FF0000";
-const RADIUS = 7;
+const color = "#c10064";
+const RADIUS = 4;
 
 class Point {
     constructor(parent, readonly) {
