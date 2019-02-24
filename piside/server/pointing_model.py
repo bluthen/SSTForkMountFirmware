@@ -29,6 +29,9 @@ def inverse_altaz_projection(xy_coord):
     caz = numpy.arctan2(y, x) * 180.0 / math.pi
     az = 90 - caz
     r = x / numpy.cos(caz * math.pi / 180.0)
+    # TODO: When r is < 0, is this the right move.
+    if r < 0.0:
+        r = 0.0
     alt = 90.0 * (1.0 - r)
     return SkyCoord(alt=alt, az=az, unit='deg', frame='altaz')
 
