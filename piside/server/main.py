@@ -58,6 +58,8 @@ conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
 runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
                     'tracking': True}
 
+pointing_logger = settings.get_logger('pointing')
+
 
 # Sets up power switch
 # TODO: disable power switch for simulation
@@ -131,7 +133,7 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.11"})
+    return jsonify({"version": "0.0.12"})
 
 
 @app.route('/settings')
@@ -150,13 +152,23 @@ def shutdown_put():
     return 'Shutdown', 204
 
 
+@app.route('/logger', methods=['GET'])
+@nocache
+def logger_get():
+    logger_name = request.args.get('name')
+    if logger_name == 'pointing':
+        pointing_logger.handlers[0].flush()
+        return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
+
+
 @app.route('/settings', methods=['PUT'])
 @nocache
 def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "ra_ticks_per_degree", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
+    keys = ["ra_track_rate", "ra_ticks_per_degree", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster",
+            "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
             "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"
@@ -446,12 +458,14 @@ def do_slewto():
         alt = float(alt)
         az = float(az)
         altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+        pointing_logger.debug('Slewto target: ' + str(altaz))
         # parking = True
     else:
         ra = float(ra)
         dec = float(dec)
         radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
         altaz = control.convert_to_altaz(radec)
+        pointing_logger.debug('Slewto target: ' + str(radec) + ' -> ' + str(altaz))
     if not control.slewtocheck(altaz):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
@@ -874,7 +888,7 @@ def main():
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
-    paa_capture(1000000 * 10, 800)
+    paa_capture(1000000 * 9.99, 800)
 
     print('Running...')
     try:

@@ -2,6 +2,8 @@ import json
 import fasteners
 import threading
 import os
+import logging
+
 _lock = threading.RLock()
 _plock = threading.RLock()
 
@@ -57,3 +59,24 @@ def parked():
 
 
 settings = read_settings()
+
+
+def get_logger(name):
+    logger = logging.getLogger(name)
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    p = os.path.join(dname, 'logs')
+    if not os.path.exists(p):
+        os.makedirs(p)
+    p = os.path.join(p, name + '.log')
+    if len(logger.handlers) == 0:
+        try:
+            if os.stat(p).st_size > 10000000:
+                os.remove(p)
+        except:
+            pass
+        handler = logging.FileHandler(p)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+    return logger

@@ -180,22 +180,6 @@ class SettingsMenuGeneral {
             }
         });
 
-        $('#settings-atmospheric-refraction-enabled, #settings-atmospheric-refraction-disabled', this._selfDiv).change(() => {
-            if($('#settings-atmospheric-refraction-enabled', this._selfDiv).is(':checked')) {
-                $.ajax({
-                    url: '/settings',
-                    method: 'PUT',
-                    data: {'settings': JSON.stringify({atmos_refract: true})}
-                });
-            } else {
-                $.ajax({
-                    url: '/settings',
-                    method: 'PUT',
-                    data: {'settings': JSON.stringify({atmos_refract: false})}
-                });
-            }
-        });
-
         $('#firmware_file_upload', this._selfDiv).click(() => {
             const formData = new FormData();
             const file = $('#firmware_file', this._selfDiv)[0].files[0];

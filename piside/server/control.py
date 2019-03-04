@@ -65,6 +65,8 @@ last_status = None
 pm_real_stepper = None
 pm_stepper_real = None
 
+pointing_logger = settings.get_logger('pointing')
+
 
 class SimpleInterval:
     def __init__(self, func, sec):
@@ -282,7 +284,7 @@ def init(osocketio, fruntime_settings):
     # Open serial port
     stepper = stepper_control.StepperControl(settings.settings['microserial']['port'],
                                              settings.settings['microserial']['baud'])
-    pm_real_stepper = pointing_model.PointingModel()
+    pm_real_stepper = pointing_model.PointingModel(True, 'pm_real_stepper')
     pm_stepper_real = pointing_model.PointingModel()
     update_location()
     if settings.settings['park_position'] and runtime_settings['earth_location_set'] and settings.last_parked():
@@ -720,6 +722,7 @@ def clear_sync():
     """
     Clears sync_info and sync points.
     """
+    pointing_logger.debug('Clearing All Sync Points')
     pm_real_stepper.clear()
     pm_stepper_real.clear()
     runtime_settings['sync_info'] = None
@@ -742,6 +745,7 @@ def sync(coord):
         altaz = coord
     else:
         altaz = convert_to_altaz(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
+
     if settings.settings['pointing_model'] != 'single' and not park_sync and pm_real_stepper.size() > 0:
         altaz = clean_altaz(altaz)
         pt.mark('control.sync 1a')
@@ -751,6 +755,8 @@ def sync(coord):
         pm_real_stepper.add_point(altaz, stepper_altaz)
         pt.mark('control.sync 1c')
         pm_stepper_real.add_point(stepper_altaz, altaz)
+        pointing_logger.debug(
+            'sync point added: %s -> %s -- stepper altaz: %s ' % (str(coord), str(altaz), str(stepper_altaz)))
     else:
         if hasattr(coord, 'alt'):
             coord = convert_to_icrs(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
@@ -765,6 +771,8 @@ def sync(coord):
         pm_stepper_real.set_model(settings.settings['pointing_model'])
         pm_real_stepper.add_point(altaz, altaz)
         pm_stepper_real.add_point(altaz, altaz)
+        pointing_logger.debug(
+            'sync point set: %s -> %s' % (str(coord), str(altaz)))
     pt.mark('control.sync done')
 
 

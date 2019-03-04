@@ -31,6 +31,23 @@ class SettingsMenuPointModel {
                 }
             });
         });
+
+        $('#settings-atmospheric-refraction-enabled, #settings-atmospheric-refraction-disabled', this._selfDiv).change(() => {
+            if($('#settings-atmospheric-refraction-enabled', this._selfDiv).is(':checked')) {
+                $.ajax({
+                    url: '/settings',
+                    method: 'PUT',
+                    data: {'settings': JSON.stringify({atmos_refract: true})}
+                });
+            } else {
+                $.ajax({
+                    url: '/settings',
+                    method: 'PUT',
+                    data: {'settings': JSON.stringify({atmos_refract: false})}
+                });
+            }
+        });
+
         this._graph = new PointModelGraph($('#pointModelCanvas', this._selfDiv)[0])
         this._update();
     }

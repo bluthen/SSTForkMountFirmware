@@ -14,6 +14,25 @@
         <button id="pointModelClearSync" type="button" class="btn btn-error"><i class="fas fa-sync" alt="Clear Sync Points"></i>Clear Sync Points
         </button>&nbsp;
     </div>
+    <div>
+        <a href="/logger?name=pointing" target="_blank">View Pointing Log</a>
+    </div>
+    <div class="form-group">
+        <h4>Compensate Pointing for Atmospheric Refraction</h4>
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary active">
+                <input type="radio" id="settings-atmospheric-refraction-enabled" name="settings-atmospheric-refraction"
+                       value="enabled"
+                       autocomplete="off" checked>Enabled
+            </label>
+            <label class="btn btn-primary">
+                <input type="radio" id="settings-atmospheric-refraction-disabled"
+                       name="settings-atmospheric-refraction"
+                       value="disabled"
+                       autocomplete="off">Disabled
+            </label>
+        </div>
+    </div>
     <br/>
     <canvas id="pointModelCanvas" width="620" height="620"></canvas>
 </div>

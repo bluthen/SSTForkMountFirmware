@@ -352,6 +352,7 @@ class SettingsMenuPolarAlignAssist {
         this._selfDiv.show();
         this._$canvas[0].width = this._$canvas.parent().width();
         this._$canvas[0].height = window.innerHeight * 0.75;
+        this._exposureTimeChange_event();
         this._update();
 
     }
