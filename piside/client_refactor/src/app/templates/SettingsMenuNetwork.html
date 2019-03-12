@@ -115,7 +115,7 @@
                 </div>
             </div>
             <div>
-                DHCP Client is always enabled but you can also set a static IP.
+                DHCP Client/Server and static IP is always set.
             </div>
             <h3>Static IP</h3>
             <div class="form-group row">
@@ -125,7 +125,7 @@
                 <div class="col">
                     <div class="input-group">
                         <input class="form-control" type="text" id="networkSettingsEthernetStaticIP"
-                               placeholder="xxx.xxx.xxx.xxx">
+                               placeholder="xxx.xxx.xxx.xxx" disabled>
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>
@@ -137,14 +137,14 @@
                 <div class="col">
                     <div class="input-group">
                         <input class="form-control" type="text" id="networkSettingsEthernetStaticNetmask"
-                               placeholder="xxx.xxx.xxx.xxx">
+                               placeholder="xxx.xxx.xxx.xxx" disabled>
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>
             </div>
             <div class="form-group row">
                 <div class="col">
-                    <button id="networkSettingsEthernetSave" class="btn btn-warning">Save Ethernet
+                    <button id="networkSettingsEthernetSave" class="btn btn-warning" disabled>Save Ethernet
                         Settings
                     </button>
                     <span class="status"></span>

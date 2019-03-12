@@ -10,18 +10,23 @@ def check_and_restart():
     """
     Checks if any interface is uncommented if so restarts dnsmasq otherwise stops it
     """
+    print("check_and_restart")
     try:
         subprocess.check_call(['/bin/grep', '-q', '^interface=', '/etc/dnsmasq.conf'])
-        subprocess.call(['/usr/sbin/service', 'dnsmasq', 'restart'])
+        subprocess.call(['/bin/systemctl', 'restart', 'dnsmasq.service'])
+        print("dnsmasq restart")
     except subprocess.CalledProcessError:
-        subprocess.call(['/usr/sbin/service', 'dnsmasq', 'stop'])
+        subprocess.call(['/bin/systemctl', 'stop', 'dnsmasq'])
+        print("dnsmasq stop")
 
 
 def check_if_not_started():
+    print("check_if_not_started")
     try:
-        subprocess.check_call(['/usr/bin/pgrep', 'dnsmasq'])
+        subprocess.check_call(['/bin/systemctl', 'is-active', 'dnsmasq.service'])
+        print('=======================')
     except:
-        subprocess.call(['/usr/sbin/service', 'dnsmasq', 'restart'])
+        subprocess.call(['/bin/systemctl', 'start', 'dnsmasq'])
 
 
 
@@ -42,6 +47,9 @@ def main():
     elif len(sys.argv) == 3 and iface in ('wlan0', 'eth0'):
         dnsmasq="""
 bogus-priv
+bind-interfaces
+except-interface=eth0
+except-interface=lo
 %s
 dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
 dhcp-mac=set:client_is_a_pi,B8:27:EB:*:*:*

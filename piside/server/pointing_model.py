@@ -1,8 +1,11 @@
 import numpy
 import math
 import affine_fit
+import settings
 
 from astropy.coordinates import SkyCoord
+
+pointing_logger = settings.get_logger('pointing')
 
 
 def inverse_altaz_projection(xy_coord):
@@ -120,7 +123,7 @@ def test_transform(oalt, oaz, alt, az, deg):
 
 
 class PointingModel:
-    def __init__(self):
+    def __init__(self, log=False, name=''):
         """
         :Example:
             >>> import pointing_model
@@ -186,6 +189,9 @@ class PointingModel:
             >>> tpt.alt.deg, tpt.az.deg
             (50.08108010292904, 94.4534133318961)
         """
+        self.__log = log
+        self.__name = name
+
         self.__sync_points = []
         self.__model = '3point'
         # Distance matrix for sync_points
@@ -203,6 +209,8 @@ class PointingModel:
 
     def set_model(self, model):
         if model in ['single', '1point', '2point', '3point']:
+            if self.__log:
+                pointing_logger.debug('Model Set to: ' + model)
             self.__model = model
 
     def add_point(self, from_point, to_point):
@@ -313,6 +321,11 @@ class PointingModel:
             transform = affine_fit.affine_fit(from_npa, to_npa)
             transformed_projection = transform.Transform([proj_coord['x'], proj_coord['y']])
             to_point = inverse_altaz_projection({'x': transformed_projection[0], 'y': transformed_projection[1]})
+            if self.__log:
+                pointing_logger.debug('Using 3point model:')
+                for idx in triangle:
+                    pointing_logger.debug('        ' + str(self.__sync_points[idx]['from_point']))
+                pointing_logger.debug('Transformed Point: ' + str(to_point))
             return to_point
         else:
             if len(self.__sync_points) >= 2:
@@ -337,6 +350,11 @@ class PointingModel:
                     transformed_projection = [proj_coord['x'] * x[0][0] + x[2][0], proj_coord['y'] * x[1][0] + x[3][0]]
                     to_point = inverse_altaz_projection(
                         {'x': transformed_projection[0], 'y': transformed_projection[1]})
+                    if self.__log:
+                        pointing_logger.debug('Using 2point model:')
+                        for idx in near_two:
+                            pointing_logger.debug('        ' + str(self.__sync_points[idx]['from_point']))
+                        pointing_logger.debug('Transformed Point: ' + str(to_point))
                     return to_point
                 else:
                     # for 1 point use simple offsets
@@ -354,11 +372,16 @@ class PointingModel:
                         new_az = new_az - 360.0
                     elif new_az < 0:
                         new_az = 360 + new_az
-                    return SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
+                    to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
+                    if self.__log:
+                        pointing_logger.debug('Using 1point model, transformed point: ' + str(to_point))
+                    return to_point
 
             elif len(self.__sync_points) == 1:
                 # TODO: Or two point failed get nearest point
                 # Just normal stepper slew using point as sync_point
+                if self.__log:
+                    pointing_logger.debug('No model used')
                 return point
             else:
                 raise ValueError('No sync points.')
@@ -367,7 +390,9 @@ class PointingModel:
         """
         Reset all points in pointing model.
         """
-        self.__init__()
+        self.__sync_points = []
+        self.__distance_matrix = []
+        self.__triangles = []
 
     def size(self):
         return len(self.__sync_points)

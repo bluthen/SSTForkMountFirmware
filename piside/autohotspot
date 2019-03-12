@@ -43,8 +43,13 @@ createAdHocNetwork()
     ip link set dev "$wifidev" down
     ip a add 192.168.45.1/24 brd + dev "$wifidev"
     ip link set dev "$wifidev" up
-    sleep 1
+    ifconfig wlan0
     /usr/sbin/hostapd -B /etc/hostapd/hostapd.conf
+    /sbin/ifconfig wlan0
+    /sbin/ifconfig wlan0 up
+    /sbin/ifconfig wlan0 192.168.45.1 netmask 255.255.255.0
+    /root/ctrl_dnsmasq.py wlan0 enable
+    /sbin/ifconfig wlan0 192.168.45.1 netmask 255.255.255.0
     /root/ctrl_dnsmasq.py wlan0 enable
 }
 
@@ -151,7 +156,7 @@ then
               ChkWifiUp
        fi
 else #ssid or MAC address not in range
-       if pgrep hostapd && pgrep dnsmasq >/dev/null 2>&1
+       if pgrep hostapd && /bin/systemctl is-active --quiet dnsmasq.service && /sbin/ifconfig wlan0 | grep -q 192.168.45.1 >/dev/null 2>&1
        then
               echo "Hostspot already active"
        elif { wpa_cli status | grep "$wifidev"; } >/dev/null 2>&1

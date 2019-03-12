@@ -75,10 +75,10 @@ def run_power_switch():
 
         while not power_thread_quit:
             time.sleep(0.1)
-            if GPIO.input(SWITCH_PIN):
+            if GPIO.input(SWITCH_PIN) == 0:
                 continue
             time.sleep(0.1)
-            if not GPIO.input(SWITCH_PIN):
+            if GPIO.input(SWITCH_PIN) == 1:
                 subprocess.run(['sudo', 'shutdown', '-h', 'now'])
 
     except ImportError:
