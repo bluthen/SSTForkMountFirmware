@@ -129,6 +129,6 @@ crontab -e
 */1 * * * * /usr/bin/autohotspot
 
 
-apt-get install astrometry.net imagemagick
+apt-get install astrometry.net imagemagick avahi-utils
 # copy index-41* data to /usr/share/astrometry
 

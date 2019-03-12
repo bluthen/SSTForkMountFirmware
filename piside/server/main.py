@@ -27,6 +27,7 @@ import settings
 import sstchuck
 import network
 import sys
+import socket
 from solver import Solver
 
 from werkzeug.serving import make_ssl_devcert
@@ -45,6 +46,8 @@ correct_dir()
 paa_process_lock = threading.RLock()
 paa_process = None
 paa_count = 0
+
+avahi_process = None
 
 power_thread_quit = False
 
@@ -861,7 +864,7 @@ def solver_done_cb(status):
 
 
 def main():
-    global st_queue, power_thread_quit, solver
+    global st_queue, power_thread_quit, solver, avahi_process
     if settings.is_simulation():
         solver_tmp = './simulation_files/ramtmp/solver'
         solved_plot_path = './simulation_files/ramtmp/solved.png'
@@ -890,6 +893,10 @@ def main():
     sstchuck_thread.start()
     paa_capture(1000000 * 9.99, 800)
 
+    hostname = socket.gethostname()
+    # TODO: What about when they change hostname? Or can move this to systemd?
+    avahi_process = subprocess.Popen(
+        ['/usr/bin/avahi-publish-service', hostname, '_sstmount._tcp', '5000', '/'])
     print('Running...')
     try:
         ssl_context = None
@@ -904,6 +911,7 @@ def main():
         stellarium_thread.join()
         sstchuck_thread.join()
         power_thread.join()
+        avahi_process.kill()
     finally:
         if paa_process and paa_process.poll() is None:
             paa_process.stdin.write('STOP\nQUIT\n'.encode())
