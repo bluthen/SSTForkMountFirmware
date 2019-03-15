@@ -116,11 +116,13 @@ systemctl disable hostapd.service
 systemctl disable bluetooth.service
 
 cp ssteq25.service to /etc/systemd/system/
+cp clearhomepyc.service to /etc/systemd/system/
 cp dnsmasq-eth0.service to /etc/systemd/system/
 
 cp dnsmasq.eth0.conf /etc
 
 systmctrl enable dnsmasq-eth0.service
+systemctl enable clearhomepyc.service 
 systemctl enable ssteq25
 systemctl enable autohotspot
 
