@@ -37,6 +37,7 @@ from astropy.time import Time as AstroTime
 import astropy.units as u
 import astropy.units.si as usi
 import math
+import socket
 import stepper_control
 import pointing_model
 
@@ -223,6 +224,7 @@ def send_status():
     status['dec'] = None
     status['alt'] = None
     status['az'] = None
+    status['hostname'] = socket.gethostname()
     status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     status['time_been_set'] = runtime_settings['time_been_set']
     status['synced'] = runtime_settings['sync_info'] is not None

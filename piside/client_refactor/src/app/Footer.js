@@ -15,10 +15,33 @@ class Footer {
         if (startingSettings.location && startingSettings.location.name) {
             location.text(startingSettings.location.name);
         }
+        let hostname = null;
+        let lastStatus = new Date();
+        //Disconnect warning
+        setInterval(function() {
+            if (new Date().getTime() - lastStatus.getTime() > 7000) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text('Disconnection detected, check connect close/reload.');
+                $('#errorInfoModal').modal();
+            }
+        }, 5000);
 
         App.socket.on('status', (msg) => {
             //console.log(msg);
             const status = msg;
+            lastStatus = new Date();
+            if (hostname === null) {
+                hostname = status.hostname;
+            }
+            if (hostname !== null && status.hostname !== hostname) {
+                $('#errorInfoModalTitle').text('Error');
+                $('#errorInfoModalBody').text('You are now connected to a different mount, will attempt reload.');
+                $('#errorInfoModal').modal();
+                setTimeout(function () {
+                    location.href.reload();
+                }, 5000);
+                return;
+            }
             if ('alert' in msg) {
                 console.error('ALERT', msg.alert);
                 $('#errorInfoModalTitle').text('Error');
