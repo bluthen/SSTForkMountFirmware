@@ -136,13 +136,19 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.12"})
+    return jsonify({"version": "0.0.13"})
 
 
 @app.route('/settings')
 @nocache
 def settings_get():
     return jsonify(settings.settings)
+
+
+@app.route('/hostname')
+@nocache
+def hostname_get():
+    return jsonify({'hostname': socket.gethostname()})
 
 
 @app.route('/shutdown', methods=['PUT'])
