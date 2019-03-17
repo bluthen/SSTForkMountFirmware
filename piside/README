@@ -115,13 +115,14 @@ systemctl disable dnsmasq.service
 systemctl disable hostapd.service
 systemctl disable bluetooth.service
 
-cp ssteq25.service to /etc/systemd/system/
-cp clearhomepyc.service to /etc/systemd/system/
-cp dnsmasq-eth0.service to /etc/systemd/system/
+cp ssteq25.service /etc/systemd/system/
+cp clearhomepyc.service /etc/systemd/system/
+cp dnsmasq-eth0.service /etc/systemd/system/
 
 cp dnsmasq.eth0.conf /etc
+cp dnsmasq.eth0.sh /root
 
-systmctrl enable dnsmasq-eth0.service
+systemctl enable dnsmasq-eth0.service
 systemctl enable clearhomepyc.service 
 systemctl enable ssteq25
 systemctl enable autohotspot
@@ -129,6 +130,7 @@ systemctl enable autohotspot
 # Edit cron
 crontab -e
 */1 * * * * /usr/bin/autohotspot
+*/1 * * * * /root/dnsmasq.eth0.sh
 
 
 apt-get install astrometry.net imagemagick avahi-utils
