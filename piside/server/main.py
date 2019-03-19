@@ -136,7 +136,7 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.13"})
+    return jsonify({"version": "0.0.14"})
 
 
 @app.route('/settings')
@@ -793,8 +793,8 @@ def paa_solve_info():
 def paa_capture(exposure, iso):
     global paa_process
     with paa_process_lock:
-        print('Staring paa process')
         if not paa_process or paa_process.poll() is not None:
+            print('Staring paa process')
             paa_process = subprocess.Popen(
                 ['/usr/bin/python3', '-u', 'polar_align_assist.py'],
                 bufsize=0,
@@ -808,7 +808,7 @@ def paa_capture(exposure, iso):
             t.start()
             # t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
             # t.start()
-        time.sleep(2)
+            time.sleep(2)
         print('Writing to paa process')
         paa_process.stdin.write(('%d %d %d %f\n' % (exposure, iso, -1, 0.25)).encode())
 
@@ -851,8 +851,12 @@ def listen_paa_stdout(process):
         if len(sline) == 2 and sline[0] == 'CAPTURED':
             paa_count = int(sline[1])
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
+            print('SOLVER!!!!!!!!!!!!!!!!!!!!!!!!:', str(solver.queue), str(solver.running()))
             if solver.queue and not solver.running():
-                solver.solve(paa_image_path())
+                try:
+                    solver.solve(paa_image_path())
+                except:
+                    print('Solver had exception:', sys.exc_info()[0])
         elif sline[0] == 'CAPTUREDONE':
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
         elif sline[0] == 'STATUS':
@@ -862,7 +866,8 @@ def listen_paa_stdout(process):
 
 
 def solver_log_cb(msg):
-    socketio.emit('paa_solve_log', {'msg': msg})
+    # socketio.emit('paa_solve_log', {'msg': msg})
+    pass
 
 
 def solver_done_cb(status):

@@ -33,9 +33,8 @@ class Solver:
             os.makedirs(work_dir)
 
     def running(self):
-        return self.__thread is not None and self.__thread.is_alive()
         # Return true if thread still going
-        pass
+        return self.__thread is not None and self.__thread.is_alive()
 
     def get_solved_plot_path(self):
         return self.__final_plot_path

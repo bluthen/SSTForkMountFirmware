@@ -86,18 +86,24 @@ def ramtmp_generator(camera, count, delay):
         # queue.put(RAMTMP+'/%d.jpg' % (paa_count-1,))
         # socketio.emit('paa_capture_response', {'message': 'captured'})
         line = None
-        if select.select([sys.stdin], [], [], 0.0)[0]:
+        while select.select([sys.stdin], [], [], 0.0)[0]:
             line = sys.stdin.readline().strip()
         if line:
-            cmd = parse_cmd(line)
-            if cmd:
-                exposure_time = int(cmd['exposure_time'])
-                camera.shutter_speed = exposure_time
-                camera.framerate = Fraction(1000000.0 / exposure_time)
-                camera.iso = cmd['iso']
-                i = 0
-                count = cmd['count']
-                delay = cmd['delay']
+            try:
+                cmd = parse_cmd(line)
+                if cmd:
+                    exposure_time = int(cmd['exposure_time'])
+                    camera.shutter_speed = exposure_time
+                    framerate = Fraction(1000000.0 / exposure_time)
+                    if framerate > 40:
+                        framerate = Fraction(40)
+                    camera.framerate = framerate
+                    camera.iso = cmd['iso']
+                    i = 0
+                    count = cmd['count']
+                    delay = cmd['delay']
+            except:
+                print('LOG exception while running camera cmd', sys.exc_info()[0])
         i += 1
         if (count != -1 and i >= count) or line == 'stop':
             stop_capture = True
