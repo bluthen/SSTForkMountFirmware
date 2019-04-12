@@ -29,6 +29,7 @@ import network
 import sys
 import socket
 from solver import Solver
+import pointing_model
 
 from werkzeug.serving import make_ssl_devcert
 
@@ -136,7 +137,7 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.14"})
+    return jsonify({"version": "0.0.15"})
 
 
 @app.route('/settings')
@@ -439,7 +440,7 @@ def do_sync():
 @nocache
 def post_sync():
     model = request.form.get('model', None)
-    if model not in ['single', '1point', '2point', '3point']:
+    if model not in ['single', '1point', '2point', '3point', 'affine_meridian', 'affine_all']:
         return 'Invalid model', 400
     # Set models
     control.clear_sync()
@@ -467,14 +468,15 @@ def do_slewto():
         alt = float(alt)
         az = float(az)
         altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
-        pointing_logger.debug('Slewto target: ' + str(altaz))
+        pointing_logger.debug(json.dumps({'func': 'main.do_slewto', 'altaz': pointing_model.log_p2dict(altaz)}))
         # parking = True
     else:
         ra = float(ra)
         dec = float(dec)
         radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
         altaz = control.convert_to_altaz(radec)
-        pointing_logger.debug('Slewto target: ' + str(radec) + ' -> ' + str(altaz))
+        pointing_logger.debug(json.dumps({'func': 'main.do_slewto', 'radec': pointing_model.log_p2dict(radec),
+                                          'altaz': pointing_model.log_p2dict(altaz)}))
     if not control.slewtocheck(altaz):
         return 'Slew position is below horizon or in keep-out area.', 400
     else:
@@ -788,6 +790,12 @@ def paa_solve_image():
 def paa_solve_info():
     ret = solver.get_last_solved_info()
     return jsonify(ret)
+
+
+@app.route('/status', methods=['GET'])
+@nocache
+def status_get():
+    return jsonify(control.last_status)
 
 
 def paa_capture(exposure, iso):

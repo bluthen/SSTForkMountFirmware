@@ -2,6 +2,7 @@ import numpy
 import math
 import affine_fit
 import settings
+import json
 
 from astropy.coordinates import SkyCoord
 
@@ -122,6 +123,16 @@ def test_transform(oalt, oaz, alt, az, deg):
             'az': oaz + (az - oaz) * math.cos(theta) - (alt - oalt) * math.sin(theta)}
 
 
+def log_p2dict(point):
+    if hasattr(point, 'alt'):
+        return {'alt': point.alt.deg, 'az': point.az.deg}
+    elif hasattr(point, 'dec'):
+        return {'ra': point.ra.deg, 'dec': point.dec.deg}
+    else:
+        return {}
+
+
+
 class PointingModel:
     def __init__(self, log=False, name=''):
         """
@@ -199,6 +210,9 @@ class PointingModel:
         #: distance matrix created with sync_points
         self.__distance_matrix = []
         self.__triangles = []
+        self.__affineAll = None
+        self.__affineW = None
+        self.__affineE = None
         self.debug = False
 
     def get_from_points(self):
@@ -208,9 +222,9 @@ class PointingModel:
         return ret
 
     def set_model(self, model):
-        if model in ['single', '1point', '2point', '3point']:
+        if model in ['single', '1point', '2point', '3point', 'affine_meridian', 'affine_all']:
             if self.__log:
-                pointing_logger.debug('Model Set to: ' + model)
+                pointing_logger.debug(json.dumps({'func': 'set_model', 'model': model}))
             self.__model = model
 
     def add_point(self, from_point, to_point):
@@ -262,29 +276,58 @@ class PointingModel:
              'to_projection': alt_az_projection(to_point)})
         self.__distance_matrix.append(row)
 
-        # Create traingles again
-        # For each point find two other points that are near by.
-        if len(self.__sync_points) > 2:
-            new_triangles = []
-            for i in range(len(self.__sync_points)):
-                min_v1 = 999999999.0
-                min_idx1 = -1
-                min_idx2 = -1
-                for j in range(len(self.__sync_points)):
-                    if i == j:
-                        continue
-                    if self.__distance_matrix[i][j] < min_v1:
-                        min_idx2 = min_idx1
-                        min_v1 = self.__distance_matrix[i][j]
-                        min_idx1 = j
-                # check if triangle is already in there or not.
-                triangle = {i, min_idx1, min_idx2}
-                if triangle not in new_triangles and -1 not in triangle:
-                    new_triangles.append(triangle)
-            self.__triangles = new_triangles
-        else:
-            self.__triangles = []
-        return self.__triangles
+        if self.__model == '3point':
+            # Create traingles again
+            # For each point find two other points that are near by.
+            if len(self.__sync_points) > 2:
+                new_triangles = []
+                for i in range(len(self.__sync_points)):
+                    min_v1 = 999999999.0
+                    min_idx1 = -1
+                    min_idx2 = -1
+                    for j in range(len(self.__sync_points)):
+                        if i == j:
+                            continue
+                        if self.__distance_matrix[i][j] < min_v1:
+                            min_idx2 = min_idx1
+                            min_v1 = self.__distance_matrix[i][j]
+                            min_idx1 = j
+                    # check if triangle is already in there or not.
+                    triangle = {i, min_idx1, min_idx2}
+                    if triangle not in new_triangles and -1 not in triangle:
+                        new_triangles.append(triangle)
+                self.__triangles = new_triangles
+            else:
+                self.__triangles = []
+            return self.__triangles
+        elif self.__model == 'affine_meridian':
+            if to_point.az.deg <= 180.0:
+                indexes = [i for i, e in enumerate(self.__sync_points) if e['from_point'].az.deg <= 180.0]
+                if self.__log:
+                    pointing_logger.debug(json.dumps(
+                        {'func': 'add_point', 'model': 'affine_meridian', 'dir': 'east', 'indexes': indexes}))
+                if len(indexes) >= 3:
+                    from_npa = get_projection_coords(indexes, self.__sync_points, 'from_projection')
+                    to_npa = get_projection_coords(indexes, self.__sync_points, 'to_projection')
+                    self.__affineE = affine_fit.affine_fit(from_npa, to_npa)
+            else:
+                indexes = [i for i, e in enumerate(self.__sync_points) if e['from_point'].az.deg > 180.0]
+                if self.__log:
+                    pointing_logger.debug(json.dumps(
+                        {'func': 'add_point', 'model': 'affine_meridian', 'dir': 'west', 'indexes': indexes}))
+                if len(indexes) >= 3:
+                    from_npa = get_projection_coords(indexes, self.__sync_points, 'from_projection')
+                    to_npa = get_projection_coords(indexes, self.__sync_points, 'to_projection')
+                    self.__affineW = affine_fit.affine_fit(from_npa, to_npa)
+        elif self.__model == 'affine_all':
+            if len(self.__sync_points) >= 3:
+                if self.__log:
+                    pointing_logger.debug(json.dumps({'func': 'add_point', 'model': 'affine_all'}))
+                from_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
+                                                 'from_projection')
+                to_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
+                                               'to_projection')
+                self.__affineAll = affine_fit.affine_fit(from_npa, to_npa)
 
     def __get_two_closest_sync_points_idx(self, coord):
         one = None
@@ -309,7 +352,10 @@ class PointingModel:
         """
         proj_coord = alt_az_projection(point)
         triangle = None
-        if len(self.__sync_points) >= 3:
+        east_point = False
+        if point.az.deg <= 180.0:
+            east_point = True
+        if self.__model == '3point' and len(self.__sync_points) >= 3:
             triangle = find_triangle(proj_coord, self.__sync_points, self.__triangles)
         # Find trangle it is in
         if self.__model == '3point' and triangle:
@@ -322,13 +368,42 @@ class PointingModel:
             transformed_projection = transform.Transform([proj_coord['x'], proj_coord['y']])
             to_point = inverse_altaz_projection({'x': transformed_projection[0], 'y': transformed_projection[1]})
             if self.__log:
-                pointing_logger.debug('Using 3point model:')
-                for idx in triangle:
-                    pointing_logger.debug('        ' + str(self.__sync_points[idx]['from_point']))
-                pointing_logger.debug('Transformed Point: ' + str(to_point))
+                pointing_logger.debug(json.dumps(
+                    {'func': 'transform_point', 'model': '3point', 'from_point': log_p2dict(point),
+                     'to_point': log_p2dict(to_point),
+                     'p0': log_p2dict(self.__sync_points[triangle[0]]['from_point']),
+                     'p1': log_p2dict(self.__sync_points[triangle[1]]['from_point']),
+                     'p2': log_p2dict(self.__sync_points[triangle[2]]['from_point'])}))
             return to_point
         else:
-            if len(self.__sync_points) >= 2:
+            if (east_point and self.__affineE) or (not east_point and self.__affineW):
+                if east_point:
+                    transformed_projection = self.__affineE.Transform([proj_coord['x'], proj_coord['y']])
+                    to_point = inverse_altaz_projection(
+                        {'x': transformed_projection[0], 'y': transformed_projection[1]})
+                    if self.__log:
+                        pointing_logger.debug(json.dumps(
+                            {'func': 'transform_point', 'model': 'affine_meridian', 'dir': 'east',
+                             'from_point': log_p2dict(point), 'to_point': log_p2dict(to_point)}))
+                else:
+                    transformed_projection = self.__affineW.Transform([proj_coord['x'], proj_coord['y']])
+                    to_point = inverse_altaz_projection(
+                        {'x': transformed_projection[0], 'y': transformed_projection[1]})
+                    if self.__log:
+                        pointing_logger.debug(json.dumps(
+                            {'func': 'transform_point', 'model': 'affine_meridian', 'dir': 'west',
+                             'from_point': log_p2dict(point), 'to_point': log_p2dict(to_point)}))
+                return to_point
+            elif self.__affineAll:
+                transformed_projection = self.__affineAll.Transform([proj_coord['x'], proj_coord['y']])
+                to_point = inverse_altaz_projection(
+                    {'x': transformed_projection[0], 'y': transformed_projection[1]})
+                if self.__log:
+                    pointing_logger.debug(json.dumps(
+                        {'func': 'transform_point', 'model': 'affine_all', 'from_point': log_p2dict(point),
+                         'to_point': log_p2dict(to_point)}))
+                return to_point
+            elif len(self.__sync_points) >= 2:
                 # Get nearest two_points
                 near_two = self.__get_two_closest_sync_points_idx(point)
 
@@ -351,10 +426,11 @@ class PointingModel:
                     to_point = inverse_altaz_projection(
                         {'x': transformed_projection[0], 'y': transformed_projection[1]})
                     if self.__log:
-                        pointing_logger.debug('Using 2point model:')
-                        for idx in near_two:
-                            pointing_logger.debug('        ' + str(self.__sync_points[idx]['from_point']))
-                        pointing_logger.debug('Transformed Point: ' + str(to_point))
+                        pointing_logger.debug(json.dumps(
+                            {'func': 'transform_point', 'model': '2point', 'from_point': log_p2dict(point),
+                             'to_point': log_p2dict(to_point),
+                             'p0': log_p2dict(self.__sync_points[near_two[0]]['from_point']),
+                             'p1': log_p2dict(self.__sync_points[near_two[1]]['from_point'])}))
                     return to_point
                 else:
                     # for 1 point use simple offsets
@@ -374,14 +450,17 @@ class PointingModel:
                         new_az = 360 + new_az
                     to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
                     if self.__log:
-                        pointing_logger.debug('Using 1point model, transformed point: ' + str(to_point))
+                        pointing_logger.debug(json.dumps(
+                            {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
+                             'to_point': log_p2dict(to_point)}))
                     return to_point
 
             elif len(self.__sync_points) == 1:
                 # TODO: Or two point failed get nearest point
                 # Just normal stepper slew using point as sync_point
                 if self.__log:
-                    pointing_logger.debug('No model used')
+                    pointing_logger.debug(json.dumps(
+                        {'func': 'transform_point', 'model': 'nomodel', 'from_point': log_p2dict(point)}))
                 return point
             else:
                 raise ValueError('No sync points.')
@@ -393,6 +472,9 @@ class PointingModel:
         self.__sync_points = []
         self.__distance_matrix = []
         self.__triangles = []
+        self.__affineAll = None
+        self.__affineW = None
+        self.__affineE = None
 
     def size(self):
         return len(self.__sync_points)

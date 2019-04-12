@@ -1,36 +1,68 @@
 #!/usr/bin/env python3
 
-""" Example of announcing a service (in this case, a fake HTTP server) """
-
 import logging
 import socket
 import sys
 from time import sleep
+import socket
+import netifaces
 
 from zeroconf import ServiceInfo, Zeroconf
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    if len(sys.argv) > 1:
-        assert sys.argv[1:] == ['--debug']
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+# avahi-publish-service ssteq25r _sstmount._tcp 5000 "/"
 
-    desc = {'path': '/'}
 
-    info = ServiceInfo("_sstmount._tcp.local.",
-                       "ssteq25._sstmount._tcp.local.",
-                       socket.inet_aton("127.0.0.1"), 5000, 0, 0,
-                       desc, "ssteq25.local.")
+def get_addresses():
+    addresses = []
+    for iface in netifaces.interfaces():
+        if iface == 'lo':
+            continue
+        naddresses = netifaces.ifaddresses(iface)
+        if netifaces.AF_INET in naddresses:
+            for a in naddresses[netifaces.AF_INET]:
+                address = a['addr']
+                if address:
+                    addresses.append(address)
+    return addresses
 
-    zeroconf = Zeroconf()
-    print("Registration of a service, press Ctrl-C to exit...")
-    zeroconf.register_service(info)
+
+def main():
+    services = {}
     try:
         while True:
-            sleep(0.1)
-    except KeyboardInterrupt:
-        pass
+            addresses = get_addresses()
+            for address, zc in services.items():
+                if address not in addresses:
+                    unregister_service(zc[0], zc[1])
+                    del services[address]
+            for address in addresses:
+                if address not in services:
+                    print('Registering: ', address)
+                    services[address] = register_service(address)
+            sleep(1.0)
     finally:
-        print("Unregistering...")
-        zeroconf.unregister_service(info)
-        zeroconf.close()
+        for address, zc in services.items():
+            unregister_service(zc[0], zc[1])
+
+
+def register_service(address):
+    hostname = socket.gethostname()
+    desc = {'path': '/'}
+    info = ServiceInfo("_sstmount._tcp.local.",
+                       hostname + "._sstmount._tcp.local.",
+                       socket.inet_aton(address), 5000, 0, 0,
+                       desc, hostname + ".local.")
+
+    zeroconf = Zeroconf(interfaces=[address])
+    zeroconf.register_service(info, allow_name_change=True)
+
+    return zeroconf, info
+
+
+def unregister_service(zeroconf, info):
+    zeroconf.unregister_service(info)
+    zeroconf.close()
+
+
+if __name__ == '__main__':
+    main()

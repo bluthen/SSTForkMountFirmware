@@ -38,6 +38,7 @@ import astropy.units as u
 import astropy.units.si as usi
 import math
 import socket
+import json
 import stepper_control
 import pointing_model
 
@@ -724,7 +725,7 @@ def clear_sync():
     """
     Clears sync_info and sync points.
     """
-    pointing_logger.debug('Clearing All Sync Points')
+    pointing_logger.debug(json.dumps({'func': 'control.clear_sync'}))
     pm_real_stepper.clear()
     pm_stepper_real.clear()
     runtime_settings['sync_info'] = None
@@ -757,8 +758,10 @@ def sync(coord):
         pm_real_stepper.add_point(altaz, stepper_altaz)
         pt.mark('control.sync 1c')
         pm_stepper_real.add_point(stepper_altaz, altaz)
-        pointing_logger.debug(
-            'sync point added: %s -> %s -- stepper altaz: %s ' % (str(coord), str(altaz), str(stepper_altaz)))
+        pointing_logger.debug(json.dumps({
+            'func': 'control.sync', 'coord': pointing_model.log_p2dict(coord),
+            'altaz': pointing_model.log_p2dict(altaz), 'stepper_altaz': pointing_model.log_p2dict(stepper_altaz)
+        }))
     else:
         if hasattr(coord, 'alt'):
             coord = convert_to_icrs(coord, obstime=obstime, atmo_refraction=settings.settings['atmos_refract'])
@@ -773,8 +776,9 @@ def sync(coord):
         pm_stepper_real.set_model(settings.settings['pointing_model'])
         pm_real_stepper.add_point(altaz, altaz)
         pm_stepper_real.add_point(altaz, altaz)
-        pointing_logger.debug(
-            'sync point set: %s -> %s' % (str(coord), str(altaz)))
+        pointing_logger.debug(json.dumps({
+            'func': 'control.sync', 'coord': pointing_model.log_p2dict(coord), 'altaz': pointing_model.log_p2dict(altaz)
+        }))
     pt.mark('control.sync done')
 
 
