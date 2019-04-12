@@ -64,6 +64,10 @@ void command_qs() {
   WSERIAL.println(getRAPosition());
   WSERIAL.print("dp:");
   WSERIAL.println(getDECPosition());
+  WSERIAL.print("re:");
+  WSERIAL.println(getRAEncoder());
+  WSERIAL.print("de:");
+  WSERIAL.println(getDECEncoder());
   print_prompt();  
 }
 
@@ -92,6 +96,10 @@ void command_status() {
   WSERIAL.println(getRAPosition());
   WSERIAL.print("dec_pos:");
   WSERIAL.println(getDECPosition());
+  WSERIAL.print("ra_enc:");
+  WSERIAL.println(getRAEncoder());
+  WSERIAL.print("dec_enc:");
+  WSERIAL.println(getDECEncoder());
   print_prompt();
 }
 

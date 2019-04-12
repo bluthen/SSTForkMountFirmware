@@ -1,6 +1,11 @@
+#define ENCODER_OPTIMIZE_INTERRUPTS
+#include <Encoder.h>
 #include <Arduino.h>
 #include "stepper_drivers.h"
 #include "forkmount.h"
+
+static Encoder raEnc(9, 10);
+static Encoder decEnc(11, 12);
 
 static const int MODE_FULL = 1;
 static const int MODE_SIXTEEN = 16;
@@ -275,6 +280,14 @@ float getRASpeed() {
 
 long getRAPosition() {
   return RAPosition;
+}
+
+long getRAEncoder() {
+  return raEnc.read();
+}
+
+long getDECEncoder() {
+  return decEnc.read();
 }
 
 void setDECSpeed(float speed) {
