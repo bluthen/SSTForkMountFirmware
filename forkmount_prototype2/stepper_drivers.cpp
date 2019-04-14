@@ -6,6 +6,10 @@
 
 static Encoder raEnc(9, 10);
 static Encoder decEnc(11, 12);
+static long ra_ticks_in_pulse = 0;
+static long dec_ticks_in_pulse = 0;
+static long ra_last_encoder = 0;
+static long dec_last_encoder = 0;
 
 static const int MODE_FULL = 1;
 static const int MODE_SIXTEEN = 16;
@@ -286,8 +290,24 @@ long getRAEncoder() {
   return raEnc.read();
 }
 
+long getLastRAEncoder() {
+  return ra_last_encoder;
+}
+
+long getRATicksInPulse() {
+  return ra_ticks_in_pulse;
+}
+
 long getDECEncoder() {
   return decEnc.read();
+}
+
+long getDECTicksInPulse() {
+  return dec_ticks_in_pulse;
+}
+
+long getLastDECEncoder() {
+  return dec_last_encoder;
 }
 
 void setDECSpeed(float speed) {
@@ -323,6 +343,10 @@ void runSteppers() {
   //Serial.println(RAClock);
   //Serial.println(RACounts);
   //Serial.println(count);
+  if (ra_last_encoder != raEnc.read()) {
+    ra_last_encoder = raEnc.read();
+    ra_ticks_in_pulse = 0;
+  }
   if(abs(RASpeed) > MICROSTEP_TO_FULL_THRES) {
     if (minDelayRA > 500000/(RASpeed/MICROSTEPS)) {
       minDelayRA = 0;
@@ -330,10 +354,12 @@ void runSteppers() {
         ra_stepper_backwardstep_fast();
         RACounts += MICROSTEPS;
         RAPosition += MICROSTEPS;
+        ra_ticks_in_pulse += MICROSTEPS;
       } else if (count > MICROSTEPS) {
         ra_stepper_forwardstep_fast();    
         RACounts -= MICROSTEPS;
         RAPosition -= MICROSTEPS;
+        ra_ticks_in_pulse -= MICROSTEPS;
       }
     }
   } else {
@@ -343,10 +369,12 @@ void runSteppers() {
         ra_stepper_backwardstep();
         RACounts++;
         RAPosition++;
+        ra_ticks_in_pulse++;
       } else if (count > 1.0) {
         ra_stepper_forwardstep();    
         RACounts--;
         RAPosition--;
+        ra_ticks_in_pulse--;
       }
     }
   }
@@ -367,7 +395,10 @@ void runSteppers() {
     //Serial.println(count);
   }
 
-
+  if (dec_last_encoder != decEnc.read()) {
+    dec_last_encoder = decEnc.read();
+    dec_ticks_in_pulse = 0;
+  }
   if(abs(DECSpeed) > MICROSTEP_TO_FULL_THRES) {
     if (minDelayDEC > 500000/(DECSpeed/MICROSTEPS)) {
       minDelayDEC = 0;
@@ -375,10 +406,12 @@ void runSteppers() {
         dec_stepper_backwardstep_fast();
         DECCounts+=MICROSTEPS;
         DECPosition+=MICROSTEPS;
+        dec_ticks_in_pulse+=MICROSTEPS;
       } else if (count > MICROSTEPS) {
         dec_stepper_forwardstep_fast();    
         DECCounts-=MICROSTEPS;
         DECPosition-=MICROSTEPS;
+        dec_ticks_in_pulse-=MICROSTEPS;
       }
     }
   } else {
@@ -388,10 +421,12 @@ void runSteppers() {
         dec_stepper_backwardstep();
         DECCounts++;
         DECPosition++;
+        dec_ticks_in_pulse++;
       } else if (count > 1.0) {
         dec_stepper_forwardstep();    
         DECCounts--;
         DECPosition--;
+        dec_ticks_in_pulse--;
       }
     }
   }

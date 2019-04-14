@@ -55,23 +55,43 @@ void command_set_var() {
 
 
 void command_qs() {
+  long raPos, decPos, raEnc, decEnc, raTip, decTip;
   //TODO: Maybe make binary status so we don't get close to tracking tick interval?
   WSERIAL.print("rs:");
   WSERIAL.println(getRASpeed());
   WSERIAL.print("ds:");
   WSERIAL.println(getDECSpeed());
+  raPos = getRAPosition();
+  decPos = getDECPosition();
+  raEnc = getRAEncoder();
+  decEnc = getDECEncoder();
+  if (getLastRAEncoder() != raEnc) {
+    raTip = 0;
+  } else {
+    raTip = getRATicksInPulse();
+  }
+  if (getLastDECEncoder() != decEnc) {
+    decTip = 0;
+  } else {
+    decTip = getDECTicksInPulse();
+  }
   WSERIAL.print("rp:");
-  WSERIAL.println(getRAPosition());
+  WSERIAL.println(raPos);
   WSERIAL.print("dp:");
-  WSERIAL.println(getDECPosition());
+  WSERIAL.println(decPos);
   WSERIAL.print("re:");
-  WSERIAL.println(getRAEncoder());
+  WSERIAL.println(raEnc);
   WSERIAL.print("de:");
-  WSERIAL.println(getDECEncoder());
+  WSERIAL.println(decEnc);
+  WSERIAL.print("ri:");
+  WSERIAL.println(raTip);
+  WSERIAL.print("di:");
+  WSERIAL.println(decTip);
   print_prompt();  
 }
 
 void command_status() {
+  long raPos, decPos, raEnc, decEnc, raTip, decTip;
   WSERIAL.print("ra_max_tps=");
   WSERIAL.println(configvars.ra_max_tps);
   WSERIAL.print("ra_guide_rate=");
@@ -92,14 +112,34 @@ void command_status() {
   WSERIAL.println(getRASpeed());
   WSERIAL.print("dec_speed:");
   WSERIAL.println(getDECSpeed());
+
+  raPos = getRAPosition();
+  decPos = getDECPosition();
+  raEnc = getRAEncoder();
+  decEnc = getDECEncoder();
+  if (getLastRAEncoder() != raEnc) {
+    raTip = 0;
+  } else {
+    raTip = getRATicksInPulse();
+  }
+  if (getLastDECEncoder() != decEnc) {
+    decTip = 0;
+  } else {
+    decTip = getDECTicksInPulse();
+  }
+  
   WSERIAL.print("ra_pos:");
-  WSERIAL.println(getRAPosition());
+  WSERIAL.println(raPos);
   WSERIAL.print("dec_pos:");
-  WSERIAL.println(getDECPosition());
+  WSERIAL.println(decPos);
   WSERIAL.print("ra_enc:");
-  WSERIAL.println(getRAEncoder());
+  WSERIAL.println(raEnc);
   WSERIAL.print("dec_enc:");
-  WSERIAL.println(getDECEncoder());
+  WSERIAL.println(decEnc);
+  WSERIAL.print("ra_tip:");
+  WSERIAL.println(raTip);
+  WSERIAL.print("dec_tip:");
+  WSERIAL.println(decTip);  
   print_prompt();
 }
 

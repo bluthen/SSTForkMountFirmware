@@ -18,8 +18,13 @@ long getRAPosition(void);
 void setDECSpeed(float speed);
 float getDECSpeed(void);
 long getDECPosition(void);
+
 long getRAEncoder(void);
 long getDECEncoder(void);
+long getRATicksInPulse(void);
+long getDECTicksInPulse(void);
+long getLastRAEncoder(void);
+long getLastDECEncoder(void);
 
 void runSteppers(void);
 
