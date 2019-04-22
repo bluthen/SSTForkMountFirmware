@@ -131,12 +131,14 @@ table.direction-controls td {
 #status_altaz {
     width: 21ex;
 }
+/*
 #status_ra_ticks {
     width: 16ex;
 }
 #status_dec_ticks {
     width: 16ex;
 }
+*/
 #status_time {
     width: 34ex;
 }

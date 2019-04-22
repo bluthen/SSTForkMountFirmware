@@ -69,10 +69,21 @@ def command_qs(args):
     swrite("%.7f\r" % getRASpeed())
     swrite("ds:")
     swrite("%.7f\r" % getDECSpeed())
+    rap = round(getRAPosition())
+    decp = round(getDECPosition())
     swrite("rp:")
-    swrite("%d\r" % round(getRAPosition()))
+    swrite("%d\r" % rap)
     swrite("dp:")
-    swrite("%d\r" % round(getDECPosition()))
+    swrite("%d\r" % decp)
+    # TODO: Simulate encoder better
+    swrite("re:")
+    swrite("%d\r" % 0)
+    swrite("de:")
+    swrite("%d\r" % 0)
+    swrite("ri:")
+    swrite("%d\r" % rap)
+    swrite("di:")
+    swrite("%d\r" % decp)
     print_prompt()
 
 
@@ -97,10 +108,21 @@ def command_status(args):
     swrite("%.7f\r" % getRASpeed())
     swrite("dec_speed:")
     swrite("%.7f\r" % getDECSpeed())
+    rap = round(getRAPosition())
+    decp = round(getDECPosition())
     swrite("ra_pos:")
-    swrite("%d\r" % round(getRAPosition()))
+    swrite("%d\r" % rap)
     swrite("dec_pos:")
-    swrite("%d\r" % round(getDECPosition()))
+    swrite("%d\r" % decp)
+    # TODO: Simulate encoder better
+    swrite("ra_enc:")
+    swrite("%d\r" % 0)
+    swrite("dec_enc:")
+    swrite("%d\r" % 0)
+    swrite("ra_tip:")
+    swrite("%d\r" % rap)
+    swrite("dec_tip:")
+    swrite("%d\r" % decp)
     print_prompt()
 
 
@@ -190,7 +212,7 @@ def command_autoguide_enable(args):
 
 def run_steppers():
     count = sd['RACounts'] - (sd['RASpeed'] * (float(millis() - sd['RAClock'])) / 1000.0)
-    #print(sd['RACounts'], sd['RASpeed'], millis(), sd['RAClock'], count)
+    # print(sd['RACounts'], sd['RASpeed'], millis(), sd['RAClock'], count)
     sd['RACounts'] -= int(count)
     sd['RAPosition'] -= int(count)
 
@@ -208,7 +230,7 @@ def main():
     serialcom = serial.Serial(port=sys.argv[1], baudrate=115200)
     line = b''
     while True:
-        #while serialcom.in_waiting > 0:
+        # while serialcom.in_waiting > 0:
         c = serialcom.read(1)
         if c == b'\r' or c == b'\n':
             run_steppers()
@@ -224,9 +246,10 @@ def main():
             line = b''
         else:
             line += c
-            if len(line) >  50:
+            if len(line) > 50:
                 line = b''
-        #time.sleep(0.00007)
+        # time.sleep(0.00007)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

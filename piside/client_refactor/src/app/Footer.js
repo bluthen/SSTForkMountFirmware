@@ -64,8 +64,8 @@ class Footer {
                 status_altaz.html(Formating.dec(status.alt) + '/' + Formating.dec(status.az));
                 status_altaz2.html(Formating.dec(status.alt) + '/' + Formating.dec(status.az));
             }
-            $('#status_ra_ticks', this._selfDiv).text('' + msg.rs + '/' + msg.rp);
-            $('#status_dec_ticks', this._selfDiv).text('' + msg.ds + '/' + msg.dp);
+            $('#status_ra_ticks', this._selfDiv).text('' + msg.re + '/' + msg.ri + '/' + msg.rs + '/' + msg.rp);
+            $('#status_dec_ticks', this._selfDiv).text('' + msg.de+'/' + msg.di + '/' + msg.ds + '/' + msg.dp);
             status_steps2.text(msg.rp + '/' + msg.dp);
             $('#status_time', this._selfDiv).text(msg.time);
         });

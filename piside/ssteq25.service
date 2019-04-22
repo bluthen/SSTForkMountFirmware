@@ -1,6 +1,6 @@
 [Unit]
 Description=SSTEQ25 service
-After=network.target
+After=clearhomepyc.service network.target
 
 [Service]
 Type=simple

@@ -177,8 +177,9 @@ def settings_put():
     print('settings_put')
     settings_buffer = {}
     args = json.loads(request.form['settings'])
-    keys = ["ra_track_rate", "ra_ticks_per_degree", "dec_ticks_per_degree", "ra_slew_fastest", "ra_slew_faster",
-            "ra_slew_medium",
+    keys = ["ra_track_rate", "ra_ticks_per_degree", "dec_ticks_per_degree",
+            "ra_encoder_pulse_per_degree", "dec_encoder_pulse_per_degree",
+            "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
             "ra_slew_slower", "ra_slew_slowest",
             "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium", "dec_slew_slower", "dec_slew_slowest",
             "time_autosync", "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"
@@ -193,7 +194,7 @@ def settings_put():
                 settings_buffer['micro'] = {}
             settings_buffer['micro'][key] = float(args[key])
 
-    keys = ["atmos_refract"]
+    keys = ["atmos_refract", "use_encoders", "limit_encoder_step_fillin"]
     for key in keys:
         if key in args:
             settings_buffer[key] = bool(args[key])

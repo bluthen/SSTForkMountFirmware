@@ -8,6 +8,10 @@ const saveSettingsClicked = function() {
         ra_track_rate: $('#settings_ra_track_rate', this._selfDiv).val(),
         ra_ticks_per_degree: $('#settings_ra_ticks_per_degree', this._selfDiv).val(),
         dec_ticks_per_degree: $('#settings_dec_ticks_per_degree', this._selfDiv).val(),
+        use_encoders: $('#settings_use_encoders', this._selfDiv).is(':checked'),
+        limit_encoder_step_fillin: $('#settings_limit_encoder_step_fillin', this._selfDiv).is(':checked'),
+        ra_encoder_pulse_per_degree: $('#settings_ra_encoder_pulse_per_degree', this._selfDiv).val(),
+        dec_encoder_pulse_per_degree: $('#settings_dec_encoder_pulse_per_degree', this._selfDiv).val(),
         ra_direction: $('#settings_ra_direction', this._selfDiv).val(),
         dec_direction: $('#settings_dec_direction', this._selfDiv).val(),
         ra_guide_rate: $('#settings_ra_guide_rate', this._selfDiv).val(),
@@ -226,6 +230,12 @@ class SettingsMenuGeneral {
                 $('#settings_ra_track_rate', this._selfDiv).val(data.ra_track_rate);
                 $('#settings_ra_ticks_per_degree', this._selfDiv).val(data.ra_ticks_per_degree);
                 $('#settings_dec_ticks_per_degree', this._selfDiv).val(data.dec_ticks_per_degree);
+
+                $('#settings_use_encoders', this._selfDiv).prop('checked', data.use_encoders);
+                $('#settings_limit_encoder_step_fillin', this._selfDiv).prop('checked', data.limit_encoder_step_fillin);
+                $('#settings_ra_encoder_pulse_per_degree', this._selfDiv).val(data.ra_encoder_pulse_per_degree);
+                $('#settings_dec_encoder_pulse_per_degree', this._selfDiv).val(data.dec_encoder_pulse_per_degree);
+
                 $('#settings_ra_direction', this._selfDiv).val(data.micro.ra_direction);
                 $('#settings_dec_direction', this._selfDiv).val(data.micro.dec_direction);
                 $('#settings_ra_guide_rate', this._selfDiv).val(data.micro.ra_guide_rate);

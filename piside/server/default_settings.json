@@ -1,6 +1,10 @@
 {
   "dec_ticks_per_degree": 177.7777,
   "ra_ticks_per_degree": 4320.00188221,
+  "use_encoders": false,
+  "limit_encoder_step_fillin": true,
+  "ra_encoder_pulse_per_degree": 0.0,
+  "dec_encoder_pulse_per_degree": 0.0,
   "pointing_model": "3point",
   "microserial": {
     "baud": 115200,
