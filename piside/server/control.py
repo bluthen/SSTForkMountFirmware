@@ -475,7 +475,12 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
             if abs(round(ra_delta)) <= ra_close_enough and abs(round(dec_delta)) <= dec_close_enough:
                 break
 
-            if abs(ra_delta) < math.ceil(settings.settings['ra_track_rate']):
+            if abs(ra_delta) <= ra_close_enough:
+                if not parking and runtime_settings['tracking']:
+                    ra_speed = settings.settings['ra_track_rate']
+                else:
+                    ra_speed = 0
+            elif abs(ra_delta) < 4*math.ceil(settings.settings['ra_track_rate']):
                 if not parking and runtime_settings['tracking']:
                     # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
                     ra_speed = settings.settings['ra_track_rate'] + ra_delta / dt
@@ -505,6 +510,9 @@ def move_to_skycoord_threadf(sync_info, wanted_skycoord, parking=False):
 
             if abs(dec_delta) < dec_close_enough:
                 dec_speed = 0.0
+            # In case model has dec constantly moving.
+            elif abs(dec_delta) < 4*settings.settings['dec_ticks_per_degree']*SIDEREAL_RATE:
+                dec_speed = dec_delta/dt
             elif abs(dec_delta) < settings.settings['dec_slew_fastest'] / 2.0:
                 dec_speed = dec_delta * 2.0
                 if abs(dec_speed) > abs(status['ds']):
