@@ -8,6 +8,7 @@ import threading
 import control
 import pendulum
 import iso8601
+from functools import partial
 
 ourport = 10002
 kill = False
@@ -19,6 +20,7 @@ manual_slew_map = {'w': 'left', 'e': 'right', 'n': 'up', 's': 'down'}
 slew_speed_map = {'S': 'fastest', 'M': 'faster', 'C': 'slower', 'G': 'slowest'}
 slew_speed = 'fastest'
 target = {'ra': None, 'dec': None, 'alt': None, 'az': None}
+slew_intervals = {'n': None, 's': None, 'e': None, 'w': None}
 
 
 def ra_format(ra_deg):
@@ -177,7 +179,7 @@ class LX200Client:
                 buffer = ""
 
     def process(self, cmd):
-        global localtime_utc_offset, localtime_daylight_savings, slew_speed, target
+        global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals
         print('process', cmd)
         if cmd == ':Aa#':  # Start automatic alignment sequence
             self.write(b'0')
@@ -339,13 +341,16 @@ class LX200Client:
             elif cmd[2] == 'g':  # PRIORITY2
                 # move guide telescope
                 m = self.re_guide_telescope.match(cmd)
-                direction = m[1]
-                timeMS = m[2]
+                direction = m.group(1)
+                timeMS = m.group(2)
                 control.guide_control(direction, int(timeMS))
             elif cmd[2] in ['n', 's', 'e', 'w']:  # PRIORITY DONE
                 # slew
                 # Set interval
-                control.manual_control(manual_slew_map[cmd[2]], slew_speed, True)
+                print('LX200 Manual Slew', slew_speed)
+                if slew_intervals[cmd[2]]:
+                    slew_intervals[cmd[2]].cancel()
+                slew_intervals[cmd[2]] = control.SimpleInterval(partial(control.manual_control, manual_slew_map[cmd[2]], slew_speed), 0.1)
         elif cmd == ':P#':
             self.write(b'LOW PRECISION')
         elif cmd[1] == 'Q':
@@ -357,12 +362,16 @@ class LX200Client:
                 self.write(b'0')
             # :$QZ+# :$QZ-#
             elif cmd[2] == '#':  # Halt all slewing PRIORITY DONE
-                control.manual_control('left', None)
-                control.manual_control('right', None)
-                control.manual_control('up', None)
-                control.manual_control('down', None)
+                for d in ['n', 'w', 's', 'e']:
+                    if slew_intervals[d]:
+                        slew_intervals[d].cancel()
+                        slew_intervals[d] = None
+                        control.manual_control(manual_slew_map[d], None)
                 control.cancel_slews()
             elif cmd[2] in ['e', 'n', 'w', 's']:  # halt slew by direction # PRIORITY DONE
+                if slew_intervals[cmd[2]]:
+                    slew_intervals[cmd[2]].cancel()
+                    slew_intervals[cmd[2]] = None
                 control.manual_control(manual_slew_map[cmd[2]], None)
         # rotators :r+# :r-# :rn# :rh# :rC# :rc# :rq#
         elif cmd[1] == 'R':
@@ -371,11 +380,11 @@ class LX200Client:
                 slew_speed = slew_speed_map[cmd[2]]
             elif cmd[2] == 'A':
                 # m = self.re_ra_rate_deg_cmd.match(cmd)
-                # dps = m[1]
+                # dps = m.group(1)
                 pass
             elif cmd[2] == 'E':
                 # m = self.re_dec_rate_deg_cmd.match(cmd)
-                # dps = m[1]
+                # dps = m.group(1)
                 pass
             # set guide rate :RgSS.S#
         # Telescope set commands
@@ -383,17 +392,17 @@ class LX200Client:
             if cmd[2] == 'a':  # PRIORITY2 DONE
                 if self.re_set_target_object_alt_hp.match(cmd):  # high precision set target object
                     m = self.re_set_target_object_alt_hp.match(cmd)
-                    deg = m[1]
-                    minute = m[2]
-                    seconds = m[3]
+                    deg = m.group(1)
+                    minute = m.group(2)
+                    seconds = m.group(3)
                     target['ra'] = None
                     target['dec'] = None
                     target['alt'] = dec_to_deg(float(deg), float(minute), float(seconds))
                     self.write(b'1')
                 elif self.re_set_target_object_alt.match(cmd):  # low precision set target object
                     m = self.re_set_target_object_alt.match(cmd)
-                    deg = m[1]
-                    minute = m[2]
+                    deg = m.group(1)
+                    minute = m.group(2)
                     target['ra'] = None
                     target['dec'] = None
                     target['alt'] = dec_to_deg(float(deg), float(minute))
@@ -406,9 +415,9 @@ class LX200Client:
                 self.write(b'1')
             elif cmd[2] == 'C':
                 m = self.re_set_handbox_date.match(cmd)
-                month = m[1]
-                day = m[2]
-                year = m[3]  # YY
+                month = m.group(1)
+                day = m.group(2)
+                year = m.group(3)  # YY
 
                 # Get current time, try to set date time
                 dstr = "20%s-%s-%s" % (year, month, day)
@@ -421,19 +430,19 @@ class LX200Client:
             elif cmd[2] == 'd':  # PRIORITY DONE
                 m = self.re_set_target_obj_dec_hp.match(cmd)
                 if m:
-                    sign = -1 if m[1] == '-' else 1.0
-                    deg = m[2]
-                    minutes = m[3]
-                    seconds = m[4]
+                    sign = -1 if m.group(1) == '-' else 1.0
+                    deg = m.group(2)
+                    minutes = m.group(3)
+                    seconds = m.group(4)
                     target['dec'] = dec_to_deg(sign*float(deg), float(minutes), float(seconds))
                     target['alt'] = None
                     target['az'] = None
                     self.write(b'1')  # 0 if not accepted/valid
                 else:
                     m = self.re_set_target_obj_dec.match(cmd)
-                    sign = -1 if m[1] == '-' else 1.0
-                    deg = m[2]
-                    minutes = m[3]
+                    sign = -1 if m.group(1) == '-' else 1.0
+                    deg = m.group(2)
+                    minutes = m.group(3)
                     target['dec'] = dec_to_deg(sign*float(deg), float(minutes))
                     target['alt'] = None
                     target['az'] = None
@@ -450,8 +459,8 @@ class LX200Client:
                 self.write(b'0')
             elif cmd[2] == 'g':  # PRIORITY DONE
                 m = self.re_set_site_long.match(cmd)
-                deg = m[1]
-                minutes = m[2]
+                deg = m.group(1)
+                minutes = m.group(2)
 
                 lon = dec_to_deg(float(deg), float(minutes))
                 if lon > 180:
@@ -466,8 +475,8 @@ class LX200Client:
                     self.write(b'0')
             elif cmd[2] == 'G':  # PRIORITY
                 m = self.re_set_site_hours_add_utc.match(cmd)
-                sign = m[1]  # + or -
-                hours = m[2]
+                sign = m.group(1)  # + or -
+                hours = m.group(2)
                 offset = float(hours) * (-1.0 if sign == '-' else 1.0)
                 dstr = pendulum.now(tz=localtime_utc_offset)
                 offset_adjust = offset - localtime_utc_offset
@@ -480,7 +489,7 @@ class LX200Client:
                     self.write(b'0')
             elif cmd[2] == 'H':
                 m = self.re_set_dst.match(cmd)
-                dst_enabled = m[1] == '1'
+                dst_enabled = m.group(1) == '1'
                 localtime_daylight_savings = dst_enabled
                 # TODO: Should this adjust localtime or utc_offset any?
                 self.write(b'1')
@@ -490,9 +499,9 @@ class LX200Client:
                 self.write(b'0')
             elif cmd[2] == 'L':  # PRIORITY DONE
                 m = self.re_set_local_time.match(cmd)
-                hour = m[1]
-                minute = m[2]
-                second = m[3]
+                hour = m.group(1)
+                minute = m.group(2)
+                second = m.group(3)
                 print('Trying to set time')
 
                 t = "%s:%s:%s" % (hour, minute, second)
@@ -506,12 +515,12 @@ class LX200Client:
             # flexure correction :SM+# Sm-#
             elif cmd[2] in ['M', 'N', 'O', 'P']:
                 m = self.re_set_site_name.match(cmd)
-                site = m[1]  # M = site1, N=site2, O=site3, P = site4
-                name = m[2]
+                site = m.group(1)  # M = site1, N=site2, O=site3, P = site4
+                name = m.group(2)
                 self.write(b'1')
             elif cmd[2] == 'o':
                 m = self.re_set_altitude_low_limit.match(cmd)
-                alt = m[1]
+                alt = m.group(1)
                 self.write(b'1')
             # Backlash :SpB<num><num>#, Home data :SpH<num><num>#, sensor offset :SpS<num><num><num>#
             elif cmd[2] == 'p':
@@ -521,17 +530,17 @@ class LX200Client:
             elif cmd[2] == 'r':  # PRIORITY DONE
                 m = self.re_set_target_object_ra_hp.match(cmd)
                 if m:
-                    hour = m[1]
-                    minutes = m[2]
-                    seconds = m[3]
+                    hour = m.group(1)
+                    minutes = m.group(2)
+                    seconds = m.group(3)
                     target['ra'] = ra_to_deg(float(hour), float(minutes), float(seconds))
                     target['alt'] = None
                     target['az'] = None
                     self.write(b'1')
                 else:
                     m = self.re_set_target_object_ra.match(cmd)
-                    hour = m[1]
-                    minutes = m[2]
+                    hour = m.group(1)
+                    minutes = m.group(2)
                     target['ra'] = ra_to_deg(float(hour), float(minutes))
                     target['alt'] = None
                     target['az'] = None
@@ -541,22 +550,22 @@ class LX200Client:
                 self.write(b'1')
             elif cmd[2] == 'S':  # PRIORITY 3?
                 # m = self.re_set_local_sidereal_time.match(cmd)
-                # hour = m[1]
-                # minute = m[2]
-                # second = m[3]
+                # hour = m.group(1)
+                # minute = m.group(2)
+                # second = m.group(3)
                 self.write(b'0')
             elif cmd[2] == 't':  # PRIORITY DONE
                 m = self.re_set_current_site_latitude_hp.match(cmd)
                 if m:
-                    sign = -1 if m[1] == '-' else 1.0
-                    deg = m[2]
-                    minute = m[3]
-                    seconds = m[4]
+                    sign = -1 if m.group(1) == '-' else 1.0
+                    deg = m.group(2)
+                    minute = m.group(3)
+                    seconds = m.group(4)
                 else:
                     m = self.re_set_current_site_latitude.match(cmd)
-                    sign = -1 if m[1] == '-' else 1.0
-                    deg = m[2]
-                    minute = m[3]
+                    sign = -1 if m.group(1) == '-' else 1.0
+                    deg = m.group(2)
+                    minute = m.group(3)
                     seconds = 0.0
                 try:
                     lat = dec_to_deg(sign * float(deg), float(minute), float(seconds))
@@ -574,14 +583,14 @@ class LX200Client:
             # increment rate, smart drive :ST+#, ST-#, STA- :STA+, :STZ-, :STZ+
             elif cmd[2] == 'w':
                 m = self.re_set_max_slew_degrees.match(cmd)
-                deg = m[1]  # expect 2 through 8
+                deg = m.group(1)  # expect 2 through 8
                 self.write(b'1')
             elif cmd == ':SyGPDCO#':
                 self.write(b'0')
             elif cmd[2] == 'z':
                 m = self.re_set_target_azimuth.match(cmd)
-                deg = m[1]
-                minutes = m[2]
+                deg = m.group(1)
+                minutes = m.group(2)
                 self.write(b'1')
         # inc dec tracking :T+# :T-#, set lunar tracking :TL# custom tracking :TM#, sidereal tracking :TS#
         # toggle between high low precision positions :U#
@@ -590,7 +599,7 @@ class LX200Client:
             self.write(b'0.0000')
         elif cmd[1] == 'W':
             m = self.re_site_select.match(cmd)
-            site = m[1]  # 1 through 4
+            site = m.group(1)  # 1 through 4
         elif cmd in [':??#', ':?+#', ':?-#']:
             self.write(b'HelpText#')
 

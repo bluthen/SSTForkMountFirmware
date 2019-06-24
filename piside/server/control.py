@@ -1088,7 +1088,7 @@ def set_time(iso_timestr):
         else:
             return False, 'Failed to set date'
     runtime_settings['time_been_set'] = True
-    return False, 'NTP Set'
+    return True, 'NTP Set'
 
 
 def set_location(lat, long, elevation, name):
