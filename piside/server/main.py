@@ -14,14 +14,11 @@ import control
 import threading
 import re
 import sqlite3
-import iso8601
 import subprocess
 import datetime
-import traceback
 import tempfile
 import zipfile
 import stellarium_server
-import math
 import os
 import settings
 import sstchuck
@@ -29,7 +26,7 @@ import network
 import sys
 import socket
 from solver import Solver
-import pointing_model
+import lx200proto_server
 
 from werkzeug.serving import make_ssl_devcert
 
@@ -137,7 +134,7 @@ def root():
 @app.route('/version')
 @nocache
 def version():
-    return jsonify({"version": "0.0.16"})
+    return jsonify({"version": control.version, "version_date": control.version_date_str})
 
 
 @app.route('/settings')
@@ -388,15 +385,10 @@ def set_location():
         return 'Missing arguments', 400
     location = {'lat': float(location['lat']), 'long': float(location['long']),
                 'elevation': float(location['elevation']), 'name': str(location['name'])}
-    old_location = settings.settings['location']
-    settings.settings['location'] = location
     try:
-        control.update_location()
+        control.set_location(location['lat'], location['long'], location['elevation'], location['name'])
     except:
-        settings.settings['location'] = old_location
-        traceback.print_exc(file=sys.stdout)
         return 'Invalid location', 400
-    settings.write_settings(settings.settings)
     return 'Set Location', 200
 
 
@@ -424,16 +416,15 @@ def do_sync():
     alt = request.form.get('alt', None)
     az = request.form.get('az', None)
     if alt is not None and az is not None:
-        if not runtime_settings['earth_location_set']:
-            return 'Cant Alt/Az Sync if not location set', 400
-        alt = float(alt)
-        az = float(az)
-        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+        alt=float(alt)
+        az=float(az)
     else:
         ra = float(ra)
         dec = float(dec)
-        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    control.sync(coord)
+    try:
+        control.set_sync(ra, dec, alt, az)
+    except Exception as e:
+        return str(e), 400
     return jsonify({'text': 'Sync Points: ' + str(control.pm_real_stepper.size())})
 
 
@@ -441,7 +432,7 @@ def do_sync():
 @nocache
 def post_sync():
     model = request.form.get('model', None)
-    if model not in ['single', '1point', '2point', '3point', 'affine_meridian', 'affine_all']:
+    if model not in ['single', '1point', 'affine_all']:
         return 'Invalid model', 400
     # Set models
     control.clear_sync()
@@ -459,30 +450,20 @@ def do_slewto():
     az = request.form.get('az', None)
     ra_steps = request.form.get('ra_steps', None)
     dec_steps = request.form.get('dec_steps', None)
-    parking = False
-    if ra_steps is not None and dec_steps is not None:
-        control.slew_to_steps(int(ra_steps), int(dec_steps))
-        return 'Slewing', 200
-    elif alt is not None and az is not None:
-        if not runtime_settings['earth_location_set']:
-            return 'Cant do alt/az slew if no location set.', 400
-        alt = float(alt)
-        az = float(az)
-        altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
-        pointing_logger.debug(json.dumps({'func': 'main.do_slewto', 'altaz': pointing_model.log_p2dict(altaz)}))
-        # parking = True
-    else:
-        ra = float(ra)
-        dec = float(dec)
-        radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-        altaz = control.convert_to_altaz(radec)
-        pointing_logger.debug(json.dumps({'func': 'main.do_slewto', 'radec': pointing_model.log_p2dict(radec),
-                                          'altaz': pointing_model.log_p2dict(altaz)}))
-    if not control.slewtocheck(altaz):
-        return 'Slew position is below horizon or in keep-out area.', 400
-    else:
-        control.slew(altaz, parking)
-        return 'Slewing', 200
+    try:
+        if ra_steps is not None and dec_steps is not None:
+            control.set_slew(ra_steps=int(ra_steps), dec_steps=int(dec_steps))
+        elif alt is not None and az is not None:
+            alt = float(alt)
+            az = float(az)
+            control.set_slew(alt=alt, az=az)
+        else:
+            ra = float(ra)
+            dec = float(dec)
+            control.set_slew(ra=ra, dec=dec)
+    except Exception as e:
+        return str(e), 400
+    return 'Slewing', 200
 
 
 @app.route('/slewto_check', methods=['PUT'])
@@ -504,27 +485,12 @@ def stop_slewto():
 @app.route('/set_time', methods=['PUT'])
 @nocache
 def set_time():
-    s = datetime.datetime.now()
     time = request.form.get('time', None)
-    overwrite = request.form.get('overwrite', None)
-    # if runtime_settings['time_been_set'] and not overwrite:
-    #    return 'Already Set', 200
-    d = iso8601.parse_date(time)
-    ntpstat = subprocess.run(['/usr/bin/ntpstat'])
-    if ntpstat.returncode != 0:
-        d = d + (datetime.datetime.now() - s)
-        time = d.isoformat()
-        if not settings.is_simulation():
-            daterun = subprocess.run(['/usr/bin/sudo', '/bin/date', '-s', time])
-        else:
-            daterun = {'returncode': 0}
-        if daterun.returncode == 0:
-            runtime_settings['time_been_set'] = True
-            return 'Date Set', 200
-        else:
-            return 'Failed to set date', 500
-    runtime_settings['time_been_set'] = True
-    return 'NTP Set', 200
+    # overwrite = request.form.get('overwrite', None)
+    status = control.set_time(time)
+    if status[1] == 'NTP Set':
+        return status[1], 200
+    return status[1], 200 if status[0] else 500
 
 
 @app.route('/set_park_position', methods=['PUT'])
@@ -905,13 +871,19 @@ def main():
         settings.settings['network'][key] = ethernetinfo[key]
     st_queue = control.init(socketio, runtime_settings)
 
+    lx200proto_thread = threading.Thread(target=lx200proto_server.main)
+    lx200proto_thread.start()
+
     # TODO: Config if start stellarium server.
     stellarium_thread = threading.Thread(target=stellarium_server.run)
     stellarium_thread.start()
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
-    paa_capture(1000000 * 9.99, 800)
+    try:
+        paa_capture(1000000 * 2.00, 800)
+    except:
+        pass
 
     hostname = socket.gethostname()
     # TODO: What about when they change hostname? Or can move this to systemd?
@@ -928,6 +900,8 @@ def main():
         power_thread_quit = True
         stellarium_server.terminate()
         sstchuck.terminate()
+        lx200proto_server.terminate()
+        lx200proto_thread.join()
         stellarium_thread.join()
         sstchuck_thread.join()
         power_thread.join()

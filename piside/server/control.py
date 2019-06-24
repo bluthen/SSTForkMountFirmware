@@ -28,6 +28,8 @@ Pointing:
 import threading
 from functools import partial
 import time
+import traceback
+import sys
 
 from sstutil import ProfileTimer as PT
 
@@ -41,8 +43,14 @@ import socket
 import json
 import stepper_control
 import pointing_model
+import pendulum
+import subprocess
 
 import settings
+
+version = "0.0.17"
+version_short = "0.0"
+version_date_str = "Jun 21 2019"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -326,7 +334,40 @@ def init(osocketio, fruntime_settings):
     status_interval = SimpleInterval(send_status, 1)
 
 
-def manual_control(direction, speed):
+def guide_control(direction, time_ms):
+    """
+
+    :param direction: 'n', 's', 'e', or 'w'
+    :type direction: str
+    :param time_ms:
+    :type time_ms: float
+    :return:
+    """
+    # TODO: Not when manual slewing
+    # TODO: Different locks for e or w ?
+    got_lock = slew_lock.acquire(blocking=False)
+    if not got_lock:
+        return
+    try:
+        status = calc_status(stepper.get_status())
+        if direction == 'n':
+            stepper.set_speed_dec(status['ds'] + settings.settings['micro']['dec_guide_rate'])
+            threading.Timer(time_ms/1000.0, partial(stepper.set_speed_dec, status['ds']))
+        elif direction == 's':
+            stepper.set_speed_dec(status['ds'] - settings.settings['micro']['dec_guide_rate'])
+            threading.Timer(time_ms/1000.0, partial(stepper.set_speed_dec, status['ds']))
+        elif direction == 'w':
+            stepper.set_speed_ra(status['rs'] + settings.settings['micro']['ra_guide_rate'])
+            threading.Timer(time_ms/1000.0, partial(stepper.set_speed_ra, status['rs']))
+        elif direction == 'e':
+            stepper.set_speed_ra(status['rs'] - settings.settings['micro']['ra_guide_rate'])
+            threading.Timer(time_ms/1000.0, partial(stepper.set_speed_ra, status['rs']))
+    finally:
+        slew_lock.release()
+
+
+
+def manual_control(direction, speed, persistant=False):
     global slew_lock, manual_lock
     # print('manual_control', direction, speed)
     settings.not_parked()
@@ -419,8 +460,9 @@ def manual_control(direction, speed):
                     # print('--------------- dec down -%.1f' % settings.settings['dec_slew_' + speed])
                     # print(sspeed)
                     stepper.set_speed_dec(sspeed)
-                timers[direction] = threading.Timer(0.5, partial(manual_control, direction, None))
-                timers[direction].start()
+                if not persistant:
+                    timers[direction] = threading.Timer(0.5, partial(manual_control, direction, None))
+                    timers[direction].start()
         finally:
             slew_lock.release()
 
@@ -1025,3 +1067,106 @@ def slew(coord, parking=False):
     stepper_coord = pm_real_stepper.transform_point(coord)
     icrs_stepper = convert_to_icrs(stepper_coord)
     move_to_skycoord(runtime_settings['sync_info'], icrs_stepper, parking)
+
+
+def set_time(iso_timestr):
+    # if runtime_settings['time_been_set'] and not overwrite:
+    #    return 'Already Set', 200
+    s = datetime.datetime.now()
+    d = pendulum.parse(iso_timestr)
+    if settings.is_simulation():
+        runtime_settings['time_been_set'] = True
+        return True, 'Date Set'
+    ntpstat = subprocess.run(['/usr/bin/ntpstat'])
+    if ntpstat.returncode != 0:
+        d = d + (datetime.datetime.now() - s)
+        time = d.isoformat()
+        daterun = subprocess.run(['/usr/bin/sudo', '/bin/date', '-s', time])
+        if daterun.returncode == 0:
+            runtime_settings['time_been_set'] = True
+            return True, 'Date Set'
+        else:
+            return False, 'Failed to set date'
+    runtime_settings['time_been_set'] = True
+    return False, 'NTP Set'
+
+
+def set_location(lat, long, elevation, name):
+    """
+
+    :param lat:
+    :type lat: float
+    :param long:
+    :type long: float
+    :param elevation:
+    :type elevation: float
+    :param name:
+    :type name: str
+    :return: None
+    """
+    location = {'lat': lat, 'long': long, 'elevation': elevation, 'name': name}
+    old_location = settings.settings['location']
+    settings.settings['location'] = location
+    try:
+        update_location()
+    except:
+        settings.settings['location'] = old_location
+        traceback.print_exc(file=sys.stdout)
+        raise
+    settings.write_settings(settings.settings)
+
+
+def set_sync(ra=None, dec=None, alt=None, az=None):
+    """
+
+    :param ra: deg
+    :param dec: deg
+    :param alt: deg
+    :param az: deg
+    :return:
+    """
+    if alt is not None and az is not None:
+        if not runtime_settings['earth_location_set']:
+            raise Exception('Cant Alt/Az Sync if not location set')
+        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+    elif ra is not None and dec is not None:
+        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+    else:
+        raise Exception('Missing Coordinates')
+    sync(coord)
+
+
+def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None, parking=False):
+    """
+
+    :param ra: deg
+    :param dec: deg
+    :param alt: deg
+    :param az: deg
+    :param ra_steps:
+    :type ra_steps: int
+    :param dec_steps:
+    :type dec_steps: int
+    :param parking: True if parking slew
+    :type parking: bool
+    :return:
+    """
+    if ra_steps is not None and dec_steps is not None:
+        slew_to_steps(int(ra_steps), int(dec_steps))
+        return
+    elif alt is not None and az is not None:
+        if not runtime_settings['earth_location_set']:
+            raise Exception('Cant do alt/az slew if no location set.')
+        altaz = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+        pointing_logger.debug(json.dumps({'func': 'main.do_slewto', 'altaz': pointing_model.log_p2dict(altaz)}))
+    else:
+        ra = float(ra)
+        dec = float(dec)
+        radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        altaz = convert_to_altaz(radec)
+        pointing_logger.debug(json.dumps({'func': 'main.do_slewto', 'radec': pointing_model.log_p2dict(radec),
+                                          'altaz': pointing_model.log_p2dict(altaz)}))
+    if not slewtocheck(altaz):
+        return Exception('Slew position is below horizon or in keep-out area.')
+    else:
+        slew(altaz, parking)

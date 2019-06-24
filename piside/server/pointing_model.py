@@ -3,8 +3,11 @@ import math
 import affine_fit
 import settings
 import json
+import scipy
+import scipy.optimize
 
 from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 pointing_logger = settings.get_logger('pointing')
 
@@ -68,36 +71,6 @@ def alt_az_projection(altaz_coord):
     return {'x': x, 'y': y}
 
 
-def find_triangle(coord, sync_points, triangles):
-    """
-    Find a set of sync points that make up a triangle in which the coord is inside the triangle.
-    :param coord: The coordinate you want to find a triangle that it is in.
-    :type coord: astropy.coordinates.SkyCoord or xy project coordinates
-    :param sync_points: A list of dicts of (from_point, real_projection, ...)
-    :type sync_points: list[dict['from_point': astropy.coordinates.SkyCoord, 'from_projection': dict[x, y]]
-    :param triangles: A list of sets of indexes of sync_points that make minimal triangles.
-    :return: Tuple of 3 sync_point indexes representing the triangle.
-    :rtype: tuple
-    """
-    if not hasattr(coord, 'alt') and (not isinstance(coord, dict) or ('x' not in coord and 'y' not in coord)):
-        raise AssertionError('coord should be an alt-az coordinate or xy projection coordinate')
-    if len(triangles) == 0:
-        return None
-    if hasattr(coord, 'alt'):
-        pt = alt_az_projection(coord)
-    else:
-        pt = coord
-    pt = [pt['x'], pt['y']]
-    for triangle in triangles:
-        tri = []
-        for idx in triangle:
-            tri.append([sync_points[idx]['from_projection']['x'], sync_points[idx]['from_projection']['y']])
-        if tr_point_in_triangle(pt, tri[0], tri[1], tri[2]):
-            return triangle
-    # Outside any triangle sync.
-    return None
-
-
 def get_projection_coords(indexes, sync_points, sync_point_key):
     """
 
@@ -132,6 +105,143 @@ def log_p2dict(point):
         return {}
 
 
+def buie_model(xdata, r, dr, dd, dt, i, c, gamma, nu, e, phi):
+    """
+
+    :param xdata: [ra_array, dec_array]
+    :param r: ra scale error
+    :param dr: dec scale error
+    :param dd: zeropoint offset dec
+    :param dt: zeropoint offset ra
+    :param i: polar axis non-orthogonality value
+    :param c: mis-alignment of optical and mechanical axes
+    :param gamma: angular separation of true and instrument pole
+    :param nu: angle between true meridian and line of true and instrumental poles
+    :param e: tube flexure
+    :param phi: latitude
+    :return:
+    """
+    xdataT = xdata.T
+    tau = xdataT[0] * math.pi / 180.0
+    delta = xdataT[1] * math.pi / 180.0
+
+    a1 = gamma * numpy.cos(nu)
+    a2 = gamma * numpy.sin(nu)
+    x = numpy.cos(tau)
+    y = numpy.sin(tau)
+    x_hat = numpy.cos(delta)
+    T = numpy.tan(delta)
+    S = 1 / x_hat
+    z = numpy.sin(phi) * x_hat - numpy.cos(phi) * numpy.sin(delta) * x
+
+    d = delta - (dd - a1 * x - a2 * y - e * z + dr * delta)
+    t = tau - (dt + T * (a2 * x - a1 * y - i) + S * (c + e * y * numpy.cos(phi)) + r * tau)
+
+    return numpy.array([(180.0 / math.pi) * t, (180.0 / math.pi) * d]).T
+
+
+def buie_model_error(p0, x, y):
+    p0a = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    p0a = numpy.concatenate([p0, p0a[len(p0):]])
+    ny = buie_model(x, *p0a)
+    err = numpy.power(ny.T[0] - y.T[0], 2) + numpy.power(ny.T[1] - y.T[1], 2)
+    return err
+
+
+# scipy.curve_fit(buie_model, x_data, y_data, p0=[altitude, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+"""
+import pointing_model
+import numpy
+import scipy
+import scipy.optimize
+xdata = numpy.array([
+[30, 21],
+[50, 41],
+[44, 51],
+[33, 61],
+[130, 71],
+[150, 81],
+[92, 11],
+[66, 14],
+[98.2, 15],
+[21, -50],
+[89, -22],
+[190, 44],
+[200, -70],
+[21, 1],
+[44, 5],
+])
+ydata = numpy.array([xdata.T[0]*1.02, xdata.T[1]*0.98]).T
+p0=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+scipy.optimize.leastsq(pointing_model.buie_model_error, p0[:], args=(xdata, xdata))
+"""
+
+
+# scipy.optimize.curve_fit(pointing_model.buie_model ,
+# numpy.array([[30.0, 40.0, 24, 26, 70, 82, 32, 44, 65, 70, 12, 170], [45.0, 50.0, -32, -50, 32, 33, 66, 89, 11, 23, 66, -12]]) , numpy.array([[30.0, 40.0, 24, 26, 70, 82, 32, 44, 65, 70, 12, 170], [45.0, 50.0, -32, -50, 32, 33, 66, 89, 11, 23, 66, -12]]) , p0=[39.9, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+
+
+class PointingModelRADEC:
+    def __init__(self, log=False, name=''):
+        self.__from_points = None
+        self.__to_points = []
+        self.__model = 'buie'
+        self.__buie_vals = None
+
+    def set_model(self, model):
+        pass
+
+    def add_point(self, from_point, to_point):
+        SEPERATION_THRESHOLD = 0.5
+        replace_idx = None
+        if self.__from_points is not None:
+            replace_idxex = numpy.where(self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD)[0]
+            if len(replace_idxex) > 0:
+                replace_idx = replace_idxex[0]
+        if replace_idx is not None:
+            fra = self.__from_points.ra.deg
+            fdec = self.__from_points.dec.deg
+            fra[replace_idx] = from_point.ra.deg
+            fdec[replace_idx] = from_point.dec.deg
+            self.__to_points[replace_idx] = [to_point.ra.deg, to_point.dec.deg]
+        else:
+            self.__to_points.append([to_point.ra.deg, to_point.dec.deg])
+            if self.__from_points is not None:
+                fra = numpy.append(self.__from_points.ra.deg, from_point.ra.deg)
+                fdec = numpy.append(self.__from_points.dec.deg, from_point.dec.deg)
+            else:
+                fra = [from_point.ra.deg]
+                fdec = [from_point.dec.deg]
+        self.__from_points = SkyCoord(ra=fra * u.deg, dec=fdec * u.deg, frame='icrs')
+
+        if self.__model == 'buie':
+            p0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            if len(self.__to_points) < len(p0):
+                p0 = p0[0:len(self.__to_points)]
+            xdata = numpy.array([self.__from_points.ra.deg, self.__from_points.dec.deg]).T
+            ydata = numpy.array(self.__to_points)
+            self.__buie_vals = scipy.optimize.leastsq(buie_model_error, p0, args=(xdata, ydata))[0]
+
+    def transform_point(self, point):
+        if self.__model == 'buie' and self.__buie_vals:
+            p0 = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+            p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals):]])
+            new_point = buie_model(numpy.array([[point.ra.deg, point.dec.deg]]), *p0)
+            return SkyCoord(ra=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg, frame='icrs')
+        else:
+            return point
+
+    def clear(self):
+        self.__from_points = None
+        self.__to_points = []
+        self.__buie_vals = None
+
+    def get_from_points(self):
+        return numpy.array(self.__from_points)
+
+    def size(self):
+        return len(self.__to_points)
+
 
 class PointingModel:
     def __init__(self, log=False, name=''):
@@ -143,13 +253,13 @@ class PointingModel:
             >>> # Unity test
             >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
             >>> tpt = pm.transform_point(point)
             >>> tpt.alt.deg, tpt.az.deg
@@ -158,10 +268,10 @@ class PointingModel:
             >>> pm.clear()
             >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
             >>> tpt = pm.transform_point(point)
             >>> tpt.alt.deg, tpt.az.deg
@@ -170,13 +280,13 @@ class PointingModel:
             >>> pm.clear()
             >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=10+(60-10)*1.02, az=90+(95-90)*1.02, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=10+(20-10)*1.02, az=90+(100-90)*1.02, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
             >>> tpt = pm.transform_point(point)
             >>> tpt.alt.deg, tpt.az.deg
@@ -186,15 +296,15 @@ class PointingModel:
             >>> pm.clear()
             >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
             >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
             >>> sp = pointing_model.test_transform(10.0, 90.0, 60., 95.0, 1.)
             >>> stepper_point = SkyCoord(alt=sp['alt'], az=sp['az'], unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
             >>> sp = pointing_model.test_transform(10.0, 90.0, 20., 100.0, 1.0)
             >>> stepper_point = SkyCoord(alt=sp['alt'], az=sp['az'], unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
+            >>> pm.add_point(sync_point, stepper_point)
             >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
             >>> tpt = pm.transform_point(point)
             >>> tpt.alt.deg, tpt.az.deg
@@ -204,15 +314,13 @@ class PointingModel:
         self.__name = name
 
         self.__sync_points = []
-        self.__model = '3point'
+        self.__from_points = None
+        self.__model = 'affine_all'
         # Distance matrix for sync_points
         # https://en.wikipedia.org/wiki/Distance_matrix
         #: distance matrix created with sync_points
         self.__distance_matrix = []
-        self.__triangles = []
         self.__affineAll = None
-        self.__affineW = None
-        self.__affineE = None
         self.debug = False
 
     def get_from_points(self):
@@ -222,7 +330,7 @@ class PointingModel:
         return ret
 
     def set_model(self, model):
-        if model in ['single', '1point', '2point', '3point', 'affine_meridian', 'affine_all']:
+        if model in ['single', '1point', 'affine_all']:
             if self.__log:
                 pointing_logger.debug(json.dumps({'func': 'set_model', 'model': model}))
             self.__model = model
@@ -235,91 +343,39 @@ class PointingModel:
         :param to_point: AltAz to point
         :type to_point: astropy.coordinates.SkyCoord in AltAz frame
         :return: triangle mainly used for debugging.
-        :Example:
-            >>> import pointing_model
-            >>> from astropy.coordinates import SkyCoord
-            >>> pm = pointing_model.PointingModel()
-            >>> pm.debug = True
-            >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10.1, az=90.1, unit='deg', frame='altaz')
-            >>> triangle = pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=60.1, az=95.1, unit='deg', frame='altaz')
-            >>> triangles = pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=20.1, az=100.1, unit='deg', frame='altaz')
-            >>> triangles = pm.add_point(sync_point, stepper_point)
-            >>> triangles
-            [{0, 1, 2}]
-            >>> sync_point = SkyCoord(alt=12, az=80, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=12.1, az=80.1, unit='deg', frame='altaz')
-            >>> triangles = pm.add_point(sync_point, stepper_point)
-            >>> triangles
-            [{0, 2, 3}, {0, 1, 2}]
         """
         if not hasattr(from_point, 'alt'):
             raise ValueError('coord should be an alt-az coordinate')
-        # TODO: Check if coord already in sync_points first and don't add if so.
 
-        # Add on to distance matrix
-        row = []
-        for i in range(len(self.__sync_points)):
-            # print("add_point", from_point, self.__sync_points[i]['from_point'])
-            sep = from_point.separation(self.__sync_points[i]['from_point']).deg
-            self.__distance_matrix[i].append(sep)
-            row.append(sep)
-        if 0.0 in row:
-            raise ValueError('coord already in sync_points')
-        row.append(0.0)
-        self.__sync_points.append(
-            {'from_point': from_point, 'from_projection': alt_az_projection(from_point), 'to_point': to_point,
-             'to_projection': alt_az_projection(to_point)})
-        self.__distance_matrix.append(row)
+        # If it is close enough to a point already there, we will replace it.
+        SEPERATION_THRESHOLD = 0.5
 
-        if self.__model == '3point':
-            # Create traingles again
-            # For each point find two other points that are near by.
-            if len(self.__sync_points) > 2:
-                new_triangles = []
-                for i in range(len(self.__sync_points)):
-                    min_v1 = 999999999.0
-                    min_idx1 = -1
-                    min_idx2 = -1
-                    for j in range(len(self.__sync_points)):
-                        if i == j:
-                            continue
-                        if self.__distance_matrix[i][j] < min_v1:
-                            min_idx2 = min_idx1
-                            min_v1 = self.__distance_matrix[i][j]
-                            min_idx1 = j
-                    # check if triangle is already in there or not.
-                    triangle = {i, min_idx1, min_idx2}
-                    if triangle not in new_triangles and -1 not in triangle:
-                        new_triangles.append(triangle)
-                self.__triangles = new_triangles
+        replace_idx = None
+        if self.__from_points is not None:
+            replace_idxex = numpy.where(self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD)[0]
+            if len(replace_idxex) > 0:
+                replace_idx = replace_idxex[0]
+        if replace_idx is not None:
+            self.__sync_points[replace_idx] = {'from_point': from_point,
+                                               'from_projection': alt_az_projection(from_point), 'to_point': to_point,
+                                               'to_projection': alt_az_projection(to_point)}
+            alt = self.__from_points.alt.deg
+            az = self.__from_points.az.deg
+            alt[replace_idx] = from_point.alt.deg
+            az[replace_idx] = from_point.az.deg
+        else:
+            self.__sync_points.append(
+                {'from_point': from_point, 'from_projection': alt_az_projection(from_point), 'to_point': to_point,
+                 'to_projection': alt_az_projection(to_point)})
+            if self.__from_points is not None:
+                alt = numpy.append(self.__from_points.alt.deg, from_point.alt.deg)
+                az = numpy.append(self.__from_points.az.deg, from_point.az.deg)
             else:
-                self.__triangles = []
-            return self.__triangles
-        elif self.__model == 'affine_meridian':
-            if to_point.az.deg <= 180.0:
-                indexes = [i for i, e in enumerate(self.__sync_points) if e['from_point'].az.deg <= 180.0]
-                if self.__log:
-                    pointing_logger.debug(json.dumps(
-                        {'func': 'add_point', 'model': 'affine_meridian', 'dir': 'east', 'indexes': indexes}))
-                if len(indexes) >= 3:
-                    from_npa = get_projection_coords(indexes, self.__sync_points, 'from_projection')
-                    to_npa = get_projection_coords(indexes, self.__sync_points, 'to_projection')
-                    self.__affineE = affine_fit.affine_fit(from_npa, to_npa)
-            else:
-                indexes = [i for i, e in enumerate(self.__sync_points) if e['from_point'].az.deg > 180.0]
-                if self.__log:
-                    pointing_logger.debug(json.dumps(
-                        {'func': 'add_point', 'model': 'affine_meridian', 'dir': 'west', 'indexes': indexes}))
-                if len(indexes) >= 3:
-                    from_npa = get_projection_coords(indexes, self.__sync_points, 'from_projection')
-                    to_npa = get_projection_coords(indexes, self.__sync_points, 'to_projection')
-                    self.__affineW = affine_fit.affine_fit(from_npa, to_npa)
-        elif self.__model == 'affine_all':
+                alt = [from_point.alt.deg]
+                az = [from_point.az.deg]
+        self.__from_points = SkyCoord(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg, frame='altaz')
+
+        if self.__model == 'affine_all':
             if len(self.__sync_points) >= 3:
                 if self.__log:
                     pointing_logger.debug(json.dumps({'func': 'add_point', 'model': 'affine_all'}))
@@ -329,20 +385,8 @@ class PointingModel:
                                                'to_projection')
                 self.__affineAll = affine_fit.affine_fit(from_npa, to_npa)
 
-    def __get_two_closest_sync_points_idx(self, coord):
-        one = None
-        two = None
-        for i in range(len(self.__sync_points)):
-            # print("__get_two_closest_sync_points_idx loop", coord, self.__sync_points[i]['from_point'])
-            sep = coord.separation(self.__sync_points[i]['from_point']).deg
-            if one is None:
-                one = [i, sep]
-            elif one[1] > sep:
-                two = one
-                one = [i, sep]
-            elif two is None:
-                two = [i, sep]
-        return [one[0], two[0]]
+    def __get_closest_sync_point_idx(self, coord):
+        return self.__from_points.separation(coord).argmin()
 
     def transform_point(self, point):
         """
@@ -351,119 +395,49 @@ class PointingModel:
         :return:
         """
         proj_coord = alt_az_projection(point)
-        triangle = None
-        east_point = False
-        if point.az.deg <= 180.0:
-            east_point = True
-        if self.__model == '3point' and len(self.__sync_points) >= 3:
-            triangle = find_triangle(proj_coord, self.__sync_points, self.__triangles)
-        # Find trangle it is in
-        if self.__model == '3point' and triangle:
-            # TODO: Or should affine be done in sync?
-            # Calculate affine function from triangle
-            # TODO: Can this fail?
-            from_npa = get_projection_coords(triangle, self.__sync_points, 'from_projection')
-            to_npa = get_projection_coords(triangle, self.__sync_points, 'to_projection')
-            transform = affine_fit.affine_fit(from_npa, to_npa)
-            transformed_projection = transform.Transform([proj_coord['x'], proj_coord['y']])
-            to_point = inverse_altaz_projection({'x': transformed_projection[0], 'y': transformed_projection[1]})
+        if self.__affineAll:
+            transformed_projection = self.__affineAll.Transform([proj_coord['x'], proj_coord['y']])
+            to_point = inverse_altaz_projection(
+                {'x': transformed_projection[0], 'y': transformed_projection[1]})
             if self.__log:
                 pointing_logger.debug(json.dumps(
-                    {'func': 'transform_point', 'model': '3point', 'from_point': log_p2dict(point),
-                     'to_point': log_p2dict(to_point),
-                     'p0': log_p2dict(self.__sync_points[triangle[0]]['from_point']),
-                     'p1': log_p2dict(self.__sync_points[triangle[1]]['from_point']),
-                     'p2': log_p2dict(self.__sync_points[triangle[2]]['from_point'])}))
+                    {'func': 'transform_point', 'model': 'affine_all', 'from_point': log_p2dict(point),
+                     'to_point': log_p2dict(to_point)}))
             return to_point
+        elif len(self.__sync_points) >= 2:
+            # Get nearest two_points
+            nearest_point = self.__get_closest_sync_point_idx(point)
+
+            # for 1 point use simple offsets
+            fp = self.__sync_points[nearest_point]['from_point']
+            tp = self.__sync_points[nearest_point]['to_point']
+            dalt = tp.alt.deg - fp.alt.deg
+            daz = tp.az.deg - fp.az.deg
+            new_alt = point.alt.deg + dalt
+            if new_alt > 90.0:
+                new_alt = 180.0 - new_alt
+            elif new_alt < -90.0:
+                new_alt = -180.0 - new_alt
+            new_az = point.az.deg + daz
+            if new_az > 360.0:
+                new_az = new_az - 360.0
+            elif new_az < 0:
+                new_az = 360 + new_az
+            to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
+            if self.__log:
+                pointing_logger.debug(json.dumps(
+                    {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
+                     'to_point': log_p2dict(to_point)}))
+            return to_point
+
+        elif len(self.__sync_points) == 1:
+            # Just normal stepper slew using point as sync_point
+            if self.__log:
+                pointing_logger.debug(json.dumps(
+                    {'func': 'transform_point', 'model': 'nomodel', 'from_point': log_p2dict(point)}))
+            return point
         else:
-            if (east_point and self.__affineE) or (not east_point and self.__affineW):
-                if east_point:
-                    transformed_projection = self.__affineE.Transform([proj_coord['x'], proj_coord['y']])
-                    to_point = inverse_altaz_projection(
-                        {'x': transformed_projection[0], 'y': transformed_projection[1]})
-                    if self.__log:
-                        pointing_logger.debug(json.dumps(
-                            {'func': 'transform_point', 'model': 'affine_meridian', 'dir': 'east',
-                             'from_point': log_p2dict(point), 'to_point': log_p2dict(to_point)}))
-                else:
-                    transformed_projection = self.__affineW.Transform([proj_coord['x'], proj_coord['y']])
-                    to_point = inverse_altaz_projection(
-                        {'x': transformed_projection[0], 'y': transformed_projection[1]})
-                    if self.__log:
-                        pointing_logger.debug(json.dumps(
-                            {'func': 'transform_point', 'model': 'affine_meridian', 'dir': 'west',
-                             'from_point': log_p2dict(point), 'to_point': log_p2dict(to_point)}))
-                return to_point
-            elif self.__affineAll:
-                transformed_projection = self.__affineAll.Transform([proj_coord['x'], proj_coord['y']])
-                to_point = inverse_altaz_projection(
-                    {'x': transformed_projection[0], 'y': transformed_projection[1]})
-                if self.__log:
-                    pointing_logger.debug(json.dumps(
-                        {'func': 'transform_point', 'model': 'affine_all', 'from_point': log_p2dict(point),
-                         'to_point': log_p2dict(to_point)}))
-                return to_point
-            elif len(self.__sync_points) >= 2:
-                # Get nearest two_points
-                near_two = self.__get_two_closest_sync_points_idx(point)
-
-                if self.__model in ['2point', '3point']:
-                    # Just use scale and offset.
-                    from_npa = numpy.array(get_projection_coords(near_two, self.__sync_points, 'from_projection'))
-                    to_npa = numpy.array(get_projection_coords(near_two, self.__sync_points, 'to_projection'))
-
-                    A = numpy.array([[from_npa[0][0], 0, 1.0, 0],
-                                     [from_npa[1][0], 0, 1, 0],
-                                     [0, from_npa[0][1], 0, 1],
-                                     [0, from_npa[1][1], 0, 1.0]])
-                    b = numpy.array([[to_npa[0][0]],
-                                     [to_npa[1][0]],
-                                     [to_npa[0][1]],
-                                     [to_npa[1][1]]])
-                    x = numpy.linalg.solve(A, b)
-                    # print(proj_coord, x)
-                    transformed_projection = [proj_coord['x'] * x[0][0] + x[2][0], proj_coord['y'] * x[1][0] + x[3][0]]
-                    to_point = inverse_altaz_projection(
-                        {'x': transformed_projection[0], 'y': transformed_projection[1]})
-                    if self.__log:
-                        pointing_logger.debug(json.dumps(
-                            {'func': 'transform_point', 'model': '2point', 'from_point': log_p2dict(point),
-                             'to_point': log_p2dict(to_point),
-                             'p0': log_p2dict(self.__sync_points[near_two[0]]['from_point']),
-                             'p1': log_p2dict(self.__sync_points[near_two[1]]['from_point'])}))
-                    return to_point
-                else:
-                    # for 1 point use simple offsets
-                    fp = self.__sync_points[near_two[0]]['from_point']
-                    tp = self.__sync_points[near_two[0]]['to_point']
-                    dalt = tp.alt.deg - fp.alt.deg
-                    daz = tp.az.deg - fp.az.deg
-                    new_alt = point.alt.deg + dalt
-                    if new_alt > 90.0:
-                        new_alt = 180.0 - new_alt
-                    elif new_alt < -90.0:
-                        new_alt = -180.0 - new_alt
-                    new_az = point.az.deg + daz
-                    if new_az > 360.0:
-                        new_az = new_az - 360.0
-                    elif new_az < 0:
-                        new_az = 360 + new_az
-                    to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
-                    if self.__log:
-                        pointing_logger.debug(json.dumps(
-                            {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
-                             'to_point': log_p2dict(to_point)}))
-                    return to_point
-
-            elif len(self.__sync_points) == 1:
-                # TODO: Or two point failed get nearest point
-                # Just normal stepper slew using point as sync_point
-                if self.__log:
-                    pointing_logger.debug(json.dumps(
-                        {'func': 'transform_point', 'model': 'nomodel', 'from_point': log_p2dict(point)}))
-                return point
-            else:
-                raise ValueError('No sync points.')
+            raise ValueError('No sync points.')
 
     def clear(self):
         """
@@ -471,10 +445,7 @@ class PointingModel:
         """
         self.__sync_points = []
         self.__distance_matrix = []
-        self.__triangles = []
         self.__affineAll = None
-        self.__affineW = None
-        self.__affineE = None
 
     def size(self):
         return len(self.__sync_points)

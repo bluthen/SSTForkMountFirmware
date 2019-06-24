@@ -53,7 +53,7 @@ class Solver:
                  '820x616+0+0', os.path.join(self.__work_dir, 'work_image_crop.jpg')])
             # solve
             process = subprocess.Popen(
-                ['/usr/bin/solve-field', '-D', self.__work_dir, '-u', 'degw', '-L', str(self.low), '-H', str(self.high),
+                ['/usr/bin/timeout', '120', '/usr/bin/solve-field', '-D', self.__work_dir, '-u', 'degw', '-L', str(self.low), '-H', str(self.high),
                  '-E', str(self.pixel_error), '-c', str(self.code_tolerance),
                  os.path.join(self.__work_dir, 'work_image_crop.jpg')], stdout=subprocess.PIPE)
             for line in process.stdout:

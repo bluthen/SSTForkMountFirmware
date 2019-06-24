@@ -1,5 +1,7 @@
 import settings
 import subprocess
+import traceback
+import json
 
 if settings.is_simulation():
     from simulation_helper import PiCamera
@@ -21,6 +23,8 @@ CAMERAUNKNOWN = {'version': -1, 'resolution': (0, 0), 'max_exposure': 100}
 ramtmp_count = 0
 
 RAMTMP = '/ramtmp'
+
+last_line = ''
 
 if settings.is_simulation():
     RAMTMP = './simulation_files' + RAMTMP
@@ -62,6 +66,7 @@ def delete_files(path):
 
 def ramtmp_generator(camera, count, delay):
     global ramtmp_count
+    global last_line
 
     stop_capture = False
     i = 0
@@ -92,6 +97,7 @@ def ramtmp_generator(camera, count, delay):
             try:
                 cmd = parse_cmd(line)
                 if cmd:
+                    last_line = line
                     exposure_time = int(cmd['exposure_time'])
                     camera.shutter_speed = exposure_time
                     framerate = Fraction(1000000.0 / exposure_time)
@@ -168,17 +174,25 @@ def rm_in_dir(dir):
 
 
 def main():
+    global last_line
     rm_in_dir(RAMTMP)
     line = sys.stdin.readline()
     with get_camera() as camera:
         while line != '':
             cmd = parse_cmd(line)
             if cmd:
+                last_line = line
                 print('LOG cmd:', cmd, flush=True)
-                capture(cmd['exposure_time'], cmd['iso'], cmd['count'], cmd['delay'], camera)
-            if line.strip() == 'QUIT':
-                return
-            line = sys.stdin.readline()
+                try:
+                    capture(cmd['exposure_time'], cmd['iso'], cmd['count'], cmd['delay'], camera)
+                except:
+                    print('LOG capture_exception: ', json.dumps(traceback.format_exc()), flush=True)
+                    rm_in_dir(RAMTMP)
+                    line = last_line
+            else:
+                if line.strip() == 'QUIT':
+                    return
+                line = sys.stdin.readline()
 
 
 if __name__ == '__main__':
