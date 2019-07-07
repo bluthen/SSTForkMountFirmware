@@ -1,13 +1,10 @@
 import socket
 import traceback
-import select
-import time
 import datetime
 import re
 import threading
 import control
 import pendulum
-import iso8601
 from functools import partial
 
 ourport = 10002
@@ -21,6 +18,19 @@ slew_speed_map = {'S': 'fastest', 'M': 'faster', 'C': 'slower', 'G': 'slowest'}
 slew_speed = 'fastest'
 target = {'ra': None, 'dec': None, 'alt': None, 'az': None}
 slew_intervals = {'n': None, 's': None, 'e': None, 'w': None}
+slewing_time_buffer = False
+
+
+def slew_commanded_delay_done():
+    global slewing_time_buffer
+    slewing_time_buffer = False
+
+
+def slew_commanded():
+    global slewing_time_buffer
+    slewing_time_buffer = True
+    timer = threading.Timer(2, slew_commanded_delay_done)
+    timer.start()
 
 
 def ra_format(ra_deg):
@@ -179,7 +189,7 @@ class LX200Client:
                 buffer = ""
 
     def process(self, cmd):
-        global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals
+        global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
         print('process', cmd)
         if cmd == ':Aa#':  # Start automatic alignment sequence
             self.write(b'0')
@@ -187,7 +197,7 @@ class LX200Client:
             self.write(b'0')
         elif cmd[1] == 'D':  # PRIORITY
             # If slewing hashes till how close we are? 0-8 #
-            if control.last_status['slewing']:
+            if slewing_time_buffer or control.last_status['slewing']:
                 self.write(b'\x7f\x7f#')
             else:
                 self.write(b'#')  # or is it b'' ?
@@ -330,8 +340,10 @@ class LX200Client:
                 try:
                     if target['ra'] and target['dec']:
                         control.set_slew(ra=target['ra'], dec=target['dec'])
+                        slew_commanded()
                     elif target['alt'] and target['az']:
                         control.set_slew(alt=target['alt'], az=target['az'])
+                        slew_commanded()
                     else:
                         self.write(b'1Unable to slew#')
                         return

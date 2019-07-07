@@ -257,6 +257,7 @@ def send_status():
     status['alt'] = None
     status['az'] = None
     status['hostname'] = socket.gethostname()
+    status['started_parked'] = runtime_settings['started_parked']
     status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     status['time_been_set'] = runtime_settings['time_been_set']
     status['synced'] = runtime_settings['sync_info'] is not None
@@ -274,16 +275,16 @@ def send_status():
         # print('earth_location', runtime_settings['earth_location'])
         status['alt'] = None
         status['az'] = None
-        if runtime_settings['earth_location_set']:
-            altaz = real_altaz
-            below_horizon = below_horizon_limit(altaz)
-            if below_horizon and runtime_settings['tracking']:
-                runtime_settings['tracking'] = False
-                stepper.set_speed_ra(0)
-                status['alert'] = 'In horizon limit, tracking stopped'
-            # print(altaz)
-            status['alt'] = altaz.alt.deg
-            status['az'] = altaz.az.deg
+        # if runtime_settings['earth_location_set']:
+        altaz = real_altaz
+        below_horizon = below_horizon_limit(altaz)
+        if below_horizon and runtime_settings['tracking']:
+            runtime_settings['tracking'] = False
+            stepper.set_speed_ra(0)
+            status['alert'] = 'In horizon limit, tracking stopped'
+        # print(altaz)
+        status['alt'] = altaz.alt.deg
+        status['az'] = altaz.az.deg
     status['slewing'] = slewing
     status['tracking'] = runtime_settings['tracking']
     last_status = status
@@ -321,16 +322,28 @@ def init(osocketio, fruntime_settings):
     pm_real_stepper = pointing_model.PointingModel(True, 'pm_real_stepper')
     pm_stepper_real = pointing_model.PointingModel()
     update_location()
+    micro_update_settings()
+
+    coord = None
     if settings.settings['park_position'] and runtime_settings['earth_location_set'] and settings.last_parked():
-        settings.not_parked()
+        runtime_settings['started_parked'] = True
         coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
                          az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
                          obstime=AstroTime.now(),
                          location=runtime_settings['earth_location']).icrs
-        sync(coord)
-        park_sync = True
+    elif settings.settings['park_position']:
+        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
+                         obstime=AstroTime.now(),
+                         location=runtime_settings['earth_location']).icrs
+    else:
+        coord = SkyCoord(alt=10.0 * u.deg,
+                         az=180.0 * u.deg, frame='altaz',
+                         obstime=AstroTime.now(),
+                         location=runtime_settings['earth_location']).icrs
     settings.not_parked()
-    micro_update_settings()
+    sync(coord)
+    park_sync = True
     status_interval = SimpleInterval(send_status, 1)
 
 

@@ -57,7 +57,7 @@ db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
 
 runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
-                    'tracking': True}
+                    'tracking': True, 'started_parked': False}
 
 pointing_logger = settings.get_logger('pointing')
 
