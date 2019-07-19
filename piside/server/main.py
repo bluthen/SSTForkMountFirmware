@@ -18,7 +18,7 @@ import subprocess
 import datetime
 import tempfile
 import zipfile
-import stellarium_server
+# import stellarium_server
 import os
 import settings
 import sstchuck
@@ -863,9 +863,10 @@ def main():
     lx200proto_thread = threading.Thread(target=lx200proto_server.main)
     lx200proto_thread.start()
 
-    # TODO: Config if start stellarium server.
-    stellarium_thread = threading.Thread(target=stellarium_server.run)
-    stellarium_thread.start()
+    # # TODO: Config if start stellarium server.
+    # Maybe not enable they can just use lx200 protocol?
+    # stellarium_thread = threading.Thread(target=stellarium_server.run)
+    # stellarium_thread.start()
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
@@ -887,11 +888,11 @@ def main():
         socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False,
                      ssl_context=ssl_context)
         power_thread_quit = True
-        stellarium_server.terminate()
+        # stellarium_server.terminate()
         sstchuck.terminate()
         lx200proto_server.terminate()
         lx200proto_thread.join()
-        stellarium_thread.join()
+        # stellarium_thread.join()
         sstchuck_thread.join()
         power_thread.join()
         avahi_process.kill()

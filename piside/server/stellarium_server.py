@@ -3,9 +3,18 @@
 # Based on pyindi stellarium
 # https://sourceforge.net/p/pyindi-client/code/HEAD/tree/trunk/pip/pyindi-client/examples/pyindi-stellarium.py
 
-import signal, os, sys, logging, time, calendar, math, traceback
-import socket, select
+import logging
+import time
+import calendar
+import math
+import traceback
+import socket
+import select
 import control
+
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+
 
 gotoQueue = []
 
@@ -52,7 +61,7 @@ def from_le(b):
 
 
 # Simple class to keep stellarium socket connections
-class StelClient():
+class StelClient:
     def __init__(self, sock, clientaddress):
         self.socket = sock
         self.clientaddress = clientaddress
@@ -62,15 +71,15 @@ class StelClient():
         self.msgq = []
         self.tosend = 0
 
-    def hasToWrite(self):
-        return (self.tosend > 0)
+    def has_to_write(self):
+        return self.tosend > 0
 
-    def performRead(self):
+    def perform_read(self):
         # logging.info('Socket '+str(self.socket.fileno()) + ' has to read')
         buf = bytearray(120 - self.recv)
         nrecv = self.socket.recv_into(buf, 120 - self.recv)
         # logging.info('Socket '+str(self.socket.fileno()) + 'read: '+str(buf))
-        if (nrecv <= 0):
+        if nrecv <= 0:
             logging.info('Client ' + str(self.socket.fileno()) + ' is away')
             self.disconnect()
             stelClients.pop(self.socket)
@@ -109,7 +118,7 @@ class StelClient():
                 p += psize
         return p
 
-    def performWrite(self):
+    def perform_write(self):
         global stelClients
         # logging.info('Socket '+str(self.socket.fileno()) + ' will write')
         sent = self.socket.send(self.writebuf[0:self.tosend])
@@ -126,18 +135,18 @@ class StelClient():
                 self.tosend = len(self.msgq[0])
                 self.msgq = self.msgq[1:]
 
-    def sendMsg(self, msg):
+    def send_msg(self, msg):
         if self.tosend == 0:
             self.writebuf[0:len(msg)] = msg
             self.tosend = len(msg)
         else:
             self.msgq.append(msg)
 
-    def sendEqCoords(self, utc, rajnow, decjnow, status):
+    def send_eq_coords(self, utc, rajnow, decjnow, status):
         msg = bytearray(24)
         msg[0:2] = to_le(24, 2)
         msg[2:4] = to_le(0, 2)
-        if (utc != ''):
+        if utc != '':
             try:
                 tstamp = calendar.timegm(time.strptime(utc, '%Y-%m-%dT%H:%M:%S'))
             except:
@@ -147,9 +156,9 @@ class StelClient():
             tstamp = int(time.time())
         msg[4:12] = to_le(tstamp, 8)
         msg[12:16] = to_le(int(math.floor(rajnow * (4294967296.0 / 24.0))), 4)
-        msg[16:20] = to_le(int(math.floor(decjnow * (4294967296.0 / (360.0)))), 4)
+        msg[16:20] = to_le(int(math.floor(decjnow * (4294967296.0 / 360.0))), 4)
         msg[20:24] = to_le(status, 4)
-        self.sendMsg(msg)
+        self.send_msg(msg)
 
     def disconnect(self):
         try:
@@ -166,11 +175,11 @@ def terminate():
 
 # how to get back this signal which is translated in a python exception ?
 # signal.signal(signal.SIGKILL, terminate)
-#signal.signal(signal.SIGHUP, terminate)
-#signal.signal(signal.SIGQUIT, terminate)
+# signal.signal(signal.SIGHUP, terminate)
+# signal.signal(signal.SIGQUIT, terminate)
 
 
-#logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+# logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 # Create an instance of the IndiClient class and initialize its host/port members
 
@@ -196,22 +205,23 @@ def run():
                 # TODO: Last Status thread safety
                 ls = control.last_status
                 if ls is not None and 'ra' in ls and 'dec' in ls and ls['ra'] and ls['dec']:
-                    stelClients[s].sendEqCoords('', ls['ra']*24.0/360.0, ls['dec'], status)
+                    stelClients[s].send_eq_coords('', ls['ra'] * 24.0 / 360.0, ls['dec'], status)
             if len(gotoQueue) > 0:
                 print('Sending goto (ra, dec)=' + str(gotoQueue[0]))
                 # TODO: Send gotoQueue[0] to SSTEQ25
-                ra = gotoQueue[0][0]*360.0/24.0
+                ra = gotoQueue[0][0] * 360.0 / 24.0
                 dec = gotoQueue[0][1]
                 gotoQueue = gotoQueue[1:]
-                if control.slewtocheck(ra, dec):
+                coord = SkyCoord(ra=ra*u.deg, dec=dec*u.deg, frame='icrs')
+                if control.slewtocheck(coord):
                     try:
-                        control.slew(ra, dec)
+                        control.slew(coord)
                     except control.NotSyncedException as e:
                         pass
             # logging.info('Perform step')
             # perform one step
             readers = [stelSocket] + [s for s in stelClients]
-            writers = [s for s in stelClients if stelClients[s].hasToWrite()]
+            writers = [s for s in stelClients if stelClients[s].has_to_write()]
             ready_to_read, ready_to_write, in_error = select.select(readers, writers, [], 0.5)
             for r in ready_to_read:
                 if r == stelSocket:
@@ -221,13 +231,13 @@ def run():
                     print('New Stellarium client ' + str(news.fileno()) + ' on port ' + str(newa))
                 else:
                     try:
-                        stelClients[r].performRead()
+                        stelClients[r].perform_read()
                     except:
                         stelClients.pop(r)
             for r in ready_to_write:
                 if r in stelClients.keys():
                     try:
-                        stelClients[r].performWrite()
+                        stelClients[r].perform_write()
                     except:
                         stelClients.pop(r)
             for r in in_error:
