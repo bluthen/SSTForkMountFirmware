@@ -5,6 +5,7 @@ import re
 import threading
 import control
 import pendulum
+import settings
 from functools import partial
 
 ourport = 10002
@@ -78,7 +79,7 @@ def az_format(az, high_precision=True):
 
 
 def ra_to_deg(hours, minutes, seconds=0.0):
-    return (hours + minutes / 60.0 + seconds / 3600.0)*(360.0/24.0)
+    return (hours + minutes / 60.0 + seconds / 3600.0) * (360.0 / 24.0)
 
 
 def dec_to_deg(deg, minutes, seconds=0.0):
@@ -241,7 +242,7 @@ class LX200Client:
             elif cmd == ':Gg#':  # currente site longitude PRIORITY DONE
                 # TODO: dec says east should be negative, is that true?
                 # self.write(b'sDDD*MM#')
-                lon = control.runtime_settings['earth_location'].lon.deg
+                lon = settings.runtime_settings['earth_location'].lon.deg
                 # lon = -lon                 # if east should be negative
                 # TODO: Can be high precision?
                 self.write(lon_format(lon, False).encode())
@@ -283,7 +284,7 @@ class LX200Client:
                 self.write(b'60.0#')
             elif cmd == ':Gt#':  # current site latitude # PRIORITY DONE
                 # self.write(b'sDD*MM#') s is sign
-                lat = control.runtime_settings['earth_location'].lat.deg
+                lat = settings.runtime_settings['earth_location'].lat.deg
                 self.write(dec_format(lat, False).encode())
             elif cmd == ':GVD#':  # telescope firmware date
                 self.write((control.version_date_str + '#').encode())
@@ -348,21 +349,23 @@ class LX200Client:
                         self.write(b'1Unable to slew#')
                         return
                     self.write(b'0')
-                except:
+                except Exception as e:
+                    print(e)
                     self.write(b'1Unable to slew#')
             elif cmd[2] == 'g':  # PRIORITY2
                 # move guide telescope
                 m = self.re_guide_telescope.match(cmd)
                 direction = m.group(1)
-                timeMS = m.group(2)
-                control.guide_control(direction, int(timeMS))
+                time_ms = m.group(2)
+                control.guide_control(direction, int(time_ms))
             elif cmd[2] in ['n', 's', 'e', 'w']:  # PRIORITY DONE
                 # slew
                 # Set interval
                 print('LX200 Manual Slew', slew_speed)
                 if slew_intervals[cmd[2]]:
                     slew_intervals[cmd[2]].cancel()
-                slew_intervals[cmd[2]] = control.SimpleInterval(partial(control.manual_control, manual_slew_map[cmd[2]], slew_speed), 0.1)
+                slew_intervals[cmd[2]] = control.SimpleInterval(
+                    partial(control.manual_control, manual_slew_map[cmd[2]], slew_speed), 0.1)
         elif cmd == ':P#':
             self.write(b'LOW PRECISION')
         elif cmd[1] == 'Q':
@@ -446,7 +449,7 @@ class LX200Client:
                     deg = m.group(2)
                     minutes = m.group(3)
                     seconds = m.group(4)
-                    target['dec'] = dec_to_deg(sign*float(deg), float(minutes), float(seconds))
+                    target['dec'] = dec_to_deg(sign * float(deg), float(minutes), float(seconds))
                     target['alt'] = None
                     target['az'] = None
                     self.write(b'1')  # 0 if not accepted/valid
@@ -455,7 +458,7 @@ class LX200Client:
                     sign = -1 if m.group(1) == '-' else 1.0
                     deg = m.group(2)
                     minutes = m.group(3)
-                    target['dec'] = dec_to_deg(sign*float(deg), float(minutes))
+                    target['dec'] = dec_to_deg(sign * float(deg), float(minutes))
                     target['alt'] = None
                     target['az'] = None
                     self.write(b'1')  # 0 if not accepted/valid
@@ -476,14 +479,15 @@ class LX200Client:
 
                 lon = dec_to_deg(float(deg), float(minutes))
                 if lon > 180:
-                    lon = 360.0-180
+                    lon = 360.0 - 180
                 else:
                     lon = -lon
                 print('LX200: Set Long', lon)
                 try:
-                    control.set_location(control.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
+                    control.set_location(settings.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
                     self.write(b'1')
-                except:
+                except Exception as e:
+                    print(e)
                     self.write(b'0')
             elif cmd[2] == 'G':  # PRIORITY
                 m = self.re_set_site_hours_add_utc.match(cmd)
@@ -583,10 +587,11 @@ class LX200Client:
                     lat = dec_to_deg(sign * float(deg), float(minute), float(seconds))
                     print('Set lat:', lat)
                     control.set_location(lat,
-                                         control.runtime_settings['earth_location'].lon.deg,
+                                         settings.runtime_settings['earth_location'].lon.deg,
                                          1000.0, 'site1')
                     self.write(b'1')
-                except:
+                except Exception as e:
+                    print(e)
                     self.write(b'0')
 
             elif cmd[2] == 'T':

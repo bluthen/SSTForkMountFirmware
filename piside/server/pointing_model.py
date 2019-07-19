@@ -11,6 +11,8 @@ import astropy.units as u
 
 pointing_logger = settings.get_logger('pointing')
 
+SEPERATION_THRESHOLD = 0.5
+
 
 def inverse_altaz_projection(xy_coord):
     """
@@ -37,7 +39,9 @@ def inverse_altaz_projection(xy_coord):
     az = 90 - caz
     r = x / numpy.cos(caz * math.pi / 180.0)
     # TODO: When r is < 0, is this the right move.
-    if r < 0.0:
+    if r.size > 1:
+        r[r < 0] = 0
+    elif r < 0.0:
         r = 0.0
     alt = 90.0 * (1.0 - r)
     return SkyCoord(alt=alt, az=az, unit='deg', frame='altaz')
@@ -90,10 +94,16 @@ def get_projection_coords(indexes, sync_points, sync_point_key):
     return ret
 
 
-def test_transform(oalt, oaz, alt, az, deg):
+def test_altaz_transform(oalt, oaz, alt, az, deg):
     theta = deg * math.pi / 180.0
     return {'alt': oalt + (alt - oalt) * math.cos(theta) + (az - oaz) * math.sin(theta),
             'az': oaz + (az - oaz) * math.cos(theta) - (alt - oalt) * math.sin(theta)}
+
+
+def test_hadec_transform(offset_dec, offset_ha, dec, ha, deg):
+    theta = deg * math.pi / 180.0
+    return {'ha': offset_ha + (ha - offset_ha) * math.cos(theta) + (dec - offset_dec) * math.sin(theta),
+            'dec': offset_dec + (dec - offset_dec) * math.cos(theta) - (ha - offset_ha) * math.sin(theta)}
 
 
 def log_p2dict(point):
@@ -181,8 +191,12 @@ scipy.optimize.leastsq(pointing_model.buie_model_error, p0[:], args=(xdata, xdat
 # numpy.array([[30.0, 40.0, 24, 26, 70, 82, 32, 44, 65, 70, 12, 170], [45.0, 50.0, -32, -50, 32, 33, 66, 89, 11, 23, 66, -12]]) , numpy.array([[30.0, 40.0, 24, 26, 70, 82, 32, 44, 65, 70, 12, 170], [45.0, 50.0, -32, -50, 32, 33, 66, 89, 11, 23, 66, -12]]) , p0=[39.9, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
 
-class PointingModelRADEC:
+class PointingModelBuie:
     def __init__(self, log=False, name=''):
+        """
+        :param log:
+        :param name:
+        """
         self.__from_points = None
         self.__to_points = []
         self.__model = 'buie'
@@ -192,7 +206,6 @@ class PointingModelRADEC:
         pass
 
     def add_point(self, from_point, to_point):
-        SEPERATION_THRESHOLD = 0.5
         replace_idx = None
         if self.__from_points is not None:
             replace_idxex = numpy.where(self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD)[0]
@@ -223,13 +236,26 @@ class PointingModelRADEC:
             self.__buie_vals = scipy.optimize.leastsq(buie_model_error, p0, args=(xdata, ydata))[0]
 
     def transform_point(self, point):
-        if self.__model == 'buie' and self.__buie_vals:
+        if self.__model == 'buie' and self.__buie_vals is not None:
             p0 = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
             p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals):]])
             new_point = buie_model(numpy.array([[point.ra.deg, point.dec.deg]]), *p0)
             return SkyCoord(ra=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg, frame='icrs')
         else:
             return point
+
+    def inverse_transform_point(self, point):
+        if self.__model == 'buie' and self.__buie_vals is not None:
+            def our_func(coord):
+                new_point = self.transform_point(SkyCoord(ra=coord[0] * u.deg, dec=coord[1] * u.deg, frame='icrs'))
+                return (new_point.ra.deg-point.ra.deg)**2.0+(new_point.dec.deg-point.dec.deg)**2.0
+            inv_point = scipy.optimize.fmin(our_func, [point.ra.deg, point.dec.deg])
+            return SkyCoord(ra=inv_point[0]*u.deg, dec=inv_point[1]*u.deg, frame='icrs')
+        else:
+            return point
+
+    def frame(self):
+        return 'hadec'
 
     def clear(self):
         self.__from_points = None
@@ -243,72 +269,10 @@ class PointingModelRADEC:
         return len(self.__to_points)
 
 
-class PointingModel:
-    def __init__(self, log=False, name=''):
+class PointingModelAffine:
+    def __init__(self, log=False, name='', isinverse=False):
         """
         :Example:
-            >>> import pointing_model
-            >>> from astropy.coordinates import SkyCoord
-            >>> pm = pointing_model.PointingModel()
-            >>> # Unity test
-            >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
-            >>> tpt = pm.transform_point(point)
-            >>> tpt.alt.deg, tpt.az.deg
-            (50.0, 95.0)
-            >>> # Unit two point
-            >>> pm.clear()
-            >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
-            >>> tpt = pm.transform_point(point)
-            >>> tpt.alt.deg, tpt.az.deg
-            (50.0, 95.0)
-            >>> # 2% Stretched
-            >>> pm.clear()
-            >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10+(60-10)*1.02, az=90+(95-90)*1.02, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10+(20-10)*1.02, az=90+(100-90)*1.02, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
-            >>> tpt = pm.transform_point(point)
-            >>> tpt.alt.deg, tpt.az.deg
-            (50.80120905913654, 95.09687722671514)
-
-            >>> # 1 degree
-            >>> pm.clear()
-            >>> sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-            >>> sp = pointing_model.test_transform(10.0, 90.0, 60., 95.0, 1.)
-            >>> stepper_point = SkyCoord(alt=sp['alt'], az=sp['az'], unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-            >>> sp = pointing_model.test_transform(10.0, 90.0, 20., 100.0, 1.0)
-            >>> stepper_point = SkyCoord(alt=sp['alt'], az=sp['az'], unit='deg', frame='altaz')
-            >>> pm.add_point(sync_point, stepper_point)
-            >>> point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
-            >>> tpt = pm.transform_point(point)
-            >>> tpt.alt.deg, tpt.az.deg
-            (50.08108010292904, 94.4534133318961)
         """
         self.__log = log
         self.__name = name
@@ -321,6 +285,9 @@ class PointingModel:
         #: distance matrix created with sync_points
         self.__distance_matrix = []
         self.__affineAll = None
+        self.__inverseModel = None
+        if not isinverse:
+            self.__inverseModel = PointingModelAffine(isinverse=True)
         self.debug = False
 
     def get_from_points(self):
@@ -348,7 +315,6 @@ class PointingModel:
             raise ValueError('coord should be an alt-az coordinate')
 
         # If it is close enough to a point already there, we will replace it.
-        SEPERATION_THRESHOLD = 0.5
 
         replace_idx = None
         if self.__from_points is not None:
@@ -384,9 +350,31 @@ class PointingModel:
                 to_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
                                                'to_projection')
                 self.__affineAll = affine_fit.affine_fit(from_npa, to_npa)
+        if self.__inverseModel:
+            self.__inverseModel.add_point(to_point, from_point)
 
     def __get_closest_sync_point_idx(self, coord):
         return self.__from_points.separation(coord).argmin()
+
+    def __two_point(self, point, fp, tp):
+        dalt = tp.alt.deg - fp.alt.deg
+        daz = tp.az.deg - fp.az.deg
+        new_alt = point.alt.deg + dalt
+        if new_alt > 90.0:
+            new_alt = 180.0 - new_alt
+        elif new_alt < -90.0:
+            new_alt = -180.0 - new_alt
+        new_az = point.az.deg + daz
+        if new_az > 360.0:
+            new_az = new_az - 360.0
+        elif new_az < 0:
+            new_az = 360 + new_az
+        to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
+        if self.__log:
+            pointing_logger.debug(json.dumps(
+                {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
+                 'to_point': log_p2dict(to_point)}))
+        return to_point
 
     def transform_point(self, point):
         """
@@ -411,24 +399,7 @@ class PointingModel:
             # for 1 point use simple offsets
             fp = self.__sync_points[nearest_point]['from_point']
             tp = self.__sync_points[nearest_point]['to_point']
-            dalt = tp.alt.deg - fp.alt.deg
-            daz = tp.az.deg - fp.az.deg
-            new_alt = point.alt.deg + dalt
-            if new_alt > 90.0:
-                new_alt = 180.0 - new_alt
-            elif new_alt < -90.0:
-                new_alt = -180.0 - new_alt
-            new_az = point.az.deg + daz
-            if new_az > 360.0:
-                new_az = new_az - 360.0
-            elif new_az < 0:
-                new_az = 360 + new_az
-            to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
-            if self.__log:
-                pointing_logger.debug(json.dumps(
-                    {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
-                     'to_point': log_p2dict(to_point)}))
-            return to_point
+            return self.__two_point(point, fp, tp)
 
         elif len(self.__sync_points) == 1:
             # Just normal stepper slew using point as sync_point
@@ -439,13 +410,23 @@ class PointingModel:
         else:
             raise ValueError('No sync points.')
 
+    def inverse_transform_point(self, point):
+        # A possible other alternative is to use fmin with transform_point
+        return self.__inverseModel.transform_point(point)
+
+    def frame(self):
+        return 'altaz'
+
     def clear(self):
         """
         Reset all points in pointing model.
         """
         self.__sync_points = []
+        self.__from_points = None
         self.__distance_matrix = []
         self.__affineAll = None
+        if self.__inverseModel:
+            self.__inverseModel.clear()
 
     def size(self):
         return len(self.__sync_points)

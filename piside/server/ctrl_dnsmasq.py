@@ -29,7 +29,6 @@ def check_if_not_started():
         subprocess.call(['/bin/systemctl', 'start', 'dnsmasq'])
 
 
-
 def usage():
     print('Usage: %s [arguments]', (sys.argv[0],))
     print('')
@@ -45,7 +44,7 @@ def main():
     if len(sys.argv) == 2 and iface == 'check_and_restart':
         check_and_restart()
     elif len(sys.argv) == 3 and iface in ('wlan0', 'eth0'):
-        dnsmasq="""
+        dnsmasq = """
 bogus-priv
 bind-interfaces
 except-interface=eth0
@@ -86,7 +85,7 @@ dhcp-reply-delay=tag:client_is_a_pi,2
         if wanted_enabled != currently_enabled:
             s = ''
             for iface2 in wanted_enabled:
-                s = s+'interface='+iface2+'\n'
+                s = s + 'interface=' + iface2 + '\n'
             stemp = tempfile.mkstemp(suffix='dnsmasq')
             os.close(stemp[0])
             stemp = [open(stemp[1], 'w'), stemp[1]]

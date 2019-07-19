@@ -79,6 +79,7 @@ def contours_mousecallback(img, contours, event, x, y, flags, param):
                 cv2.drawContours(cimg, contours, i, (0, 0, 255), thickness=1)
                 radius, center = circle_least_squares(contours[i])
                 print('Circle center: ', center, radius)
+                print('Circle center: ', 'y=', bounds[0][0]+center[0], 'x=', bounds[0][1]+center[1], radius)
                 center = (int(round(center[0])), int(round(center[1])))
                 radius = int(round(radius))
                 contours_circle = [center, radius]

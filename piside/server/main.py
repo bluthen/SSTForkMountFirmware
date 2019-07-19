@@ -27,10 +27,12 @@ import sys
 import socket
 from solver import Solver
 import lx200proto_server
+import skyconv
 
 from werkzeug.serving import make_ssl_devcert
 
 iers.conf.auto_download = False
+iers.auto_max_age = None
 
 
 def correct_dir():
@@ -55,11 +57,12 @@ socketio = SocketIO(app, async_mode='threading', logger=False, engineio_logger=F
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
-
-runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
-                    'tracking': True, 'started_parked': False}
+solver = None
 
 pointing_logger = settings.get_logger('pointing')
+
+RELAY_PIN = 6
+SWITCH_PIN = 5
 
 
 # Sets up power switch
@@ -67,8 +70,6 @@ pointing_logger = settings.get_logger('pointing')
 def run_power_switch():
     try:
         import RPi.GPIO as GPIO
-        RELAY_PIN = 6
-        SWITCH_PIN = 5
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(RELAY_PIN, GPIO.OUT)
         GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -152,10 +153,7 @@ def hostname_get():
 @app.route('/shutdown', methods=['PUT'])
 @nocache
 def shutdown_put():
-    control.stepper.set_speed_ra(0.0)
-    control.stepper.set_speed_dec(0.0)
-    time.sleep(0.25)
-    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+    control.set_shutdown()
     return 'Shutdown', 204
 
 
@@ -387,7 +385,8 @@ def set_location():
                 'elevation': float(location['elevation']), 'name': str(location['name'])}
     try:
         control.set_location(location['lat'], location['long'], location['elevation'], location['name'])
-    except:
+    except Exception as e:
+        print(e)
         return 'Invalid location', 400
     return 'Set Location', 200
 
@@ -395,10 +394,14 @@ def set_location():
 @app.route('/sync', methods=['GET'])
 @nocache
 def get_sync_points():
-    ret = []
-    for point in control.pm_real_stepper.get_from_points():
-        ret.append({'alt': point.alt.deg, 'az': point.az.deg})
-    return jsonify(ret)
+    points = []
+    frame = skyconv.model_real_stepper.frame()
+    for point in skyconv.model_real_stepper.get_from_points():
+        if frame == 'altaz':
+            points.append({'alt': point.alt.deg, 'az': point.az.deg})
+        else:
+            points.append({'ha': point.ha.deg, 'dec': point.dec.deg})
+    return jsonify({'frame': frame, 'points': points})
 
 
 @app.route('/sync', methods=['DELETE'])
@@ -416,23 +419,23 @@ def do_sync():
     alt = request.form.get('alt', None)
     az = request.form.get('az', None)
     if alt is not None and az is not None:
-        alt=float(alt)
-        az=float(az)
+        alt = float(alt)
+        az = float(az)
     else:
         ra = float(ra)
         dec = float(dec)
     try:
-        control.set_sync(ra, dec, alt, az)
+        size = control.set_sync(ra, dec, alt, az)
     except Exception as e:
         return str(e), 400
-    return jsonify({'text': 'Sync Points: ' + str(control.pm_real_stepper.size())})
+    return jsonify({'text': 'Sync Points: ' + str(size)})
 
 
 @app.route('/sync', methods=['POST'])
 @nocache
 def post_sync():
     model = request.form.get('model', None)
-    if model not in ['single', '1point', 'affine_all']:
+    if model not in ['single', 'buie', 'affine_all']:
         return 'Invalid model', 400
     # Set models
     control.clear_sync()
@@ -471,7 +474,7 @@ def do_slewto():
 def do_slewtocheck():
     ra = float(request.form.get('ra', None))
     dec = float(request.form.get('dec', None))
-    radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='ircs')
+    radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     return jsonify({'slewcheck': control.slewtocheck(radec)})
 
 
@@ -485,9 +488,9 @@ def stop_slewto():
 @app.route('/set_time', methods=['PUT'])
 @nocache
 def set_time():
-    time = request.form.get('time', None)
+    time_str = request.form.get('time', None)
     # overwrite = request.form.get('overwrite', None)
-    status = control.set_time(time)
+    status = control.set_time(time_str)
     if status[1] == 'NTP Set':
         return status[1], 200
     return status[1], 200 if status[0] else 500
@@ -496,23 +499,14 @@ def set_time():
 @app.route('/set_park_position', methods=['PUT'])
 @nocache
 def set_park_position():
-    if runtime_settings['sync_info'] is None:
-        return 'You must have synced once before setting park position.', 400
-    if not runtime_settings['earth_location_set']:
-        return 'You must set location before setting park position.', 400
-    status = control.stepper.get_status()
-    coord = control.steps_to_skycoord(runtime_settings['sync_info'], {'ra': status['rp'], 'dec': status['dp']},
-                                      AstroTime.now(), settings.settings['ra_ticks_per_degree'],
-                                      settings.settings['dec_ticks_per_degree'])
-    altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
-    settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
-    settings.write_settings(settings.settings)
+    control.set_park_position_here()
     return 'Park Position Set', 200
 
 
 @app.route('/set_park_position', methods=['DELETE'])
 @nocache
 def unset_park_position():
+    # Will just be default if none
     settings.settings['park_position'] = None
     settings.write_settings(settings.settings)
     return 'Park Position Unset', 200
@@ -521,17 +515,13 @@ def unset_park_position():
 @app.route('/park', methods=['PUT'])
 @nocache
 def do_park():
-    # TODO: If started parked we can use 0,0
-    if not runtime_settings['earth_location_set']:
-        return 'Location not set', 400
+    control.stop_tracking()
     if not settings.settings['park_position']:
-        return 'No park position has been set.', 400
-    if not runtime_settings['sync_info']:
-        return 'No sync info has been set.', 400
-    runtime_settings['tracking'] = False
-    control.stepper.set_speed_ra(0)
-    coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                     az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
+        coord = SkyCoord(alt=control.DEFAULT_PARK['alt'] * u.deg,
+                         az=control.DEFAULT_PARK['az'] * u.deg, frame='altaz')
+    else:
+        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
     control.slew(coord, parking=True)
     return 'Parking.', 200
 
@@ -539,17 +529,14 @@ def do_park():
 @app.route('/start_tracking', methods=['PUT'])
 @nocache
 def start_tracking():
-    settings.not_parked()
-    runtime_settings['tracking'] = True
-    control.stepper.set_speed_ra(settings.settings['ra_track_rate'])
+    control.start_tracking()
     return 'Tracking', 200
 
 
 @app.route('/stop_tracking', methods=['PUT'])
 @nocache
 def stop_tracking():
-    runtime_settings['tracking'] = False
-    control.stepper.set_speed_ra(0)
+    control.stop_tracking()
     return 'Stopped Tracking', 200
 
 
@@ -573,15 +560,15 @@ def search_object():
             continue
         if body.find(planet_search) != -1:
             location = None
-            if runtime_settings['earth_location_set']:
-                location = runtime_settings['earth_location']
+            if settings.runtime_settings['earth_location_set']:
+                location = settings.runtime_settings['earth_location']
             coord = astropy.coordinates.get_body(body, AstroTime.now(),
                                                  location=location)
             ra = coord.ra.deg
             dec = coord.dec.deg
             coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
             if do_altaz:
-                altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
+                altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
                 altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
             else:
                 altaz = {'alt': None, 'az': None}
@@ -595,7 +582,9 @@ def search_object():
     else:
         dso_search = '%' + dso_search + '%'
         star_search = '%' + star_search + '%'
-    # catalogs = {'IC': ['IC'], 'NGC': ['NGC'], 'M': ['M', 'Messier'], 'Pal': ['Pal'], 'C': ['C', 'Caldwell'], 'ESO': ['ESO'], 'UGC': ['UGC'], 'PGC': ['PGC'], 'Cnc': ['Cnc'], 'Tr': ['Tr'], 'Col': ['Col'], 'Mel': ['Mel'], 'Harvard': ['Harvard'], 'PK': ['PK']}
+    # catalogs = {'IC': ['IC'], 'NGC': ['NGC'], 'M': ['M', 'Messier'], 'Pal': ['Pal'], 'C': ['C', 'Caldwell'],
+    # 'ESO': ['ESO'], 'UGC': ['UGC'], 'PGC': ['PGC'], 'Cnc': ['Cnc'], 'Tr': ['Tr'], 'Col': ['Col'], 'Mel': ['Mel'],
+    # 'Harvard': ['Harvard'], 'PK': ['PK']}
     with db_lock:
         cur = conn.cursor()
         cur.execute('SELECT * from dso where search like ? limit 10', (dso_search,))
@@ -609,7 +598,7 @@ def search_object():
     for ob in dso:
         if do_altaz:
             coord = SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg, frame='icrs')
-            altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
+            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
             altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
             altaz = {'alt': None, 'az': None}
@@ -618,7 +607,7 @@ def search_object():
     for ob in stars:
         if do_altaz:
             coord = SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg, frame='icrs')
-            altaz = control.convert_to_altaz(coord, atmo_refraction=settings.settings['atmos_refract'])
+            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
             altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
         else:
             altaz = {'alt': None, 'az': None}
@@ -644,8 +633,8 @@ def firmware_update():
         zip_ref.extractall('/home/pi/SSTForkMountFirmware/piside')
     try:
         subprocess.run(['/usr/bin/python3', 'post_update.py'])
-    except:
-        pass
+    except Exception as e:
+        print(e)
     t = threading.Timer(5, reboot)
     t.start()
     return 'Updated'
@@ -830,8 +819,8 @@ def listen_paa_stdout(process):
             if solver.queue and not solver.running():
                 try:
                     solver.solve(paa_image_path())
-                except:
-                    print('Solver had exception:', sys.exc_info()[0])
+                except Exception as e:
+                    print('Solver had exception:', sys.exc_info()[0], e)
         elif sline[0] == 'CAPTUREDONE':
             socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
         elif sline[0] == 'STATUS':
@@ -869,7 +858,7 @@ def main():
     ethernetinfo = network.read_ethernet_settings()
     for key in ethernetinfo.keys():
         settings.settings['network'][key] = ethernetinfo[key]
-    st_queue = control.init(socketio, runtime_settings)
+    st_queue = control.init(socketio)
 
     lx200proto_thread = threading.Thread(target=lx200proto_server.main)
     lx200proto_thread.start()
@@ -882,8 +871,8 @@ def main():
     sstchuck_thread.start()
     try:
         paa_capture(1000000 * 2.00, 800)
-    except:
-        pass
+    except Exception as e:
+        print(e)
 
     hostname = socket.gethostname()
     # TODO: What about when they change hostname? Or can move this to systemd?

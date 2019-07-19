@@ -133,7 +133,6 @@ def set_ethernet_dhcp_server(enabled):
         subprocess.run(['sudo', '/usr/bin/autohotspot'])
 
 
-
 def hostapd_write(ssid, channel, password=None):
     stemp = root_file_open('/etc/hostapd/hostapd.conf')
     stemp[0].truncate(0)
@@ -161,17 +160,18 @@ wpa_key_mgmt=WPA-PSK
     # Make hostname the ssid also
     stemp = root_file_open('/etc/hostname')
     stemp[0].truncate(0)
-    stemp[0].write(ssid+'\n')
+    stemp[0].write(ssid + '\n')
     root_file_close(stemp)
     if not settings.is_simulation():
         subprocess.run(['sudo', '/bin/hostname', ssid])
 
 
 def wpa_supplicant_read(wpa_file):
-    network_start_p = re.compile('\s*network\s*=\s*{\s*')
-    network_end_p = re.compile('\s*}\s*')
+    network_start_p = re.compile('\\s*network\\s*=\\s*{\\s*')
+    network_end_p = re.compile('\\s*}\\s*')
     networks_raw = []
     strip_networks = []
+    network_raw = []
     start = False
     for line in wpa_file:
         dline = line.strip()
@@ -230,7 +230,7 @@ def current_wifi_connect():
     results = subprocess.run(['/sbin/iwconfig', settings.settings['network']['wifi_device']], stdout=subprocess.PIPE)
     sout = results.stdout.decode().splitlines()
     essid_p = re.compile('.* ESSID:"(.+)".*')
-    access_point_p = re.compile('.* Access Point: (\S+).*')
+    access_point_p = re.compile('.* Access Point: (\\S+).*')
     ssid = None
     mac = None
     for line in sout:
@@ -245,7 +245,9 @@ def current_wifi_connect():
 
 def wifi_client_scan_iw():
     if not settings.is_simulation():
-        results = subprocess.run(['sudo', '/sbin/iw', 'dev', settings.settings['network']['wifi_device'], 'scan', 'ap-force'], stdout=subprocess.PIPE)
+        results = subprocess.run(
+            ['sudo', '/sbin/iw', 'dev', settings.settings['network']['wifi_device'], 'scan', 'ap-force'],
+            stdout=subprocess.PIPE)
     else:
         results = simulation_helper.iw_scan()
     aps = []
@@ -274,8 +276,9 @@ def wifi_client_scan_iw():
 def wifi_client_scan():
     # Doesn't work when wpa_suppliment is turned off
     subprocess.run(['sudo', '/sbin/wpa_cli', '-i', settings.settings['network']['wifi_device'], 'scan'])
-    results = subprocess.run(['sudo', '/sbin/wpa_cli', '-i', settings.settings['network']['wifi_device'], 'scan_results'],
-                             stdout=subprocess.PIPE)
+    results = subprocess.run(
+        ['sudo', '/sbin/wpa_cli', '-i', settings.settings['network']['wifi_device'], 'scan_results'],
+        stdout=subprocess.PIPE)
     aps = []
     first = True
     for line in results.stdout.decode().splitlines():

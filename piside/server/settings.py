@@ -80,3 +80,7 @@ def get_logger(name):
         logger.addHandler(handler)
         logger.setLevel(logging.DEBUG)
     return logger
+
+
+runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
+                    'tracking': True, 'started_parked': False}
