@@ -1,0 +1,54 @@
+import React from "react";
+import state from './State';
+import {observer} from "mobx-react"
+import Button from '@material-ui/core/Button';
+import Container from '@material-ui/core/Container';
+import Grid from '@material-ui/core/Grid';
+
+const item={ textAlign: "center", padding: "2ex"};
+
+const park={...item, paddingTop: "6ex"};
+
+class ManualPage extends React.Component {
+    advancedSettingsClicked() {
+        state.page='advancedSettings';
+    }
+
+    locationSettingsClicked() {
+        state.page='locationSettings';
+    }
+
+    networkSettingsClicked() {
+        state.page='networkSettings';
+    }
+
+    render() {
+        return <Container>
+            <Grid container>
+                <Grid item xs={12} style={item}>
+                    <Button variant="contained" color="primary" onClick={this.locationSettingsClicked}>Location</Button>
+                </Grid>
+                <Grid item xs={12} style={item}>
+                    <Button variant="contained" color="primary">Polar Alignment</Button>
+                </Grid>
+                <Grid item xs={12} style={item}>
+                    <Button variant="contained" color="primary" onClick={this.networkSettingsClicked}>Network Settings</Button>
+                </Grid>
+                <Grid item xs={12} style={item}>
+                    <Button variant="contained" color="primary" onClick={this.advancedSettingsClicked}>Advanced Settings</Button>
+                </Grid>
+                <Grid item xs={12} style={item}>
+                    <Button variant="contained">Help</Button>
+                </Grid>
+                <Grid item xs={12} style={item}>
+                    <Button variant="contained">About</Button>
+                </Grid>
+                <Grid item xs={12} style={park}>
+                    <Button variant="contained" color="secondary">Park Scope</Button>
+                </Grid>
+            </Grid>
+        </Container>
+    }
+}
+
+export default ManualPage;
