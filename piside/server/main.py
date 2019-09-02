@@ -7,7 +7,6 @@ from astropy.time import Time as AstroTime
 import time
 
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
-from flask_socketio import SocketIO, emit
 from functools import wraps, update_wrapper
 import json
 import control
@@ -18,7 +17,6 @@ import subprocess
 import datetime
 import tempfile
 import zipfile
-# import stellarium_server
 import os
 import settings
 import sstchuck
@@ -53,7 +51,7 @@ power_thread_quit = False
 
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
-socketio = SocketIO(app, async_mode='threading', logger=False, engineio_logger=False)
+# socketio = SocketIO(app, async_mode='threading', logger=False, engineio_logger=False)
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
@@ -132,32 +130,32 @@ def root():
     return redirect('/static/index.html')
 
 
-@app.route('/version')
+@app.route('/api/version')
 @nocache
 def version():
     return jsonify({"version": control.version, "version_date": control.version_date_str})
 
 
-@app.route('/settings')
+@app.route('/api/settings')
 @nocache
 def settings_get():
     return jsonify(settings.settings)
 
 
-@app.route('/hostname')
+@app.route('/api/hostname')
 @nocache
 def hostname_get():
     return jsonify({'hostname': socket.gethostname()})
 
 
-@app.route('/shutdown', methods=['PUT'])
+@app.route('/api/shutdown', methods=['PUT'])
 @nocache
 def shutdown_put():
     control.set_shutdown()
     return 'Shutdown', 204
 
 
-@app.route('/logger', methods=['GET'])
+@app.route('/api/logger', methods=['GET'])
 @nocache
 def logger_get():
     logger_name = request.args.get('name')
@@ -166,7 +164,7 @@ def logger_get():
         return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
 
 
-@app.route('/settings', methods=['PUT'])
+@app.route('/api/settings', methods=['PUT'])
 @nocache
 def settings_put():
     print('settings_put')
@@ -218,7 +216,7 @@ def settings_put():
     return '', 204
 
 
-@app.route('/settings_horizon_limit', methods=['PUT'])
+@app.route('/api/settings_horizon_limit', methods=['PUT'])
 @nocache
 def settings_horizon_limit():
     enabled = request.form.get('horizon_limit_enabled', None)
@@ -236,7 +234,7 @@ def settings_horizon_limit():
     return 'Saved', 204
 
 
-@app.route('/settings_network_ethernet', methods=['PUT'])
+@app.route('/api/settings_network_ethernet', methods=['PUT'])
 @nocache
 def settings_network_ethernet():
     dhcp_server = request.form.get('dhcp_server', None)
@@ -257,7 +255,7 @@ def settings_network_ethernet():
     return 'Saved', 204
 
 
-@app.route('/settings_network_wifi', methods=['PUT'])
+@app.route('/api/settings_network_wifi', methods=['PUT'])
 @nocache
 def settings_network_wifi():
     ssid = request.form.get('ssid', None)
@@ -290,7 +288,7 @@ def settings_network_wifi():
     return "Saved", 200
 
 
-@app.route('/wifi_connect', methods=['DELETE'])
+@app.route('/api/wifi_connect', methods=['DELETE'])
 @nocache
 def wifi_connect_delete():
     ssid = request.form.get('ssid', None)
@@ -310,7 +308,7 @@ def wifi_connect_delete():
     return 'Removed', 200
 
 
-@app.route('/wifi_known', methods=['GET'])
+@app.route('/api/wifi_known', methods=['GET'])
 @nocache
 def wifi_known():
     stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
@@ -319,7 +317,7 @@ def wifi_known():
     return jsonify(wpasup['networks'])
 
 
-@app.route('/wifi_connect', methods=['POST'])
+@app.route('/api/wifi_connect', methods=['POST'])
 @nocache
 def wifi_connect():
     ssid = request.form.get('ssid', None)
@@ -363,7 +361,7 @@ def wifi_connect():
     return '', 204
 
 
-@app.route('/set_location', methods=['DELETE'])
+@app.route('/api/set_location', methods=['DELETE'])
 @nocache
 def unset_location():
     settings.settings['location'] = None
@@ -372,7 +370,7 @@ def unset_location():
     return 'Unset Location', 200
 
 
-@app.route('/set_location', methods=['PUT'])
+@app.route('/api/set_location', methods=['PUT'])
 @nocache
 def set_location():
     location = request.form.get('location', None)
@@ -391,7 +389,7 @@ def set_location():
     return 'Set Location', 200
 
 
-@app.route('/sync', methods=['GET'])
+@app.route('/api/sync', methods=['GET'])
 @nocache
 def get_sync_points():
     points = []
@@ -404,14 +402,14 @@ def get_sync_points():
     return jsonify({'frame': frame, 'points': points})
 
 
-@app.route('/sync', methods=['DELETE'])
+@app.route('/api/sync', methods=['DELETE'])
 @nocache
 def clear_sync():
     control.clear_sync()
     return 'Cleared', 200
 
 
-@app.route('/sync', methods=['PUT'])
+@app.route('/api/sync', methods=['PUT'])
 @nocache
 def do_sync():
     ra = request.form.get('ra', None)
@@ -431,7 +429,7 @@ def do_sync():
     return jsonify({'text': 'Sync Points: ' + str(size)})
 
 
-@app.route('/sync', methods=['POST'])
+@app.route('/api/sync', methods=['POST'])
 @nocache
 def post_sync():
     model = request.form.get('model', None)
@@ -444,7 +442,7 @@ def post_sync():
     return 'Pointing Model Set', 200
 
 
-@app.route('/slewto', methods=['PUT'])
+@app.route('/api/slewto', methods=['PUT'])
 @nocache
 def do_slewto():
     ra = request.form.get('ra', None)
@@ -469,7 +467,7 @@ def do_slewto():
     return 'Slewing', 200
 
 
-@app.route('/slewto_check', methods=['PUT'])
+@app.route('/api/slewto_check', methods=['PUT'])
 @nocache
 def do_slewtocheck():
     ra = float(request.form.get('ra', None))
@@ -478,14 +476,14 @@ def do_slewtocheck():
     return jsonify({'slewcheck': control.slewtocheck(radec)})
 
 
-@app.route('/slewto', methods=['DELETE'])
+@app.route('/api/slewto', methods=['DELETE'])
 @nocache
 def stop_slewto():
     control.cancel_slews()
     return 'Stopping Slew', 200
 
 
-@app.route('/set_time', methods=['PUT'])
+@app.route('/api/set_time', methods=['PUT'])
 @nocache
 def set_time():
     time_str = request.form.get('time', None)
@@ -496,14 +494,14 @@ def set_time():
     return status[1], 200 if status[0] else 500
 
 
-@app.route('/set_park_position', methods=['PUT'])
+@app.route('/api/set_park_position', methods=['PUT'])
 @nocache
 def set_park_position():
     control.set_park_position_here()
     return 'Park Position Set', 200
 
 
-@app.route('/set_park_position', methods=['DELETE'])
+@app.route('/api/set_park_position', methods=['DELETE'])
 @nocache
 def unset_park_position():
     # Will just be default if none
@@ -512,7 +510,7 @@ def unset_park_position():
     return 'Park Position Unset', 200
 
 
-@app.route('/park', methods=['PUT'])
+@app.route('/api/park', methods=['PUT'])
 @nocache
 def do_park():
     control.stop_tracking()
@@ -526,14 +524,14 @@ def do_park():
     return 'Parking.', 200
 
 
-@app.route('/start_tracking', methods=['PUT'])
+@app.route('/api/start_tracking', methods=['PUT'])
 @nocache
 def start_tracking():
     control.start_tracking()
     return 'Tracking', 200
 
 
-@app.route('/stop_tracking', methods=['PUT'])
+@app.route('/api/stop_tracking', methods=['PUT'])
 @nocache
 def stop_tracking():
     control.stop_tracking()
@@ -545,7 +543,33 @@ def to_list_of_lists(tuple_of_tuples):
     return b
 
 
-@app.route('/search_object', methods=['GET'])
+def to_list_of_dicts(tuple_of_tuples, keys):
+    b = []
+    for r in tuple_of_tuples:
+        d = {}
+        for i in range(len(r)):
+            d[keys[i]] = r[i]
+        b.append(d)
+    return b
+
+
+@app.route('/api/altitude_data', methods=['POST'])
+@nocache
+def altitude_data():
+    reqj = request.json
+    if reqj['ra']:
+        ra = reqj['ra']
+        dec = reqj['dec']
+        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+    else:
+        alt = reqj['alt']
+        az = reqj['az']
+        coord = skyconv.altaz_to_icrs(SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz'))
+    altazes = skyconv.icrs_to_altaz(coord, atmo_refraction=True, obstime=reqj['times'])
+    return jsonify(altazes.alt.deg.tolist())
+
+
+@app.route('/api/search_object', methods=['GET'])
 @nocache
 def search_object():
     do_altaz = True
@@ -573,7 +597,12 @@ def search_object():
             else:
                 altaz = {'alt': None, 'az': None}
             planets.append(
-                [body.title(), coord.icrs.ra.deg * 24.0 / 360.0, coord.icrs.dec.deg, altaz['alt'], altaz['az']])
+                {
+                    'type': 'planet', 'name': body.title(), 'ra': coord.icrs.ra.deg, 'dec': coord.icrs.dec.deg,
+                    'alt': altaz['alt'],
+                    'az': altaz['az']
+                }
+            )
     dso_search = search
     star_search = search
     if re.match(r'.*\d+$', search):
@@ -585,34 +614,59 @@ def search_object():
     # catalogs = {'IC': ['IC'], 'NGC': ['NGC'], 'M': ['M', 'Messier'], 'Pal': ['Pal'], 'C': ['C', 'Caldwell'],
     # 'ESO': ['ESO'], 'UGC': ['UGC'], 'PGC': ['PGC'], 'Cnc': ['Cnc'], 'Tr': ['Tr'], 'Col': ['Col'], 'Mel': ['Mel'],
     # 'Harvard': ['Harvard'], 'PK': ['PK']}
+    dso_columns = ["ra", "dec", "type", "const", "mag", "name", "r1", "r2", "search"]
+    stars_columns = ["ra", "dec", "bf", "proper", "mag", "con"]
+
     with db_lock:
         cur = conn.cursor()
-        cur.execute('SELECT * from dso where search like ? limit 10', (dso_search,))
+        cur.execute(('SELECT %s from dso where search like ? limit 10' % ','.join(dso_columns)), (dso_search,))
         dso = cur.fetchall()
-        cur.execute('SELECT * from stars where bf like ? or proper like ? limit 10', (star_search, star_search))
+        cur.execute('SELECT \'star\',%s from stars where bf like ? or proper like ? limit 10' % ','.join(stars_columns),
+                    (star_search, star_search))
         stars = cur.fetchall()
         cur.close()
-    dso = to_list_of_lists(dso)
-    stars = to_list_of_lists(stars)
+    dso = to_list_of_dicts(dso, dso_columns)
+    stars = to_list_of_dicts(stars, ['type'] + stars_columns)
     # Alt az
     for ob in dso:
-        if do_altaz:
-            coord = SkyCoord(ra=(360.0 / 24.0) * float(ob[0]) * u.deg, dec=float(ob[1]) * u.deg, frame='icrs')
-            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
-            altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
+        print(ob['ra'], ob['dec'], ob['r1'], ob['r2'])
+        ob['ra'] = float(ob['ra']) * (360. / 24.)
+        ob['dec'] = float(ob['dec'])
+        if not ob['mag']:
+            ob['mag'] = None
         else:
-            altaz = {'alt': None, 'az': None}
-        ob.append(altaz['alt'])
-        ob.append(altaz['az'])
+            ob['mag'] = float(ob['mag'])
+        if not ob['r1']:
+            ob['r1'] = None
+        else:
+            ob['r1'] = float(ob['r1'])
+        if not ob['r2']:
+            ob['r2'] = None
+        else:
+            ob['r2'] = float(ob['r2'])
+        if do_altaz:
+            coord = SkyCoord(ra=ob['ra'] * u.deg, dec=ob['dec'] * u.deg, frame='icrs')
+            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+            ob['alt'] = altaz.alt.deg
+            ob['az'] = altaz.az.deg
+        else:
+            ob['alt'] = None
+            ob['az'] = None
     for ob in stars:
-        if do_altaz:
-            coord = SkyCoord(ra=(360.0 / 24.0) * float(ob[7]) * u.deg, dec=float(ob[8]) * u.deg, frame='icrs')
-            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
-            altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
+        ob['ra'] = float(ob['ra']) * (360. / 24.)
+        ob['dec'] = float(ob['dec'])
+        if not ob['mag']:
+            ob['mag'] = None
         else:
-            altaz = {'alt': None, 'az': None}
-        ob.append(altaz['alt'])
-        ob.append(altaz['az'])
+            ob['mag'] = float(ob['mag'])
+        if do_altaz:
+            coord = SkyCoord(ra=ob['ra'] * u.deg, dec=ob['dec'] * u.deg, frame='icrs')
+            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+            ob['alt'] = altaz.alt.deg
+            ob['az'] = altaz.az.deg
+        else:
+            ob['alt'] = None
+            ob['az'] = None
 
     return jsonify({'dso': dso, 'stars': stars, 'planets': planets})
 
@@ -622,7 +676,7 @@ def reboot():
         return subprocess.run(['/usr/bin/sudo', '/sbin/reboot'])
 
 
-@app.route('/firmware_update', methods=['POST'])
+@app.route('/api/firmware_update', methods=['POST'])
 @nocache
 def firmware_update():
     file = request.files['file']
@@ -640,7 +694,7 @@ def firmware_update():
     return 'Updated'
 
 
-@app.route('/wifi_scan', methods=['GET'])
+@app.route('/api/wifi_scan', methods=['GET'])
 @nocache
 def wifi_scan():
     aps = network.wifi_client_scan_iw()
@@ -648,7 +702,7 @@ def wifi_scan():
     return jsonify({'aps': aps, 'connected': connected})
 
 
-@app.route('/search_location', methods=['GET'])
+@app.route('/api/search_location', methods=['GET'])
 @nocache
 def search_location():
     search = request.args.get('search', None)
@@ -702,15 +756,15 @@ def search_location():
                 return jsonify({'cities': cities})
 
 
-@socketio.on('manual_control')
+@app.route('/api/manual_control')
+@nocache
 def manual_control(message):
-    emit('controls_response', {'data': 33})
     # print("Got %s" + json.dumps(message))
     control.manual_control(message['direction'], message['speed'])
-    emit('controls_response', {'data': 33})
+    return 'Moving', 200
 
 
-@app.route('/paa_capture', methods=['POST'])
+@app.route('/api/paa_capture', methods=['POST'])
 @nocache
 def paa_capture_post():
     exposure = int(request.form.get('exposure'))
@@ -719,7 +773,7 @@ def paa_capture_post():
     return "Capturing", 200
 
 
-@app.route('/paa_solve', methods=['POST'])
+@app.route('/api/paa_solve', methods=['POST'])
 @nocache
 def paa_solve_post():
     global solver
@@ -731,7 +785,7 @@ def paa_solve_post():
     return "Solving Queued", 200
 
 
-@app.route('/paa_solve_image', methods=['GET'])
+@app.route('/api/paa_solve_image', methods=['GET'])
 @nocache
 def paa_solve_image():
     img = 'solved.png'
@@ -741,14 +795,14 @@ def paa_solve_image():
         return send_from_directory('/ramtmp', img)
 
 
-@app.route('/paa_solve_info', methods=['GET'])
+@app.route('/api/paa_solve_info', methods=['GET'])
 @nocache
 def paa_solve_info():
     ret = solver.get_last_solved_info()
     return jsonify(ret)
 
 
-@app.route('/status', methods=['GET'])
+@app.route('/api/status', methods=['GET'])
 @nocache
 def status_get():
     return jsonify(control.last_status)
@@ -777,7 +831,7 @@ def paa_capture(exposure, iso):
         paa_process.stdin.write(('%d %d %d %f\n' % (exposure, iso, -1, 0.25)).encode())
 
 
-@app.route('/paa_capture', methods=['DELETE'])
+@app.route('/api/paa_capture', methods=['DELETE'])
 @nocache
 def paa_capture_stop():
     with paa_process_lock:
@@ -795,7 +849,7 @@ def paa_image_path():
         return os.path.join('/ramtmp', img)
 
 
-@app.route('/paa_image', methods=['GET'])
+@app.route('/api/paa_image', methods=['GET'])
 @nocache
 def paa_image():
     global paa_count
@@ -814,7 +868,7 @@ def listen_paa_stdout(process):
         sline = line.split(' ', 1)
         if len(sline) == 2 and sline[0] == 'CAPTURED':
             paa_count = int(sline[1])
-            socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
+            # TODO: socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
             print('SOLVER!!!!!!!!!!!!!!!!!!!!!!!!:', str(solver.queue), str(solver.running()))
             if solver.queue and not solver.running():
                 try:
@@ -822,9 +876,11 @@ def listen_paa_stdout(process):
                 except Exception as e:
                     print('Solver had exception:', sys.exc_info()[0], e)
         elif sline[0] == 'CAPTUREDONE':
-            socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
+            # TODO: socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
+            pass
         elif sline[0] == 'STATUS':
-            socketio.emit('paa_capture_response', {'status': sline[1]})
+            # TODO: socketio.emit('paa_capture_response', {'status': sline[1]})
+            pass
         else:
             print('polar_align_assist.py:', line)
 
@@ -835,7 +891,8 @@ def solver_log_cb(msg):
 
 
 def solver_done_cb(status):
-    socketio.emit('paa_solve_done', {'status': status})
+    # TODO: socketio.emit('paa_solve_done', {'status': status})
+    pass
 
 
 def main():
@@ -858,15 +915,10 @@ def main():
     ethernetinfo = network.read_ethernet_settings()
     for key in ethernetinfo.keys():
         settings.settings['network'][key] = ethernetinfo[key]
-    st_queue = control.init(socketio)
+    st_queue = control.init()
 
     lx200proto_thread = threading.Thread(target=lx200proto_server.main)
     lx200proto_thread.start()
-
-    # # TODO: Config if start stellarium server.
-    # Maybe not enable they can just use lx200 protocol?
-    # stellarium_thread = threading.Thread(target=stellarium_server.run)
-    # stellarium_thread.start()
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
@@ -885,14 +937,11 @@ def main():
         if len(sys.argv) == 2 and sys.argv[1] == '--https':
             make_ssl_devcert('../key')
             ssl_context = ('../key.crt', '../key.key')
-        socketio.run(app, host="0.0.0.0", debug=False, log_output=False, use_reloader=False,
-                     ssl_context=ssl_context)
+        app.run(host="0.0.0.0", debug=False, use_reloader=False, ssl_context=ssl_context)
         power_thread_quit = True
-        # stellarium_server.terminate()
         sstchuck.terminate()
         lx200proto_server.terminate()
         lx200proto_thread.join()
-        # stellarium_thread.join()
         sstchuck_thread.join()
         power_thread.join()
         avahi_process.kill()

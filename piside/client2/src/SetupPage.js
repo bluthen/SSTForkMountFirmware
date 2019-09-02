@@ -22,6 +22,10 @@ class ManualPage extends React.Component {
         state.page='networkSettings';
     }
 
+    slewLimitsSettingsClicked() {
+        state.page='slewLimitsSettings';
+    }
+
     render() {
         return <Container>
             <Grid container>
@@ -29,10 +33,10 @@ class ManualPage extends React.Component {
                     <Button variant="contained" color="primary" onClick={this.locationSettingsClicked}>Location</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
-                    <Button variant="contained" color="primary">Polar Alignment</Button>
+                    <Button variant="contained" color="primary" onClick={this.networkSettingsClicked}>Network Settings</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
-                    <Button variant="contained" color="primary" onClick={this.networkSettingsClicked}>Network Settings</Button>
+                    <Button variant="contained" color="primary" onClick={this.slewLimitsSettingsClicked}>Slew Limits</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
                     <Button variant="contained" color="primary" onClick={this.advancedSettingsClicked}>Advanced Settings</Button>

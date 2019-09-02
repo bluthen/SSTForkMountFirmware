@@ -64,7 +64,6 @@ slew_lock = threading.RLock()
 set_last_slew_lock = threading.RLock()
 manual_lock = threading.RLock()
 status_interval = None
-socketio = None
 inited = False
 slewing = False
 stepper = None
@@ -121,7 +120,8 @@ def sync(coord):
         coord = skyconv.altaz_to_icrs(coord, obstime=obstime, atmo_refraction=False)
         coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=False)
 
-    if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper.size() > 0:
+    if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
+            skyconv.model_real_stepper.size() > 0:
         stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
                                                frame=skyconv.model_real_stepper.frame(), obstime=obstime)
         if skyconv.model_real_stepper.frame() == 'hadec':
@@ -492,7 +492,7 @@ def send_status():
     status['slewing'] = slewing
     status['tracking'] = settings.runtime_settings['tracking']
     last_status = status
-    socketio.emit('status', status)
+    # socketio.emit('status', status)
 
 
 # TMOVE: stepper_control
@@ -514,18 +514,16 @@ def micro_update_settings():
     stepper.set_speed_dec(0)
 
 
-def init(osocketio):
+def init():
     """
     Init point for this module.
-    :param osocketio:
     :return:
     """
-    global stepper, status_interval, socketio, inited, park_sync, model_real_stepper
+    global stepper, status_interval, inited, park_sync, model_real_stepper
     if inited:
         return
     inited = True
     # print('Inited')
-    socketio = osocketio
     # Load settings file
     # Open serial port
     stepper = stepper_control.StepperControl(settings.settings['microserial']['port'],
@@ -710,9 +708,9 @@ def clear_sync():
     """
     global park_sync
     if settings.runtime_settings['tracking']:
-        scord = SkyCoord(ra=last_status['ra']*u.deg, dec=last_status['dec']*u.deg, frame='icrs')
+        scord = SkyCoord(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, frame='icrs')
     else:
-        scord = SkyCoord(alt=last_status['alt']*u.deg, az=last_status['az']*u.deg, frame='altaz')
+        scord = SkyCoord(alt=last_status['alt'] * u.deg, az=last_status['az'] * u.deg, frame='altaz')
     pointing_logger.debug(json.dumps({'func': 'control.clear_sync'}))
     park_sync = True
     sync(scord)
@@ -862,7 +860,7 @@ def set_park_position_here():
     Sets current position to park position.
     """
     if settings.runtime_settings['tracking']:
-        coord = SkyCoord(ra=last_status['ra']*u.deg, dec=last_status['dec']*u.deg, frame='icrs')
+        coord = SkyCoord(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, frame='icrs')
         altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
         settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
     else:

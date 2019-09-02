@@ -33,7 +33,7 @@ class ManualPage extends React.Component {
         let option;
 
         if (state.goto.option === 'object_search') {
-            option = <ObjectSearch></ObjectSearch>;
+            option = <ObjectSearch/>;
         } else {
             option = <CoordinatesInput coordinateType={state.goto.coordinates.type} onTypeChange={this.typeChanged}/>;
         }
@@ -42,14 +42,14 @@ class ManualPage extends React.Component {
             <PositionInfo/>
             <RadioGroup aria-label="goto option" name="goto_option" onChange={this.gotoOptionChange}>
                 <Grid container>
-                    <Grid item xs={2}></Grid>
+                    <Grid item xs={2}/>
                     <Grid item xs={4}>
                         <FormControlLabel value="object_search" control={<Radio checked={state.goto.option === 'object_search'}/>} label="Object Search"/>
                     </Grid>
                     <Grid item xs={4}>
                         <FormControlLabel value="coordinates" control={<Radio checked={state.goto.option === 'coordinates'}/>} label="Coordinates"/>
                     </Grid>
-                    <Grid item xs={2}></Grid>
+                    <Grid item xs={2}/>
                 </Grid>
             </RadioGroup>
             {option}

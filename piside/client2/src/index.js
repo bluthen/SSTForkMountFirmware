@@ -14,6 +14,8 @@ import SetupPage from './SetupPage';
 import AdvancedSettings from './AdvancedSettings';
 import LocationSettings from './LocationSettings';
 import NetworkSettings from './NetworkSettings';
+import SlewLimitsSettings from './SlewLimitsSettings';
+import APIHelp from './util/APIHelp';
 
 const tabMap = ['setup', 'goto', 'manual'];
 
@@ -49,6 +51,8 @@ class App extends React.Component {
             content = <LocationSettings/>;
         } else if(state.page === 'networkSettings') {
             content = <NetworkSettings/>;
+        } else if(state.page === 'slewLimitsSettings') {
+            content = <SlewLimitsSettings/>;
         } else {
             alert(state.page);
         }
@@ -70,3 +74,5 @@ render(
     document.getElementById("root")
 );
 
+APIHelp.startStatusUpdateInterval();
+APIHelp.startNetworkStateListeners()

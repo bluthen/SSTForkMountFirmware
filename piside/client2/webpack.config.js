@@ -4,6 +4,11 @@ var webpack = require('webpack');
 module.exports = {
     devtool: 'eval',
     mode: 'development',
+	devServer: {
+		proxy: {
+			'/api': 'http://localhost:5000'
+		}
+	},
     entry: [
         './src/index'
     ],

@@ -16,7 +16,7 @@ const settings_map = {
     dec_ticks_per_degree: {display: 'DEC', type: 'number', value: 0, min: 0, endAdornment: 'Steps/Degree'},
 
     use_encoders: {display: 'Use Encoders', type: 'boolean', value: false},
-    limit_encoder_step_fillin: {display: 'Limit Encoder Step Fillin', type: 'boolean', value: false},
+    limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean', value: false},
     ra_encoder_pulse_per_degree: {
         display: 'RA Encoder Scale',
         type: 'number',
@@ -54,7 +54,7 @@ class AdvancedSettings extends React.Component {
         for (let key in settings_map) {
             console.log(key);
             if (settings_map[key].type === 'boolean') {
-                settings.push(<Grid item xs={4}><FormControlLabel
+                settings.push(<Grid item key={key} xs={4}><FormControlLabel
                     control={
                         <Checkbox
                             value={key}
@@ -64,7 +64,7 @@ class AdvancedSettings extends React.Component {
                     label={settings_map[key].display}
                 /></Grid>);
             } else {
-                settings.push(<Grid item xs={4}><TextField label={settings_map[key].display} key={key}
+                settings.push(<Grid item key={key} xs={4}><TextField label={settings_map[key].display} key={key}
                                                            type={settings_map[key].type} inputProps={{
                     min: settings_map[key].min,
                     max: settings_map[key].max,
