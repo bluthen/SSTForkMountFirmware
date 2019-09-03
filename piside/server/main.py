@@ -23,7 +23,6 @@ import sstchuck
 import network
 import sys
 import socket
-from solver import Solver
 import lx200proto_server
 import skyconv
 
@@ -41,10 +40,6 @@ def correct_dir():
 
 correct_dir()
 
-paa_process_lock = threading.RLock()
-paa_process = None
-paa_count = 0
-
 avahi_process = None
 
 power_thread_quit = False
@@ -55,7 +50,6 @@ app = Flask(__name__, static_folder='../client_refactor/dist/')
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
 conn = sqlite3.connect('ssteq.sqlite', check_same_thread=False)
-solver = None
 
 pointing_logger = settings.get_logger('pointing')
 
@@ -764,146 +758,14 @@ def manual_control(message):
     return 'Moving', 200
 
 
-@app.route('/api/paa_capture', methods=['POST'])
-@nocache
-def paa_capture_post():
-    exposure = int(request.form.get('exposure'))
-    iso = int(request.form.get('iso'))
-    paa_capture(exposure, iso)
-    return "Capturing", 200
-
-
-@app.route('/api/paa_solve', methods=['POST'])
-@nocache
-def paa_solve_post():
-    global solver
-    solver.low = float(request.form.get('low'))
-    solver.high = float(request.form.get('high'))
-    solver.pixel_error = int(request.form.get('pixel_error'))
-    solver.code_tolerance = float(request.form.get('code_tolerance'))
-    solver.queue = True
-    return "Solving Queued", 200
-
-
-@app.route('/api/paa_solve_image', methods=['GET'])
-@nocache
-def paa_solve_image():
-    img = 'solved.png'
-    if settings.is_simulation():
-        return send_from_directory('./simulation_files/ramtmp', img)
-    else:
-        return send_from_directory('/ramtmp', img)
-
-
-@app.route('/api/paa_solve_info', methods=['GET'])
-@nocache
-def paa_solve_info():
-    ret = solver.get_last_solved_info()
-    return jsonify(ret)
-
-
 @app.route('/api/status', methods=['GET'])
 @nocache
 def status_get():
     return jsonify(control.last_status)
 
 
-def paa_capture(exposure, iso):
-    global paa_process
-    with paa_process_lock:
-        if not paa_process or paa_process.poll() is not None:
-            print('Staring paa process')
-            paa_process = subprocess.Popen(
-                ['/usr/bin/python3', '-u', 'polar_align_assist.py'],
-                bufsize=0,
-                stdout=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-                stderr=subprocess.STDOUT)
-            #    stderr=subprocess.PIPE)
-            # set_nonblock(paa_process.stdout.fileno())
-            # set_nonblock(paa_process.stderr.fileno())
-            t = threading.Thread(target=listen_paa_stdout, args=(paa_process,))
-            t.start()
-            # t = threading.Thread(target=listen_paa_stderr, args=(paa_process,))
-            # t.start()
-            time.sleep(2)
-        print('Writing to paa process')
-        paa_process.stdin.write(('%d %d %d %f\n' % (exposure, iso, -1, 0.25)).encode())
-
-
-@app.route('/api/paa_capture', methods=['DELETE'])
-@nocache
-def paa_capture_stop():
-    with paa_process_lock:
-        if paa_process and paa_process.poll() is None:
-            paa_process.stdin.write('stop\n'.encode())
-    return 'Stopping', 200
-
-
-def paa_image_path():
-    global paa_count
-    img = '%d.jpg' % (paa_count,)
-    if settings.is_simulation():
-        return os.path.join('./simulation_files/ramtmp', img)
-    else:
-        return os.path.join('/ramtmp', img)
-
-
-@app.route('/api/paa_image', methods=['GET'])
-@nocache
-def paa_image():
-    global paa_count
-    img = '%d.jpg' % (paa_count,)
-    print('paa_image', img, flush=True)
-    if settings.is_simulation():
-        return send_from_directory('./simulation_files/ramtmp', img)
-    else:
-        return send_from_directory('/ramtmp', img)
-
-
-def listen_paa_stdout(process):
-    global paa_count
-    while process.poll() is None:
-        line = process.stdout.readline().decode().strip()
-        sline = line.split(' ', 1)
-        if len(sline) == 2 and sline[0] == 'CAPTURED':
-            paa_count = int(sline[1])
-            # TODO: socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': False})
-            print('SOLVER!!!!!!!!!!!!!!!!!!!!!!!!:', str(solver.queue), str(solver.running()))
-            if solver.queue and not solver.running():
-                try:
-                    solver.solve(paa_image_path())
-                except Exception as e:
-                    print('Solver had exception:', sys.exc_info()[0], e)
-        elif sline[0] == 'CAPTUREDONE':
-            # TODO: socketio.emit('paa_capture_response', {'paa_count': paa_count, 'done': True})
-            pass
-        elif sline[0] == 'STATUS':
-            # TODO: socketio.emit('paa_capture_response', {'status': sline[1]})
-            pass
-        else:
-            print('polar_align_assist.py:', line)
-
-
-def solver_log_cb(msg):
-    # socketio.emit('paa_solve_log', {'msg': msg})
-    pass
-
-
-def solver_done_cb(status):
-    # TODO: socketio.emit('paa_solve_done', {'status': status})
-    pass
-
-
 def main():
-    global st_queue, power_thread_quit, solver, avahi_process
-    if settings.is_simulation():
-        solver_tmp = './simulation_files/ramtmp/solver'
-        solved_plot_path = './simulation_files/ramtmp/solved.png'
-    else:
-        solver_tmp = '/ramtmp/solver'
-        solved_plot_path = '/ramtmp/solved.png'
-    solver = Solver(solver_tmp, solver_log_cb, solver_done_cb, solved_plot_path)
+    global st_queue, power_thread_quit, avahi_process
     power_thread_quit = False
     if not settings.settings['power_switch']:
         power_thread_quit = True
@@ -922,10 +784,6 @@ def main():
 
     sstchuck_thread = threading.Thread(target=sstchuck.run)
     sstchuck_thread.start()
-    try:
-        paa_capture(1000000 * 2.00, 800)
-    except Exception as e:
-        print(e)
 
     hostname = socket.gethostname()
     # TODO: What about when they change hostname? Or can move this to systemd?
@@ -946,13 +804,7 @@ def main():
         power_thread.join()
         avahi_process.kill()
     finally:
-        if paa_process and paa_process.poll() is None:
-            paa_process.stdin.write('STOP\nQUIT\n'.encode())
-            try:
-                paa_process.wait(10)
-            except subprocess.TimeoutExpired:
-                paa_process.kill()
-
+        pass
 
 if __name__ == '__main__':
     main()
