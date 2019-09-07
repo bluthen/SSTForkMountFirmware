@@ -16,8 +16,10 @@ import LocationSettings from './LocationSettings';
 import NetworkSettings from './NetworkSettings';
 import SlewLimitsSettings from './SlewLimitsSettings';
 import APIHelp from './util/APIHelp';
+import SlewingDialog from './SlewingDialog';
+import SyncingDialog from './SyncingDialog';
 
-const tabMap = ['setup', 'goto', 'manual'];
+const tabMap = ['manual', 'goto', 'setup'];
 
 @observer
 class App extends React.Component {
@@ -32,9 +34,9 @@ class App extends React.Component {
         let tabs = <Container>
             <Tabs value={tabIndex} onChange={this.tabChange} aria-label="setup goto manual"
                   indicatorColor="primary" textColor="primary" centered>
-                <Tab label="Setup"/>
-                <Tab label="Goto"/>
                 <Tab label="Manual"/>
+                <Tab label="Goto"/>
+                <Tab label="Setup"/>
             </Tabs>
         </Container>;
 
@@ -57,12 +59,20 @@ class App extends React.Component {
             alert(state.page);
         }
 
+        let dialog = null;
+        if(state.goto.slewing || state.status.slewing) {
+            dialog = <SlewingDialog/>;
+        } else if(state.goto.syncing) {
+            dialog = <SyncingDialog/>;
+        }
+
         return <React.Fragment>
             <CssBaseline/>
             <Container>
                 <Paper square style={{paddingLeft: '3ex', paddingRight: '3ex', height: '100%'}}>
                     {tabs}
                     {content}
+                    {dialog}
                 </Paper>
             </Container>
         </React.Fragment>;

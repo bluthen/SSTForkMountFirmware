@@ -1,6 +1,6 @@
 const DEG_SYM = '°';
 
-const Formating = {
+const Formatting = {
     absoluteURL: function (relativeURL) {
         return new URL(relativeURL, window.location.href).href;
     },
@@ -46,6 +46,17 @@ const Formating = {
             return '';
         }
     },
+    hmsRA2deg(h, m, s) {
+        return (360.0 / 24) *
+            parseFloat(h) +
+            parseFloat(m) / 60.0 +
+            parseFloat(s) / (60.0 * 60.0);
+    },
+    dmsDEC2deg(d, m, s) {
+        return parseFloat(d) +
+            parseFloat(m) / 60.0 +
+            parseFloat(s) / (60.0 * 60.0);
+    },
     degDEC2Str(dec) {
         if (dec !== null) {
             dec = parseFloat(dec);
@@ -61,14 +72,14 @@ const Formating = {
         let h = date.getHours();
         let m = date.getMinutes();
         if (h < 10) {
-            h = '0'+h
+            h = '0' + h
         }
         if (m < 10) {
-            m = '0'+m
+            m = '0' + m
         }
-        return h+':'+m;
+        return h + ':' + m;
     }
 
 };
 
-export default Formating;
+export default Formatting;

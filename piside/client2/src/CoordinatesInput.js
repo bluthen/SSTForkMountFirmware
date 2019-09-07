@@ -8,11 +8,14 @@ import CoordDisplayToggle from './CoordDisplayToggle';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import Button from '@material-ui/core/Button';
 import RootRef from '@material-ui/core/RootRef';
+import Formatting from './util/Formatting';
+import CoordDialog from './CoordDialog';
 
 @observer
 class CoordinatesInput extends React.Component {
     constructor(props) {
         super(props);
+        this.handleClick = this.handleClick.bind(this);
         this.one = React.createRef();
         this.two = React.createRef();
         this.three = React.createRef();
@@ -42,22 +45,40 @@ class CoordinatesInput extends React.Component {
         ref.current.select();
     }
 
+
+    goodClick() {
+        let ra = null, dec = null, alt = null, az = null;
+        if (state.goto.coordinates.type === 'radec') {
+            ra = Formatting.hmsRA2deg(state.goto.coordinates.ra.h, state.goto.coordinates.ra.m, state.goto.coordinates.ra.s);
+            dec = Formatting.dmsDEC2deg(state.goto.coordinates.dec.d, state.goto.coordinates.dec.m, state.goto.coordinates.dec.s);
+        } else {
+            alt = Formatting.dmsDEC2deg(state.goto.coordinates.alt.d, state.goto.coordinates.alt.m, state.goto.coordinates.alt.s);
+            az = Formatting.dmsDEC2deg(state.goto.coordinates.az.d, state.goto.coordinates.az.m, state.goto.coordinates.az.s);
+        }
+        state.goto.coorddialog.radeg = ra;
+        state.goto.coorddialog.decdeg = dec;
+        state.goto.coorddialog.altdeg = alt;
+        state.goto.coorddialog.azdeg = az;
+        state.goto.coorddialog.shown = true;
+    }
+
     handleClick(e) {
         let coords, subkeys;
-        if (this.props.coordinateType === 'radec') {
-            coords= ['ra', 'dec'];
-            subkeys = ['h', 'm', 's'];
+        if (state.goto.coordinates.type === 'radec') {
+            coords = {'ra': ['h', 'm', 's'], 'dec': ['d', 'm', 's']};
+        } else {
+            coords = {'alt': ['d', 'm', 's'], 'az': ['d', 'm', 's']};
         }
         let validCoords = true;
-        coords.forEach((coord)=> {
-           subkeys.forEach((key)=> {
-                if(state.goto.coordinates[coord][key] === null || state.goto.coordinates[coord+'_error'][key]) {
+        for (let coord in coords) {
+            coords[coord].forEach((key) => {
+                if (state.goto.coordinates[coord][key] === null || state.goto.coordinates[coord + '_error'][key]) {
                     validCoords = false;
                 }
             });
-        });
-        if(validCoords) {
-            this.props.onClick(e);
+        }
+        if (validCoords) {
+            this.goodClick();
         }
     }
 
@@ -104,7 +125,7 @@ class CoordinatesInput extends React.Component {
     }
 
     render() {
-        let field1, field2;
+        let field1, field2, dialog = null;
         if (this.props.coordinateType === 'radec') {
             field1 = this.fieldGen('ra', [{key: 'h', min: 0, max: 23, adornment: 'h', ref: this.one, nextRef: this.two},
                 {key: 'm', min: 0, max: 59, adornment: 'm', ref: this.two, nextRef: this.three},
@@ -127,6 +148,9 @@ class CoordinatesInput extends React.Component {
                 {key: 's', min: 0, max: 59, adornment: '"', ref: this.six, nextRef: this.buttonRef}]);
         }
 
+        if (state.goto.coorddialog.shown) {
+            dialog = <CoordDialog/>;
+        }
 
         return <Typography component="div">
             <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
@@ -150,6 +174,7 @@ class CoordinatesInput extends React.Component {
                     <Button variant="contained" color="primary" buttonRef={this.buttonRef} onClick={this.handleClick}>Slew/Sync</Button>
                 </Grid>
             </Grid>
+            {dialog}
         </Typography>
     }
 }

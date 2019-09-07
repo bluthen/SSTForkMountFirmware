@@ -4,7 +4,7 @@ import React from "react";
 import CoordDisplayToggle from './CoordDisplayToggle';
 import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
-import Formating from './util/Formating';
+import Formatting from './util/Formatting';
 
 
 const indent = {
@@ -29,14 +29,14 @@ class PositionInfo extends React.Component {
     render() {
         const tableInfo = {coord1: 'RA', coord2: 'Dec', toggleChecked: false, coord1Value: 'CDV1', coord2Value: 'CDV2'};
         if (state.coordDisplay === 'radec') {
-            tableInfo.coord1Value = Formating.degRA2Str(state.status.ra);
-            tableInfo.coord2Value = Formating.degDEC2Str(state.status.dec);
+            tableInfo.coord1Value = Formatting.degRA2Str(state.status.ra);
+            tableInfo.coord2Value = Formatting.degDEC2Str(state.status.dec);
         } else {
             tableInfo.coord1 = 'Alt';
             tableInfo.coord2 = 'Az';
             tableInfo.toggleChecked = true;
-            tableInfo.coord1Value = Formating.degDEC2Str(state.status.alt);
-            tableInfo.coord2Value = Formating.degDEC2Str(state.status.az);
+            tableInfo.coord1Value = Formatting.degDEC2Str(state.status.alt);
+            tableInfo.coord2Value = Formatting.degDEC2Str(state.status.az);
         }
         return <Typography component="div" style={{paddingBottom: "4ex"}}>
             <Typography component="h4" style={bold}>

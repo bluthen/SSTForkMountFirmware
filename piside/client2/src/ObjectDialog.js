@@ -10,11 +10,28 @@ import InputLabel from '@material-ui/core/InputLabel';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import AltChart from './AltChart';
+import APIHelp from './util/APIHelp';
 
 @observer
 class ObjectDialog extends React.Component {
+    constructor(props) {
+        super(props);
+        this.handleSlewClick = this.handleSlewClick.bind(this);
+        this.handleSyncClick = this.handleSyncClick.bind(this);
+    }
+
     handleClose() {
         state.goto.objectdialog.shown = false;
+    }
+
+    handleSlewClick() {
+        APIHelp.slewTo({ra: state.goto.objectdialog.radeg, dec: state.goto.objectdialog.decdeg});
+        this.handleClose();
+    }
+
+    handleSyncClick() {
+        APIHelp.sync({ra: state.goto.objectdialog.radeg, dec: state.goto.objectdialog.decdeg});
+        this.handleClose();
     }
 
     render() {
@@ -46,8 +63,8 @@ class ObjectDialog extends React.Component {
             </DialogContent>
             <DialogActions>
                 <Button color="primary" onClick={this.handleClose}>Cancel</Button>
-                <Button color="primary">Sync</Button>
-                <Button color="primary">Slew</Button>
+                <Button color="primary" onClick={this.handleSyncClick}>Sync</Button>
+                <Button color="primary" onClick={this.handleSlewClick}>Slew</Button>
             </DialogActions>
         </Dialog>;
     }

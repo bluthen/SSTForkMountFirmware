@@ -6,6 +6,10 @@ const state = observable({
     topTabs: 'manual',
     coordDisplay: 'radec',
     fatal_error: null,
+    manual: {
+        speed: 'fastest',
+        directions: {north: false, south: false, east: false, west: false}
+    },
     status: {
         alt: null,
         az: null,
@@ -30,6 +34,8 @@ const state = observable({
         tracking: true
     },
     goto: {
+        slewing: false,
+        syncing: false,
         option: 'object_search',
         object_search: {
             coord_display: 'radec',
@@ -52,10 +58,10 @@ const state = observable({
         },
         coorddialog: {
             shown: false,
-            ra: '04h21m44s',
-            dec: '34d12\'23"',
-            alt: '45d32\'12"',
-            az: '120d43\'22"',
+            radeg: null,
+            decdeg: null,
+            altdeg: null,
+            azdeg: null
         },
         coordinates: {
             type: 'radec',
@@ -67,6 +73,20 @@ const state = observable({
             alt_error: {d: null, m: null, s: null},
             az: {d: null, m: null, s: null},
             az_error: {d: null, m: null, s: null}
+        },
+        slewingdialog: {
+            target: {
+                ra: null,
+                dec: null,
+                alt: null,
+                az: null
+            },
+            start: {
+                ra: null,
+                dec: null,
+                alt: null,
+                az: null
+            }
         }
     },
     advancedSettings: {

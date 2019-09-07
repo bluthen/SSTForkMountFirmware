@@ -127,9 +127,9 @@ def hadec_to_steps(ha_dec_coord, sync_info=None, ha_steps_per_degree=None, dec_s
     if not sync_info:
         sync_info = settings.runtime_settings['sync_info']
     if not ha_steps_per_degree:
-        ha_steps_per_degree = settings.settings['ra_steps_per_degree']
+        ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
     if not dec_steps_per_degree:
-        dec_steps_per_degree = settings.settings['dec_steps_per_degree']
+        dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
     if model_transform:
         ha_dec_coord = model_real_stepper.transform_point(ha_dec_coord)
     # TODO: Do we neeed something like ra_deg_d? Or stop it from twisting even with tracking?
@@ -261,14 +261,14 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
     if not sync_info:
         sync_info = settings.runtime_settings['sync_info']
     if not ha_steps_per_degree:
-        ha_steps_per_degree = settings.settings['ra_steps_per_degree']
+        ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
     if not dec_steps_per_degree:
-        dec_steps_per_degree = settings.settings['dec_steps_per_degree']
+        dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
     d_ha = (steps['ha'] - sync_info['steps']['ha']) / ha_steps_per_degree
     d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_steps_per_degree
 
-    ha_deg = clean_deg(sync_info['coords'].ra.deg + d_ha)
-    dec_deg, pole_count = clean_deg(sync_info['coords'].dec.deg + d_dec, True)
+    ha_deg = clean_deg(sync_info['coord'].ra.deg + d_ha)
+    dec_deg, pole_count = clean_deg(sync_info['coord'].dec.deg + d_dec, True)
     if pole_count % 2 > 0:
         ha_deg = clean_deg(ha_deg + 180.0)
 

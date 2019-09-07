@@ -13,7 +13,7 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import ObjectDialog from './ObjectDialog';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import Formating from './util/Formating';
+import Formatting from './util/Formatting';
 import uuidv4 from 'uuid/v4';
 
 
@@ -29,10 +29,10 @@ class ObjectSearch extends React.Component {
         state.goto.objectdialog.radeg = result['ra'];
         state.goto.objectdialog.decdeg = result['dec'];
         state.goto.objectdialog.graphdata = [];
-        state.goto.objectdialog.ra = Formating.degRA2Str(result['ra']);
-        state.goto.objectdialog.dec = Formating.degDEC2Str(result['dec']);
-        state.goto.objectdialog.alt = Formating.degDEC2Str(result['alt']);
-        state.goto.objectdialog.az = Formating.degDEC2Str(result['az']);
+        state.goto.objectdialog.ra = Formatting.degRA2Str(result['ra']);
+        state.goto.objectdialog.dec = Formatting.degDEC2Str(result['dec']);
+        state.goto.objectdialog.alt = Formatting.degDEC2Str(result['alt']);
+        state.goto.objectdialog.az = Formatting.degDEC2Str(result['az']);
         if (result.type !== 'planet') {
             state.goto.objectdialog.mag = result['mag'];
         } else {
@@ -78,9 +78,9 @@ class ObjectSearch extends React.Component {
                 const result = state.goto.object_search.results[i];
                 let coord = '';
                 if (state.goto.object_search.coord_display === 'radec') {
-                    coord = Formating.degRA2Str(result.ra) + '/' + Formating.degDEC2Str(result.dec);
+                    coord = Formatting.degRA2Str(result.ra) + '/' + Formatting.degDEC2Str(result.dec);
                 } else {
-                    coord = Formating.degDEC2Str(result.alt) + '/' + Formating.degDEC2Str(result.az);
+                    coord = Formatting.degDEC2Str(result.alt) + '/' + Formatting.degDEC2Str(result.az);
                 }
                 let name;
                 if (result.type === 'planet') {

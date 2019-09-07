@@ -131,7 +131,7 @@ def sync(coord):
             model_real_stepper.add_point(coord, stepper_coord)
     else:
         park_sync = False
-        sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coords': coord}
+        sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': coord}
         settings.runtime_settings['sync_info'] = sync_info
         if settings.settings['pointing_model'] in ['single', 'buie']:
             if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):

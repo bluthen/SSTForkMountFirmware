@@ -112,18 +112,6 @@ def nocache(view):
     return update_wrapper(no_cache, view)
 
 
-@app.route('/static/<path:path>')
-@nocache
-def send_static(path):
-    return send_from_directory('../client_refactor/dist', path)
-
-
-@app.route('/')
-@nocache
-def root():
-    return redirect('/static/index.html')
-
-
 @app.route('/api/version')
 @nocache
 def version():
@@ -406,10 +394,11 @@ def clear_sync():
 @app.route('/api/sync', methods=['PUT'])
 @nocache
 def do_sync():
-    ra = request.form.get('ra', None)
-    dec = request.form.get('dec', None)
-    alt = request.form.get('alt', None)
-    az = request.form.get('az', None)
+    reqj = request.json
+    ra = reqj.get('ra')
+    dec = reqj.get('dec', None)
+    alt = reqj.get('alt', None)
+    az = reqj.get('az', None)
     if alt is not None and az is not None:
         alt = float(alt)
         az = float(az)
@@ -426,7 +415,8 @@ def do_sync():
 @app.route('/api/sync', methods=['POST'])
 @nocache
 def post_sync():
-    model = request.form.get('model', None)
+    reqj = request.json
+    model = reqj.get('model')
     if model not in ['single', 'buie', 'affine_all']:
         return 'Invalid model', 400
     # Set models
@@ -439,12 +429,13 @@ def post_sync():
 @app.route('/api/slewto', methods=['PUT'])
 @nocache
 def do_slewto():
-    ra = request.form.get('ra', None)
-    dec = request.form.get('dec', None)
-    alt = request.form.get('alt', None)
-    az = request.form.get('az', None)
-    ra_steps = request.form.get('ra_steps', None)
-    dec_steps = request.form.get('dec_steps', None)
+    reqj = request.json
+    ra = reqj.get('ra')
+    dec = reqj.get('dec')
+    alt = reqj.get('alt')
+    az = reqj.get('az')
+    ra_steps = reqj.get('ra_steps')
+    dec_steps = reqj.get('dec_steps')
     try:
         if ra_steps is not None and dec_steps is not None:
             control.set_slew(ra_steps=int(ra_steps), dec_steps=int(dec_steps))
@@ -464,8 +455,9 @@ def do_slewto():
 @app.route('/api/slewto_check', methods=['PUT'])
 @nocache
 def do_slewtocheck():
-    ra = float(request.form.get('ra', None))
-    dec = float(request.form.get('dec', None))
+    reqj = request.json
+    ra = float(reqj.get('ra'))
+    dec = float(reqj.get('dec', None))
     radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     return jsonify({'slewcheck': control.slewtocheck(radec)})
 
@@ -480,7 +472,8 @@ def stop_slewto():
 @app.route('/api/set_time', methods=['PUT'])
 @nocache
 def set_time():
-    time_str = request.form.get('time', None)
+    reqj = request.json
+    time_str = reqj.get('time')
     # overwrite = request.form.get('overwrite', None)
     status = control.set_time(time_str)
     if status[1] == 'NTP Set':
@@ -551,7 +544,7 @@ def to_list_of_dicts(tuple_of_tuples, keys):
 @nocache
 def altitude_data():
     reqj = request.json
-    if reqj['ra']:
+    if reqj.get('ra'):
         ra = reqj['ra']
         dec = reqj['dec']
         coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
@@ -561,6 +554,23 @@ def altitude_data():
         coord = skyconv.altaz_to_icrs(SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz'))
     altazes = skyconv.icrs_to_altaz(coord, atmo_refraction=True, obstime=reqj['times'])
     return jsonify(altazes.alt.deg.tolist())
+
+
+@app.route('/api/convert_coord', methods=['POST'])
+@nocache
+def conver_coord():
+    reqj = request.json
+    if reqj.get('ra'):
+        ra = reqj['ra']
+        dec = reqj['dec']
+        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+        return jsonify({'alt': altaz.alt.deg, 'az': altaz.az.deg})
+    else:
+        alt = reqj['alt']
+        az = reqj['az']
+        coord = skyconv.altaz_to_icrs(SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz'))
+        return jsonify({'ra': coord.ra.deg, 'dec': coord.dec.deg})
 
 
 @app.route('/api/search_object', methods=['GET'])
@@ -750,9 +760,10 @@ def search_location():
                 return jsonify({'cities': cities})
 
 
-@app.route('/api/manual_control')
+@app.route('/api/manual_control', methods=['POST'])
 @nocache
-def manual_control(message):
+def manual_control():
+    message = request.json
     # print("Got %s" + json.dumps(message))
     control.manual_control(message['direction'], message['speed'])
     return 'Moving', 200
@@ -762,6 +773,18 @@ def manual_control(message):
 @nocache
 def status_get():
     return jsonify(control.last_status)
+
+
+@app.route('/')
+@nocache
+def root():
+    return redirect('/index.html')
+
+
+@app.route('/<path:path>')
+@nocache
+def send_static(path):
+    return send_from_directory('../client2/dist', path)
 
 
 def main():
@@ -805,6 +828,7 @@ def main():
         avahi_process.kill()
     finally:
         pass
+
 
 if __name__ == '__main__':
     main()

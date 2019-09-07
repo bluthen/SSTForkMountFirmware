@@ -25,7 +25,7 @@ class AltChart extends React.Component {
         } else {
             ret = <LineChart width={this.props.width} height={this.props.height} data={this.state.data}>
                 <XAxis dataKey="time"/>
-                <YAxis/>
+                <YAxis label={{value: "Altitude", angle: -90, position: 'insideLeft'}} unit="°"/>
                 <Line dot={false} type="monotone" dataKey="alt"/>
             </LineChart>;
         }
