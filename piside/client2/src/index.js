@@ -15,6 +15,7 @@ import AdvancedSettings from './AdvancedSettings';
 import LocationSettings from './LocationSettings';
 import NetworkSettings from './NetworkSettings';
 import SlewLimitsSettings from './SlewLimitsSettings';
+import MiscellaneousSettings from './MiscellaneousSettings';
 import APIHelp from './util/APIHelp';
 import SlewingDialog from './SlewingDialog';
 import SyncingDialog from './SyncingDialog';
@@ -55,6 +56,8 @@ class App extends React.Component {
             content = <NetworkSettings/>;
         } else if(state.page === 'slewLimitsSettings') {
             content = <SlewLimitsSettings/>;
+        } else if(state.page === 'miscellaneousSettings') {
+            content = <MiscellaneousSettings/>;
         } else {
             alert(state.page);
         }

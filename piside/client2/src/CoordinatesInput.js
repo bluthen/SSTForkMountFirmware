@@ -26,7 +26,10 @@ class CoordinatesInput extends React.Component {
     }
 
     onCoordChange(e, coord, sub) {
-        let v = parseInt(e.currentTarget.value);
+
+        let v = e.currentTarget.value;
+        let vlen = v.length;
+        v = parseInt(v);
         if (isNaN(v)) {
             v = null;
         }

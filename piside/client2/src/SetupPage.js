@@ -4,6 +4,8 @@ import {observer} from "mobx-react"
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
+import APIHelp from './util/APIHelp';
+
 
 const item={ textAlign: "center", padding: "2ex"};
 
@@ -26,6 +28,10 @@ class ManualPage extends React.Component {
         state.page='slewLimitsSettings';
     }
 
+    slewMiscSettingsClicked() {
+        state.page='miscellaneousSettings';
+    }
+
     render() {
         return <Container>
             <Grid container>
@@ -39,6 +45,9 @@ class ManualPage extends React.Component {
                     <Button variant="contained" color="primary" onClick={this.slewLimitsSettingsClicked}>Slew Limits</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
+                    <Button variant="contained" color="primary" onClick={this.slewMiscSettingsClicked}>Miscellaneous</Button>
+                </Grid>
+                <Grid item xs={12} style={item}>
                     <Button variant="contained" color="primary" onClick={this.advancedSettingsClicked}>Advanced Settings</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
@@ -48,7 +57,7 @@ class ManualPage extends React.Component {
                     <Button variant="contained">About</Button>
                 </Grid>
                 <Grid item xs={12} style={park}>
-                    <Button variant="contained" color="secondary">Park Scope</Button>
+                    <Button variant="contained" color="secondary" onClick={APIHelp.park}>Park Scope</Button>
                 </Grid>
             </Grid>
         </Container>

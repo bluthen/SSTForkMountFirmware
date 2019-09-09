@@ -35,6 +35,7 @@ const state = observable({
     },
     goto: {
         slewing: false,
+        slewingtype: 'radec',
         syncing: false,
         option: 'object_search',
         object_search: {
@@ -90,6 +91,7 @@ const state = observable({
         }
     },
     advancedSettings: {
+        fetching: false,
         ra_track_rate: 0,
         ra_ticks_per_degree: 0,
         dec_ticks_per_degree: 0,

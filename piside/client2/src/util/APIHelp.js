@@ -174,9 +174,9 @@ const APIHelp = {
         });
 
         observe(state.status, 'slewing', () => {
-           if(state.status.slewing) {
-               state.goto.slewing = false;
-           }
+            if (state.status.slewing) {
+                state.goto.slewing = false;
+            }
         });
     },
 
@@ -222,8 +222,13 @@ const APIHelp = {
 
     slewTo(coord) {
         state.goto.slewing = true;
-        setTimeout(()=> {
-           state.goto.slewing = false;
+        if (coord.ra) {
+            state.goto.slewingtype = 'radec';
+        } else {
+            state.goto.slewingtype = 'altaz';
+        }
+        setTimeout(() => {
+            state.goto.slewing = false;
         }, 3000);
         //TODO: Steps
         if (coord.ra) {
@@ -235,7 +240,7 @@ const APIHelp = {
             state.goto.slewingdialog.target.ra = null;
             state.goto.slewingdialog.target.dec = null;
             state.goto.slewingdialog.target.alt = coord.alt;
-            state.goto.slewingdialog.target.az = coors.az;
+            state.goto.slewingdialog.target.az = coord.az;
         }
         return fetch('/api/slewto', {
             method: 'put',
@@ -268,9 +273,83 @@ const APIHelp = {
             } else {
                 return response.json();
             }
-        }).finally(()=>{
+        }).finally(() => {
             state.goto.syncing = false;
         });
+    },
+    park() {
+        state.goto.slewing = true;
+        state.goto.slewingtype = 'park';
+        setTimeout(() => {
+            state.goto.slewing = false;
+        }, 3000);
+        return fetch('/api/park', {
+            method: 'put'
+        }).then((response) => {
+            if (!response.ok) {
+                return response.text().then((t) => {
+                    return new Error(t);
+                })
+            }
+        });
+    },
+    fetchSettings() {
+        state.advancedSettings.fetching = true;
+        return fetch('/api/settings').then((response) => {
+            if (response.ok) {
+                return response.json().then((d) => {
+                    for (const key of Object.keys(d)) {
+                        if (typeof d[key] === 'object') {
+                            for (const key2 of Object.keys(d[key])) {
+                                if (state.advancedSettings.hasOwnProperty(key2)) {
+                                    state.advancedSettings[key] = d[key][key2];
+                                }
+                            }
+                        } else {
+                            if (state.advancedSettings.hasOwnProperty(key)) {
+                                state.advancedSettings[key] = d[key];
+                            }
+                        }
+                    }
+                    state.advancedSettings.fetching = false;
+                    return d;
+                });
+            }
+        });
+    },
+    saveSettings(settings) {
+        return fetch('/api/settings', {
+            method: 'put',
+            body: JSON.stringify(coord),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+           if(response.ok) {
+           }
+        });
+    },
+    setParkPosition() {
+        return fetch('/api/set_park_position', {
+            method: 'put'
+        }).then((response) => {
+            if(response.ok) {
+            }
+        });
+    },
+    uploadFirmware(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        fetch('/api/firmware_update', {
+            method: 'post',
+            body: formData
+        }).then((response) => {
+            if (response.ok) {
+                setTimeout(function() {
+                    location.reload(true);
+                }, 50000)
+            }
+        })
     }
 };
 

@@ -48,12 +48,20 @@ class CoordDialog extends React.Component {
     }
 
     handleSlewClick() {
-        APIHelp.slewTo({ra: state.goto.coorddialog.radeg, dec: state.goto.coorddialog.decdeg});
+        if (state.goto.coordinates.type === 'radec') {
+            APIHelp.slewTo({ra: state.goto.coorddialog.radeg, dec: state.goto.coorddialog.decdeg});
+        } else {
+            APIHelp.slewTo({alt: state.goto.coorddialog.altdeg, az: state.goto.coorddialog.azdeg});
+        }
         this.handleClose();
     }
 
     handleSyncClick() {
-        APIHelp.sync({ra: state.goto.coorddialog.radeg, dec: state.goto.coorddialog.decdeg});
+        if (state.goto.coordinates.type === 'radec') {
+            APIHelp.sync({ra: state.goto.coorddialog.radeg, dec: state.goto.coorddialog.decdeg});
+        } else {
+            APIHelp.sync({alt: state.goto.coorddialog.altdeg, az: state.goto.coorddialog.azdeg});
+        }
         this.handleClose();
     }
 

@@ -151,7 +151,7 @@ def logger_get():
 def settings_put():
     print('settings_put')
     settings_buffer = {}
-    args = json.loads(request.form['settings'])
+    args = request.json
     keys = ["ra_track_rate", "ra_ticks_per_degree", "dec_ticks_per_degree",
             "ra_encoder_pulse_per_degree", "dec_encoder_pulse_per_degree",
             "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
@@ -688,13 +688,17 @@ def firmware_update():
         file.save(tfile)
         tfile.seek(0)
         zip_ref = zipfile.ZipFile(tfile)
-        zip_ref.extractall('/home/pi/SSTForkMountFirmware/piside')
+        if settings.is_simulation():
+            zip_ref.extractall('/home/russ/projects/starsynctrackers/SSTForkMountFirmware/piside/upload_test')
+        else:
+            zip_ref.extractall('/home/pi/SSTForkMountFirmware/piside')
     try:
         subprocess.run(['/usr/bin/python3', 'post_update.py'])
     except Exception as e:
         print(e)
-    t = threading.Timer(5, reboot)
-    t.start()
+    if not settings.is_simulation():
+        t = threading.Timer(5, reboot)
+        t.start()
     return 'Updated'
 
 
