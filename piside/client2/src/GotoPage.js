@@ -21,7 +21,7 @@ class ManualPage extends React.Component {
         state.goto.option = value;
     }
 
-    typeChanged(event, checked) {
+    handleTypeChange(event, checked) {
         if (checked) {
             state.goto.coordinates.type = 'altaz';
         } else {
@@ -35,7 +35,7 @@ class ManualPage extends React.Component {
         if (state.goto.option === 'object_search') {
             option = <ObjectSearch/>;
         } else {
-            option = <CoordinatesInput coordinateType={state.goto.coordinates.type} onTypeChange={this.typeChanged}/>;
+            option = <CoordinatesInput coordinateType={state.goto.coordinates.type} onTypeChange={this.handleTypeChange}/>;
         }
 
         return <React.Fragment>

@@ -4,7 +4,7 @@ import {observer} from "mobx-react"
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
-import CoordDisplayToggle from './CoordDisplayToggle';
+import TToggle from './TToggle';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import Button from '@material-ui/core/Button';
 import RootRef from '@material-ui/core/RootRef';
@@ -159,7 +159,7 @@ class CoordinatesInput extends React.Component {
             <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
                 <Grid item xs={4}/>
                 <Grid item xs={4}>
-                    <CoordDisplayToggle checked={this.props.coordinateType === 'altaz'}
+                    <TToggle offLabel="RA/Dec" onLabel="Alt/Az" checked={this.props.coordinateType === 'altaz'}
                                         onChange={this.props.onTypeChange}/>
                 </Grid>
                 <Grid item xs={4}/>

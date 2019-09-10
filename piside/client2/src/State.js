@@ -114,10 +114,14 @@ const state = observable({
         dec_slew_slower: 0,
         dec_slew_slowest: 0
     },
+    location_presets: [],
+    location_set: {name: 'Unknown', lat: 0, long: 0, elevation: 0},
     location: {
         new_step: null,
         option: 'city_search',
         city_search: '',
+        city_search_results: [],
+        city_searching: false,
         coord_lat: null,
         coord_lat_error: null,
         coord_long: null,

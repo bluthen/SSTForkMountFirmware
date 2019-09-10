@@ -355,8 +355,7 @@ def unset_location():
 @app.route('/api/set_location', methods=['PUT'])
 @nocache
 def set_location():
-    location = request.form.get('location', None)
-    location = json.loads(location)
+    location = request.json
     print(location)
     if 'lat' not in location or 'long' not in location or 'elevation' not in location or (
             'name' not in location and location['name'].strip() != ''):
@@ -710,6 +709,29 @@ def wifi_scan():
     return jsonify({'aps': aps, 'connected': connected})
 
 
+@app.route('/api/location_preset', methods=['POST'])
+@nocache
+def location_preset_add():
+    location = request.json
+    name = location['name']
+    lat = location['lat']
+    long = location['long']
+    elevation = location['elevation']
+    settings.settings['location_presets'].append({'name': name, 'lat': lat, 'long': long, 'elevation': elevation})
+    settings.write_settings(settings.settings)
+    return "Saved", 200
+
+
+@app.route('/api/location_preset', methods=['DELETE'])
+@nocache
+def location_preset_del():
+    location = request.json
+    idx = location['index']
+    del settings.settings['location_presets'][idx]
+    settings.write_settings(settings.settings)
+    return "Deleted", 200
+
+
 @app.route('/api/search_location', methods=['GET'])
 @nocache
 def search_location():
@@ -717,15 +739,15 @@ def search_location():
     if not search:
         return
     search = search.strip()
+    columns = ["postalcode", "city", "state", "state_abbr", "latitude", "longitude", "elevation"]
     # If zipcode search
     if re.match(r'\d+$', search):
         search = search + '%'
         with db_lock:
             cur = conn.cursor()
-            cur.execute('SELECT * from uscities where postalcode like ? limit 20', (search,))
+            cur.execute(('SELECT %s from uscities where postalcode like ? limit 20' % ','.join(columns)), (search,))
             cities = cur.fetchall()
             cur.close()
-            return jsonify({'cities': cities})
     else:
         cstate = search.split(',')
         if len(cstate) == 1:
@@ -733,11 +755,11 @@ def search_location():
             city = cstate[0]
             city = city.strip()
             search = city + '%'
-            cur = conn.cursor()
-            cur.execute('SELECT * from uscities where city like ? limit 20', (search,))
-            cities = cur.fetchall()
-            cur.close()
-            return jsonify({'cities': cities})
+            with db_lock:
+                cur = conn.cursor()
+                cur.execute(('SELECT %s from uscities where city like ? limit 20' % ','.join(columns)), (search,))
+                cities = cur.fetchall()
+                cur.close()
         else:
             city = cstate[0]
             state = cstate[1]
@@ -747,21 +769,27 @@ def search_location():
             # If using state abbreviation
             if len(state) == 2:
                 abbr = state.upper()
-                cur = conn.cursor()
                 city = city + '%'
-                cur.execute('SELECT * from uscities where city like ? and state_abbr = ? limit 20', (city, abbr))
-                cities = cur.fetchall()
-                cur.close()
-                return jsonify({'cities': cities})
+                with db_lock:
+                    cur = conn.cursor()
+                    cur.execute(('SELECT %s from uscities where city like ? and state_abbr = ? limit 20' % ','.join(columns)), (city, abbr))
+                    cities = cur.fetchall()
+                    cur.close()
             else:
                 # State must be full name
-                cur = conn.cursor()
                 city = city + '%'
                 state = state + '%'
-                cur.execute('SELECT * from uscities where city like ? and state like ? limit 20', (city, state))
-                cities = cur.fetchall()
-                cur.close()
-                return jsonify({'cities': cities})
+                with db_lock:
+                    cur = conn.cursor()
+                    cur.execute(('SELECT %s from uscities where city like ? and state like ? limit 20' % ','.join(columns)), (city, state))
+                    cities = cur.fetchall()
+                    cur.close()
+    cities = to_list_of_dicts(cities, columns)
+    for city in cities:
+        city['latitude'] = float(city['latitude'])
+        city['longitude'] = float(city['longitude'])
+        city['elevation'] = float(city['elevation'])
+    return jsonify(cities)
 
 
 @app.route('/api/manual_control', methods=['POST'])

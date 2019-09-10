@@ -86,6 +86,6 @@ render(
     <App/>,
     document.getElementById("root")
 );
-
+APIHelp.setTime();
 APIHelp.startStatusUpdateInterval();
-APIHelp.startNetworkStateListeners()
+APIHelp.startNetworkStateListeners();

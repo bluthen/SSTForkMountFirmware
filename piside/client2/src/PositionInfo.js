@@ -1,10 +1,11 @@
 import state from './State';
 import {observer} from "mobx-react"
 import React from "react";
-import CoordDisplayToggle from './CoordDisplayToggle';
+import TToggle from './TToggle';
 import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
 import Formatting from './util/Formatting';
+import APIHelp from './util/APIHelp';
 
 
 const indent = {
@@ -26,7 +27,12 @@ class PositionInfo extends React.Component {
         }
     }
 
+    componentDidMount() {
+        APIHelp.fetchSettings();
+    }
+
     render() {
+        let notTrackingWarning = null;
         const tableInfo = {coord1: 'RA', coord2: 'Dec', toggleChecked: false, coord1Value: 'CDV1', coord2Value: 'CDV2'};
         if (state.coordDisplay === 'radec') {
             tableInfo.coord1Value = Formatting.degRA2Str(state.status.ra);
@@ -38,11 +44,17 @@ class PositionInfo extends React.Component {
             tableInfo.coord1Value = Formatting.degDEC2Str(state.status.alt);
             tableInfo.coord2Value = Formatting.degDEC2Str(state.status.az);
         }
+        if(!state.status.tracking) {
+            notTrackingWarning = <Grid item xs={12} style={{color: 'red'}}>Warning: not tracking</Grid>
+        }
+
         return <Typography component="div" style={{paddingBottom: "4ex"}}>
             <Typography component="h4" style={bold}>
                 Mount Location
             </Typography>
-            <Typography component="div" style={indent}>LawrenceAA, KS</Typography>
+            <Typography component="div" style={indent}>{state.location_set.name}<br/><span style={{color: 'gray'}}>
+                {Formatting.degLat2Str(state.location_set.lat)}/{Formatting.degLong2Str(state.location_set.long)} {state.location_set.elevation}m
+            </span></Typography>
             <Typography component="h4" style={bold}>
                 Mount Time
             </Typography>
@@ -60,12 +72,14 @@ class PositionInfo extends React.Component {
                             {tableInfo.coord2}
                         </Grid>
                         <Grid item xs={4}>
-                            <CoordDisplayToggle checked={tableInfo.toggleChecked} onChange={this.coordChange}/>
+                            <TToggle offLabel="RA/Dec" onLabel="Alt/Az" checked={tableInfo.toggleChecked}
+                                     onChange={this.coordChange}/>
                         </Grid>
                         <Grid item xs={4}>{tableInfo.coord1Value}</Grid>
                         <Grid item xs={4}>{tableInfo.coord2Value}</Grid>
                     </Grid>
                 </Grid>
+                {notTrackingWarning}
             </Grid>
         </Typography>;
     }

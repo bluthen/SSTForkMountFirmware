@@ -5,7 +5,7 @@ import {observer} from "mobx-react"
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
-import CoordDisplayToggle from './CoordDisplayToggle';
+import TToggle from './TToggle';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -111,8 +111,9 @@ class ObjectSearch extends React.Component {
                 <TableHead>
                     <TableRow>
                         <TableCell>Object Name</TableCell>
-                        <TableCell><CoordDisplayToggle checked={state.goto.object_search.coord_display === 'altaz'}
-                                                       onChange={this.onCoordToggle}/></TableCell>
+                        <TableCell><TToggle offLabel="RA/Dec" onLabel="Alt/Az"
+                                            checked={state.goto.object_search.coord_display === 'altaz'}
+                                            onChange={this.onCoordToggle}/></TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>

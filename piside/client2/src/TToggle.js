@@ -2,9 +2,7 @@ import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
 import React from "react";
 import Switch from '@material-ui/core/Switch';
-import { withStyles } from '@material-ui/core/styles';
-
-
+import {withStyles} from '@material-ui/core/styles';
 
 
 const AntSwitch = withStyles(theme => ({
@@ -40,23 +38,21 @@ const AntSwitch = withStyles(theme => ({
     checked: {},
 }))(Switch);
 
-class CoordDisplayToggle extends React.Component {
+class TToggle extends React.Component {
     render() {
-        return <Typography component="div">
-            <Grid component="label" container alignItems="center" spacing={1}>
-                <Grid item>RA/Dec</Grid>
-                <Grid item>
-                    <AntSwitch
-                        checked={this.props.checked}
-                        onChange={this.props.onChange}
-                        value="CoordV"
-                    />
-                </Grid>
-                <Grid item>AltAz</Grid>
+        return <Typography component="div"><Grid component="label" container alignItems="center" spacing={1}>
+            <Grid item>{this.props.offLabel}</Grid>
+            <Grid item>
+                <AntSwitch
+                    checked={this.props.checked}
+                    onChange={this.props.onChange}
+                    value="CoordV"
+                />
             </Grid>
-        </Typography>
+            <Grid item>{this.props.onLabel}</Grid>
+        </Grid></Typography>
     }
 }
 
 
-export default CoordDisplayToggle;
+export default TToggle;

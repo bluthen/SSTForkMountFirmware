@@ -30,7 +30,7 @@ const doObjectSearch = _.debounce(function () {
                 return;
             }
             response.json().then((d) => {
-                state.goto.object_search.results = d.planets.concat(d.dso).concat(d.stars);
+                state.goto.object_search.results.replace(d.planets.concat(d.dso).concat(d.stars));
             });
         } else {
             console.error('/api/search_object failed.', response.status);
@@ -38,6 +38,35 @@ const doObjectSearch = _.debounce(function () {
     }, (e) => {
         state.goto.object_search.searching = false;
         state.goto.object_search.results = [];
+        console.error(e);
+        throw e;
+    });
+}, 500);
+
+let locationSearchCounter = 0;
+const doLocationSearch = _.debounce(function () {
+    const t = state.location.city_search;
+    if (t === null || !t.trim()) {
+        return;
+    }
+    searchCounter++;
+    let sc = searchCounter;
+    state.location.city_searching = true;
+    return fetch('/api/search_location?search=' + encodeURIComponent(t)).then((response) => {
+        state.location.city_searching = false;
+        if (response.ok) {
+            if (sc !== searchCounter) {
+                return;
+            }
+            response.json().then((d) => {
+                state.location.city_search_results.replace(d);
+            });
+        } else {
+            console.error('/api/search_location failed.', response.status);
+        }
+    }, (e) => {
+        state.location.city_searching = false;
+        state.location.city_search_results = [];
         console.error(e);
         throw e;
     });
@@ -159,6 +188,11 @@ const APIHelp = {
         observe(state.goto.object_search, 'search_txt', () => {
             doObjectSearchDebounced();
         });
+        const doLocationSearchDebounced = _.debounce(doLocationSearch, 500);
+        observe(state.location, 'city_search', () => {
+            doLocationSearchDebounced();
+        });
+
         ['north', 'south', 'east', 'west'].forEach(observeManualDirection);
         observe(state.goto.coorddialog, 'radeg', () => {
             updateCoordDialogMissing();
@@ -298,6 +332,8 @@ const APIHelp = {
         return fetch('/api/settings').then((response) => {
             if (response.ok) {
                 return response.json().then((d) => {
+                    state.location_presets.replace(d.location_presets);
+                    state.location_set = d.location;
                     for (const key of Object.keys(d)) {
                         if (typeof d[key] === 'object') {
                             for (const key2 of Object.keys(d[key])) {
@@ -340,7 +376,7 @@ const APIHelp = {
     uploadFirmware(file) {
         const formData = new FormData();
         formData.append('file', file);
-        fetch('/api/firmware_update', {
+        return fetch('/api/firmware_update', {
             method: 'post',
             body: formData
         }).then((response) => {
@@ -350,7 +386,80 @@ const APIHelp = {
                 }, 50000)
             }
         })
+    },
+    toggleTracking(track) {
+        const formData = new FormData();
+        let url = '/api/start_tracking';
+        if(!track) {
+            url = '/api/stop_tracking'
+        }
+        return fetch(url, {
+            method: 'put'
+        }).then((response)=> {
+            if(response.ok) {
+                // Just to beat the next status update
+                if(track) {
+                    state.status.tracking = true;
+                } else {
+                    state.status.tracking = false;
+                }
+            }
+        })
+    },
+    addLocationPreset(name, lat, long, elevation) {
+        return fetch('/api/location_preset', {
+            method: 'post',
+            body: JSON.stringify({name: name, lat: lat, long: long, elevation: elevation}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if(response.ok) {
+                return response.text;
+            }
+        });
+    },
+    delLocationPreset(index) {
+        return fetch('/api/location_preset', {
+            method: 'delete',
+            body: JSON.stringify({index: index}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if(response.ok) {
+                return response.text;
+            }
+        });
+    },
+    setLocation(name, lat, long, elevation) {
+        return fetch('/api/set_location', {
+            method: 'put',
+            body: JSON.stringify({name: name, lat: lat, long: long, elevation: elevation}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if(response.ok) {
+                return response.text;
+            }
+        });
+    },
+    setTime() {
+        return fetch('/api/set_time', {
+            method: 'put',
+            body: JSON.stringify({time: new Date().toISOString()}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if(response.ok) {
+                return response.text;
+            }
+        });
+
     }
+
 };
 
 export default APIHelp;

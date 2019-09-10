@@ -23,6 +23,7 @@ import ListItemText from '@material-ui/core/ListItemText';
 import IconButton from '@material-ui/core/IconButton';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import DeleteIcon from '@material-ui/icons/Delete';
+import CheckCircle from '@material-ui/icons/CheckCircle';
 
 import Fab from '@material-ui/core/Fab';
 import AddIcon from '@material-ui/icons/Add';
@@ -33,6 +34,10 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import InputLabel from '@material-ui/core/InputLabel';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Formatting from './util/Formatting';
+import APIHelp from './util/APIHelp';
+
 
 import uuidv4 from 'uuid/v4';
 
@@ -45,25 +50,56 @@ const bold = {
     fontWeight: "bold"
 };
 
+@observer
 class CitySearch extends React.Component {
+    constructor(props) {
+        super(props);
+        this.uuid = uuidv4();
+    }
+
+    handleSearchChange(e) {
+        state.location.city_search = e.currentTarget.value;
+    }
+
+    makeHandleCityClick(name, latitude, longitude, elevation) {
+        return () => {
+            this.props.onCityClick(name, latitude, longitude, elevation);
+        }
+    }
+
     render() {
-        return <><TextField fullWidth autoFocus={this.props.autoFocus} placeholder="City Name or Zipcode"/>
-        <Table>
-            <TableHead>
-                <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Coords</TableCell>
-                </TableRow>
-            </TableHead>
-            <TableBody>
-                <TableRow hover onClick={() => {
-                    this.props.onCityClick('Lawrence, KS', 38.23, -95.232, 264)
-                }} style={{cursor: "pointer"}}>
-                    <TableCell>Lawrence, KS</TableCell>
-                    <TableCell>38&deg;58'18"N 95&deg;14'7"W 264m</TableCell>
-                </TableRow>
-            </TableBody>
-        </Table>
+        let table = null;
+        if (state.location.city_searching) {
+            table = <CircularProgress/>
+        } else if (state.location.city_search_results.length === 0) {
+            table = <Typography component="div">No results</Typography>;
+        } else {
+            let tableRows = [];
+            for (let i = 0; i < state.location.city_search_results.length; i++) {
+                const result = state.location.city_search_results[i];
+                const coord = Formatting.degLat2Str(result.latitude) + '/' + Formatting.degLong2Str(result.longitude) + ' ' + result.elevation + 'm';
+                tableRows.push(<TableRow key={this.uuid + '_' + i} hover style={{cursor: "pointer"}}
+                                         onClick={this.makeHandleCityClick(result.city + ', ' + result.state_abbr, result.latitude, result.longitude, result.elevation)}>
+                    <TableCell>{result.city}, {result.state_abbr} {result.postalcode}</TableCell>
+                    <TableCell>{coord}</TableCell>
+                </TableRow>);
+            }
+            table = <Table>
+                <TableHead>
+                    <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Coords</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {tableRows}
+                </TableBody>
+            </Table>;
+        }
+
+        return <><TextField fullWidth autoFocus={this.props.autoFocus} placeholder="City Name or Zipcode"
+                            onChange={this.handleSearchChange} value={state.location.city_search}/>
+        {table}
         </>;
     }
 }
@@ -235,13 +271,35 @@ class LocationSettings extends React.Component {
         if (!state.location.name) {
             state.location.name_error = "Location Name required"
         } else {
-            //TODO: Actually save new location
+            APIHelp.addLocationPreset(state.location.name, state.location.coord_lat, state.location.coord_long, state.location.coord_elevation).then(()=>{
+                return APIHelp.fetchSettings();
+            });
             state.location.new_step = null;
         }
     }
 
     handleDialogClose() {
         state.location.new_step = 0;
+    }
+
+    componentDidMount() {
+        APIHelp.fetchSettings();
+    }
+
+    genHandleDeletePreset(index) {
+        return () => {
+            APIHelp.delLocationPreset(index).then(()=> {
+                return APIHelp.fetchSettings();
+            })
+        }
+    }
+
+    genHandleSetLocation(name, lat, long, elevation) {
+        return () => {
+            APIHelp.setLocation(name, lat, long, elevation).then(()=>{
+                return APIHelp.fetchSettings();
+            })
+        }
     }
 
     render() {
@@ -257,6 +315,27 @@ class LocationSettings extends React.Component {
                                                   elevation_error={state.location.coord_elevation_error}
                                                   onChange={this.onCoordinateChange}/>;
         }
+        const presets = [];
+        for (let i = 0; i < state.location_presets.length; i++) {
+            const preset = state.location_presets[i];
+            let icon = null;
+            if (state.location_set.name === preset.name && state.location_set.lat === preset.lat && state.location_set.long === preset.long && state.location_set.elevation === preset.elevation) {
+                icon = <ListItemIcon><CheckCircle/></ListItemIcon>;
+            }
+            presets.push(
+                <ListItem key={'location_list' + i} button onClick={this.genHandleSetLocation(preset.name, preset.lat, preset.long, preset.elevation)}>
+                    {icon}
+                    <ListItemText primary={preset.name} secondary={
+                        Formatting.degLat2Str(preset.lat) + '/' + Formatting.degLong2Str(preset.long) + ' ' + preset.elevation + 'm'
+                    }/>
+                    <ListItemSecondaryAction>
+                        <IconButton edge="end" aria-label="delete" onClick={this.genHandleDeletePreset(i)}>
+                            <DeleteIcon/>
+                        </IconButton>
+                    </ListItemSecondaryAction>
+                </ListItem>
+            )
+        }
         return <Typography component="div">
             <Typography component="h4" style={bold}>
                 Preset Locations
@@ -264,20 +343,7 @@ class LocationSettings extends React.Component {
             <Grid container spacing={2}>
                 <Grid item xs={12}>
                     <List component="nav">
-                        <ListItem button><ListItemText primary="Home"/>
-                            <ListItemSecondaryAction>
-                                <IconButton edge="end" aria-label="delete">
-                                    <DeleteIcon/>
-                                </IconButton>
-                            </ListItemSecondaryAction>
-                        </ListItem>
-                        <ListItem button><ListItemText primary="Farpoint"/>
-                            <ListItemSecondaryAction>
-                                <IconButton edge="end" aria-label="delete">
-                                    <DeleteIcon/>
-                                </IconButton>
-                            </ListItemSecondaryAction>
-                        </ListItem>
+                        {presets}
                     </List>
                 </Grid>
                 <Grid item xs={12} style={{textAlign: "right"}}>

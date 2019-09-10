@@ -137,9 +137,6 @@ class AdvancedSettings extends React.Component {
 
         }
         return <Grid container spacing={3}>
-            <Grid item xs={12} style={{textAlign: "center", paddingTop: '3ex'}}>
-                <Button color="primary" variant="contained">Set Park Position</Button>
-            </Grid>
             {settings}
             {spinner}
         </Grid>;
