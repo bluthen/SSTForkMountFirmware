@@ -334,6 +334,9 @@ const APIHelp = {
                 return response.json().then((d) => {
                     state.location_presets.replace(d.location_presets);
                     state.location_set = d.location;
+                    state.network.ssid = d.network.ssid;
+                    state.network.wpa2key = d.network.wpa2key;
+                    state.network.channel = d.network.channel;
                     for (const key of Object.keys(d)) {
                         if (typeof d[key] === 'object') {
                             for (const key2 of Object.keys(d[key])) {
@@ -361,15 +364,15 @@ const APIHelp = {
                 'Content-Type': 'application/json'
             }
         }).then((response) => {
-           if(response.ok) {
-           }
+            if (response.ok) {
+            }
         });
     },
     setParkPosition() {
         return fetch('/api/set_park_position', {
             method: 'put'
         }).then((response) => {
-            if(response.ok) {
+            if (response.ok) {
             }
         });
     },
@@ -381,7 +384,7 @@ const APIHelp = {
             body: formData
         }).then((response) => {
             if (response.ok) {
-                setTimeout(function() {
+                setTimeout(function () {
                     location.reload(true);
                 }, 50000)
             }
@@ -390,15 +393,15 @@ const APIHelp = {
     toggleTracking(track) {
         const formData = new FormData();
         let url = '/api/start_tracking';
-        if(!track) {
+        if (!track) {
             url = '/api/stop_tracking'
         }
         return fetch(url, {
             method: 'put'
-        }).then((response)=> {
-            if(response.ok) {
+        }).then((response) => {
+            if (response.ok) {
                 // Just to beat the next status update
-                if(track) {
+                if (track) {
                     state.status.tracking = true;
                 } else {
                     state.status.tracking = false;
@@ -414,7 +417,7 @@ const APIHelp = {
                 'Content-Type': 'application/json'
             }
         }).then((response) => {
-            if(response.ok) {
+            if (response.ok) {
                 return response.text;
             }
         });
@@ -427,7 +430,7 @@ const APIHelp = {
                 'Content-Type': 'application/json'
             }
         }).then((response) => {
-            if(response.ok) {
+            if (response.ok) {
                 return response.text;
             }
         });
@@ -440,7 +443,7 @@ const APIHelp = {
                 'Content-Type': 'application/json'
             }
         }).then((response) => {
-            if(response.ok) {
+            if (response.ok) {
                 return response.text;
             }
         });
@@ -453,11 +456,73 @@ const APIHelp = {
                 'Content-Type': 'application/json'
             }
         }).then((response) => {
-            if(response.ok) {
+            if (response.ok) {
                 return response.text;
             }
         });
 
+    },
+    fetchWifiScan() {
+        return fetch('/api/wifi_scan').then((response) => {
+            if (response.ok) {
+                return response.json().then((d) => {
+                    state.network.wifi_scan.aps.replace(d.aps);
+                    state.network.wifi_scan.connected.ssid = d.connected.ssid;
+                    state.network.wifi_scan.connected.mac = d.connected.mac;
+                    return d;
+                })
+            }
+        });
+    },
+    fetchKnownWifi() {
+        return fetch('/api/wifi_known').then((response) => {
+            if (response.ok) {
+                return response.json().then((d) => {
+                    state.network.wifi_known.replace(d);
+                    return d;
+                })
+            }
+        });
+    },
+    setWAP(ssid, wpa2key, channel) {
+        return fetch('/api/settings_network_wifi', {
+            method: 'put',
+            body: JSON.stringify({ssid: ssid, wpa2key: wpa2key, channel: channel}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if (response.ok) {
+                return response.text;
+            }
+        });
+    },
+    deleteKnown(ssid, mac) {
+        return fetch('/api/wifi_connect', {
+            method: 'delete',
+            body: JSON.stringify({ssid: ssid, mac: mac}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if (response.ok) {
+                return response.text;
+            }
+        });
+    },
+    setWifiConnect(ssid, mac, known, open, password) {
+        const req = {ssid: ssid, mac: mac, known: known, open: open, psk: password};
+        return fetch('/api/wifi_connect', {
+            method: 'post',
+            body: JSON.stringify(req),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if(response.ok) {
+
+            }
+        })
     }
 
 };

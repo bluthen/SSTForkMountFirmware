@@ -240,9 +240,10 @@ def settings_network_ethernet():
 @app.route('/api/settings_network_wifi', methods=['PUT'])
 @nocache
 def settings_network_wifi():
-    ssid = request.form.get('ssid', None)
-    wpa2key = request.form.get('wpa2key', None)
-    channel = request.form.get('channel', None)
+    reqj = request.json
+    ssid = reqj.get('ssid', None)
+    wpa2key = reqj.get('wpa2key', None)
+    channel = reqj.get('channel', None)
 
     if None in [ssid, channel]:
         return 'Invalid parameters', 400
@@ -273,8 +274,9 @@ def settings_network_wifi():
 @app.route('/api/wifi_connect', methods=['DELETE'])
 @nocache
 def wifi_connect_delete():
-    ssid = request.form.get('ssid', None)
-    mac = request.form.get('mac', None)
+    reqj = request.json
+    ssid = reqj.get('ssid', None)
+    mac = reqj.get('mac', None)
     if None in [ssid, mac]:
         return 'Missing ssid or mac', 400
     stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
@@ -302,11 +304,12 @@ def wifi_known():
 @app.route('/api/wifi_connect', methods=['POST'])
 @nocache
 def wifi_connect():
-    ssid = request.form.get('ssid', None)
-    mac = request.form.get('mac', None)
-    psk = request.form.get('psk', None)
-    open_wifi = request.form.get('open', None)
-    known = request.form.get('known', None)
+    reqj = request.json
+    ssid = reqj.get('ssid', None)
+    mac = reqj.get('mac', None)
+    psk = reqj.get('psk', None)
+    open_wifi = reqj.get('open', None)
+    known = reqj.get('known', None)
 
     if None in [ssid, mac]:
         return 'Missing ssid or mac', 400

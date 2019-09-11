@@ -132,9 +132,25 @@ const state = observable({
         name_error: null
     },
     slewlimit: {
-        never_below_horizon: true,
+        enabled: true,
         greater_than: -90.0,
-        less_than: 90.0
+        greater_than_error: null,
+        less_than: 90.0,
+        less_than_error: null
+    },
+    network: {
+        ssid: null,
+        wpa2key: null,
+        channel: 1,
+        wifi_scan: {aps: [], connected: {mac: null, ssid: null}},
+        wifi_known: [],
+        password_dialog: {
+            shown: false,
+            ssid: null,
+            mac: null,
+            password: null,
+            password_error: null
+        }
     }
 });
 

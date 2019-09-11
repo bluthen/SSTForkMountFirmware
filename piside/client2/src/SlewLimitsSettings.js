@@ -24,7 +24,7 @@ class SlewLimitsSettings extends React.Component {
     onGreaterThanChange(e) {
         let v = parseFloat(e.currentTarget.value);
         if (isNaN(v)) {
-            v = -90;
+            v = '';
         }
         if (v > 90) {
             v = 90;
@@ -38,7 +38,7 @@ class SlewLimitsSettings extends React.Component {
     onLessThanChange(e) {
         let v = parseFloat(e.currentTarget.value);
         if (isNaN(v)) {
-            v = 90;
+            v = '';
         }
         if (v > 90) {
             v = 90;
@@ -51,7 +51,26 @@ class SlewLimitsSettings extends React.Component {
 
     onSlewBelowHorizonChange(e) {
         let v = e.currentTarget.checked;
-        state.slewlimit.never_below_horizon = v;
+        state.slewlimit.enabled = v;
+    }
+
+    handleSaveClicked() {
+        let gt = parseFloat(state.slewlimit.greater_than);
+        let lt = parseFloat(state.slewlimit.less_than);
+        if (isNaN(gt)) {
+            state.slewlimit.greater_than_error = 'Required';
+        } else {
+            state.slewlimit.greater_than_error = null;
+        }
+        if (isNaN(lt)) {
+            state.slewlimit.less_than_error = 'Required';
+        } else {
+            state.slewlimit.less_than_error = null;
+        }
+        if (state.slewlimit.less_than_error ||  state.slewlimit.greater_than_error) {
+            return;
+        }
+
     }
 
     render() {
@@ -65,10 +84,10 @@ class SlewLimitsSettings extends React.Component {
                         <Checkbox
                             color="primary"
                             onChange={this.onSlewBelowHorizonChange}
-                            checked={state.slewlimit.never_below_horizon}
+                            checked={state.slewlimit.enabled}
                         />
                     }
-                    label="Never slew below horizon"/>
+                    label="Enable Slew Limits"/>
             </Grid>
             <Grid item xs={12}>
                 <h2>Allowed Declination</h2>
@@ -76,7 +95,7 @@ class SlewLimitsSettings extends React.Component {
             <Grid item xs={3}>
                 <InputLabel htmlFor={this.uuid + '_greaterthan'}>Greater than</InputLabel></Grid>
             <Grid item xs={3}>
-                <TextField value={state.slewlimit.greater_than} id={this.uuid + '_greaterthan'}
+                <TextField label={state.slewlimit.greater_than_error} error={!!state.slewlimit.greater_than_error} value={state.slewlimit.greater_than} id={this.uuid + '_greaterthan'}
                            onChange={this.onGreaterThanChange}
                            type="number" inputProps={{min: -90, max: 90}}
                            InputProps={{
@@ -86,7 +105,7 @@ class SlewLimitsSettings extends React.Component {
                 <InputLabel>Less than</InputLabel>
             </Grid>
             <Grid item xs={3}>
-                <TextField id={this.uuid + '_lessthan'} value={state.slewlimit.less_than}
+                <TextField id={this.uuid + '_lessthan'} label={state.slewlimit.less_than_error} error={!!state.slewlimit.less_than_error} value={state.slewlimit.less_than}
                            onChange={this.onLessThanChange}
                            type="number" inputProps={{min: -90, max: 90}}
                            InputProps={{
@@ -94,7 +113,7 @@ class SlewLimitsSettings extends React.Component {
                            }}/>
             </Grid>
             <Grid item xs={12} style={{textAlign: "center"}}>
-                <Button color="primary" variant="contained">Save</Button>
+                <Button color="primary" variant="contained" onClick={this.handleSaveClicked}>Save</Button>
             </Grid>
         </Grid>
     }
