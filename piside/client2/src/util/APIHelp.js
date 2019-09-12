@@ -39,7 +39,7 @@ const doObjectSearch = _.debounce(function () {
         });
     }).catch((e) => {
         state.goto.object_search.searching = false;
-        state.goto.object_search.results = [];
+        state.goto.object_search.results.replace([]);
         state.snack_bar_error = true;
         state.snack_bar = 'Error: Failed to get search results';
         throw e;
@@ -65,7 +65,7 @@ const doLocationSearch = _.debounce(function () {
         });
     }).catch((e) => {
         state.location.city_searching = false;
-        state.location.city_search_results = [];
+        state.location.city_search_results.replace([]);
         state.snack_bar_error = true;
         state.snack_bar = 'Error: Failed to get search results';
         throw e;
