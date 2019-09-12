@@ -134,7 +134,7 @@ def hostname_get():
 @nocache
 def shutdown_put():
     control.set_shutdown()
-    return 'Shutdown', 204
+    return 'Shutdown', 200
 
 
 @app.route('/api/logger', methods=['GET'])
@@ -194,8 +194,7 @@ def settings_put():
             settings.settings['micro'][key] = float(settings_buffer['micro'][key])
     settings.write_settings(settings.settings)
     control.micro_update_settings()
-    print('return')
-    return '', 204
+    return 'Settings Saved', 200
 
 
 @app.route('/api/settings_horizon_limit', methods=['PUT'])
@@ -213,7 +212,7 @@ def settings_horizon_limit():
         points = json.loads(points)
         settings.settings['horizon_limit_points'] = points
         settings.write_settings(settings.settings)
-    return 'Saved', 204
+    return 'Saved Slew Setting', 200
 
 
 @app.route('/api/settings_network_ethernet', methods=['PUT'])
@@ -234,7 +233,7 @@ def settings_network_ethernet():
         settings.settings['network']['ip'] = ip
         settings.settings['network']['netmask'] = netmask
         settings.settings['network']['dhcp_server'] = dhcp_server
-    return 'Saved', 204
+    return 'Saved Network', 200
 
 
 @app.route('/api/settings_network_wifi', methods=['PUT'])
@@ -268,7 +267,7 @@ def settings_network_wifi():
     settings.settings['network']['wpa2key'] = wpa2key
     settings.settings['network']['channel'] = channel
     settings.write_settings(settings.settings)
-    return "Saved", 200
+    return "Updated Wifi Settings", 200
 
 
 @app.route('/api/wifi_connect', methods=['DELETE'])
@@ -343,7 +342,7 @@ def wifi_connect():
     if not settings.is_simulation():
         subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
         subprocess.run(['sudo', '/usr/bin/autohotspot'])
-    return '', 204
+    return 'Connecting...', 200
 
 
 @app.route('/api/set_location', methods=['DELETE'])
@@ -390,7 +389,7 @@ def get_sync_points():
 @nocache
 def clear_sync():
     control.clear_sync()
-    return 'Cleared', 200
+    return 'Cleared Sync Points', 200
 
 
 @app.route('/api/sync', methods=['PUT'])
@@ -701,7 +700,7 @@ def firmware_update():
     if not settings.is_simulation():
         t = threading.Timer(5, reboot)
         t.start()
-    return 'Updated'
+    return 'Updated Firmware'
 
 
 @app.route('/api/wifi_scan', methods=['GET'])
@@ -722,7 +721,7 @@ def location_preset_add():
     elevation = location['elevation']
     settings.settings['location_presets'].append({'name': name, 'lat': lat, 'long': long, 'elevation': elevation})
     settings.write_settings(settings.settings)
-    return "Saved", 200
+    return "Saved Location Preset", 200
 
 
 @app.route('/api/location_preset', methods=['DELETE'])
@@ -732,7 +731,7 @@ def location_preset_del():
     idx = location['index']
     del settings.settings['location_presets'][idx]
     settings.write_settings(settings.settings)
-    return "Deleted", 200
+    return "Deleted Location Preset", 200
 
 
 @app.route('/api/search_location', methods=['GET'])

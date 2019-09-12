@@ -19,6 +19,7 @@ import MiscellaneousSettings from './MiscellaneousSettings';
 import APIHelp from './util/APIHelp';
 import SlewingDialog from './SlewingDialog';
 import SyncingDialog from './SyncingDialog';
+import InfoSnackbar from './InfoSnackbar';
 
 const tabMap = ['manual', 'goto', 'setup'];
 
@@ -77,6 +78,7 @@ class App extends React.Component {
                     {content}
                     {dialog}
                 </Paper>
+                <InfoSnackbar/>
             </Container>
         </React.Fragment>;
     }

@@ -33,7 +33,9 @@ class MiscellaneousSettings extends React.Component {
     }
 
     onTrackingChange(e, tracking) {
-            APIHelp.toggleTracking(tracking);
+            APIHelp.toggleTracking(tracking).then(()=>{
+                return APIHelp.statusUpdate();
+            });
     }
 
     render() {

@@ -79,10 +79,10 @@ class AdvancedSettings extends React.Component {
         for(const key of Object.keys(settings_map)) {
             const jl = settings_map[key].jsonLevel;
             if (jl) {
-                if(!resp[key][jl]) {
-                    resp[key][jl] = {};
+                if(!resp[jl]) {
+                    resp[jl] = {};
                 }
-                resp[key][jl] = state.advancedSettings[key];
+                resp[jl][key] = state.advancedSettings[key];
             } else {
                 resp[key] = state.advancedSettings[key];
             }

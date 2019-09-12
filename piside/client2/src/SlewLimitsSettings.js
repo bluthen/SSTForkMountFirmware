@@ -9,6 +9,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import Button from '@material-ui/core/Button';
+import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 
 
 
@@ -75,10 +76,9 @@ class SlewLimitsSettings extends React.Component {
 
     render() {
         return <Grid container spacing={2}>
-            <Grid item xs={12}>
-                <h2>Horizon</h2>
-            </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12}><h2>Slew Limits</h2></Grid>
+            <Grid item xs={2}/>
+            <Grid item xs={4}>
                 <FormControlLabel
                     control={
                         <Checkbox
@@ -89,8 +89,12 @@ class SlewLimitsSettings extends React.Component {
                     }
                     label="Enable Slew Limits"/>
             </Grid>
+            <Grid item xs={4}>
+                <Button color="secondary" variant="contained" onClick={this.handleAdvancedClicked}>Advanced Limits Editor&nbsp;&nbsp;<OpenInNewIcon/></Button>
+            </Grid>
+            <Grid item xs={2}/>
             <Grid item xs={12}>
-                <h2>Allowed Declination</h2>
+                <h3>Allowed Declination</h3>
             </Grid>
             <Grid item xs={3}>
                 <InputLabel htmlFor={this.uuid + '_greaterthan'}>Greater than</InputLabel></Grid>

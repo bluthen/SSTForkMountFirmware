@@ -4,12 +4,18 @@ import _ from 'lodash';
 import Formatting from './Formatting';
 
 
+function handleFetchError(response) {
+    if (!response.ok) {
+        console.error(response.statusText);
+        throw Error(response.statusText);
+    }
+    return response;
+}
+
+
 function getStatus() {
-    return fetch('/api/status').then((response) => {
-        if (response.ok) {
-            return response.json();
-        }
-        throw new Error('Status response not okay.', response.status)
+    return fetch('/api/status').then(handleFetchError).then((response) => {
+        return response.json();
     });
 }
 
@@ -23,22 +29,19 @@ const doObjectSearch = _.debounce(function () {
     searchCounter++;
     let sc = searchCounter;
     state.goto.object_search.searching = true;
-    return fetch('/api/search_object?search=' + encodeURIComponent(t)).then((response) => {
+    return fetch('/api/search_object?search=' + encodeURIComponent(t)).then(handleFetchError).then((response) => {
         state.goto.object_search.searching = false;
-        if (response.ok) {
-            if (sc !== searchCounter) {
-                return;
-            }
-            response.json().then((d) => {
-                state.goto.object_search.results.replace(d.planets.concat(d.dso).concat(d.stars));
-            });
-        } else {
-            console.error('/api/search_object failed.', response.status);
+        if (sc !== searchCounter) {
+            return;
         }
-    }, (e) => {
+        response.json().then((d) => {
+            state.goto.object_search.results.replace(d.planets.concat(d.dso).concat(d.stars));
+        });
+    }).catch((e) => {
         state.goto.object_search.searching = false;
         state.goto.object_search.results = [];
-        console.error(e);
+        state.snack_bar_error = true;
+        state.snack_bar = 'Error: Failed to get search results';
         throw e;
     });
 }, 500);
@@ -52,22 +55,19 @@ const doLocationSearch = _.debounce(function () {
     searchCounter++;
     let sc = searchCounter;
     state.location.city_searching = true;
-    return fetch('/api/search_location?search=' + encodeURIComponent(t)).then((response) => {
+    return fetch('/api/search_location?search=' + encodeURIComponent(t)).then(handleFetchError).then((response) => {
         state.location.city_searching = false;
-        if (response.ok) {
-            if (sc !== searchCounter) {
-                return;
-            }
-            response.json().then((d) => {
-                state.location.city_search_results.replace(d);
-            });
-        } else {
-            console.error('/api/search_location failed.', response.status);
+        if (sc !== searchCounter) {
+            return;
         }
-    }, (e) => {
+        response.json().then((d) => {
+            state.location.city_search_results.replace(d);
+        });
+    }).catch((e) => {
         state.location.city_searching = false;
         state.location.city_search_results = [];
-        console.error(e);
+        state.snack_bar_error = true;
+        state.snack_bar = 'Error: Failed to get search results';
         throw e;
     });
 }, 500);
@@ -81,13 +81,13 @@ const oppositeMap = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up
 
 
 function sendManualRequest(speed, direction) {
-    fetch('/api/manual_control', {
+    return fetch('/api/manual_control', {
         method: 'post',
         body: JSON.stringify({speed: speed, direction: direction}),
         headers: {
             'Content-Type': 'application/json'
         }
-    })
+    }).then(handleFetchError);
 }
 
 
@@ -131,7 +131,7 @@ function updateCoordDialogMissing() {
         az: state.goto.coorddialog.azdeg,
         ra: state.goto.coorddialog.radeg,
         dec: state.goto.coorddialog.decdeg
-    }
+    };
     if ((res.ra !== null && res.dec !== null && res.alt === null && res.az === null) || (res.alt !== null && res.az !== null && res.ra === null && res.dec === null)) {
         fetch('/api/convert_coord', {
             method: 'post',
@@ -139,7 +139,7 @@ function updateCoordDialogMissing() {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
+        }).then(handleFetchError).then((response) => {
             return response.json()
         }).then((d) => {
             if (d.hasOwnProperty('ra')) {
@@ -164,7 +164,8 @@ const APIHelp = {
             });
         }).catch((e) => {
             console.error('Failed to get status.', e);
-            state.fatal_error = 'Failed to update status, maybe network issue.';
+            state.snack_bar = 'Error: Failed to get status, check network';
+            state.snack_bar_error = true;
         });
     },
 
@@ -230,27 +231,31 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.json().then((v) => {
-                    const ret = [];
-                    for (let i = 0; i < v.length; i++) {
-                        const v2 = v[i];
-                        const d = Formatting.dateHourMinuteStr(timesD[i]);
-                        ret.push({time: d, alt: v2});
-                    }
-                    return ret;
-                });
-            } else {
-                return new Error('Failed to get altitude data: ' + response.status);
-            }
-        })
+        }).then(handleFetchError).then((response) => {
+            return response.json().then((v) => {
+                const ret = [];
+                for (let i = 0; i < v.length; i++) {
+                    const v2 = v[i];
+                    const d = Formatting.dateHourMinuteStr(timesD[i]);
+                    ret.push({time: d, alt: v2});
+                }
+                return ret;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to get altitude data';
+            state.snack_bar_error = true;
+            throw e;
+        });
 
     },
 
     cancelSlew() {
         return fetch('/api/slewto', {
             method: 'delete'
+        }).then(handleFetchError).catch((e) => {
+            state.snack_bar = 'Error: Failed to cancel slew';
+            state.snack_bar_error = true;
+            return e;
         });
     },
 
@@ -282,12 +287,10 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (!response.ok) {
-                return response.text().then((t) => {
-                    return new Error(t);
-                })
-            }
+        }).then(handleFetchError).catch((e) => {
+            state.snack_bar = 'Error: Failed to slew';
+            state.snack_bar_error = true;
+            throw e;
         });
     },
 
@@ -299,14 +302,13 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (!response.ok) {
-                return response.text().then((t) => {
-                    return new Error(t);
-                })
-            } else {
-                return response.json();
-            }
+        }).then(handleFetchError).then((response) => {
+            state.snack_bar = 'Synced';
+            return response.json();
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to sync.';
+            state.snack_bar_error = true;
+            throw e;
         }).finally(() => {
             state.goto.syncing = false;
         });
@@ -319,61 +321,71 @@ const APIHelp = {
         }, 3000);
         return fetch('/api/park', {
             method: 'put'
-        }).then((response) => {
-            if (!response.ok) {
-                return response.text().then((t) => {
-                    return new Error(t);
-                })
-            }
+        }).then(handleFetchError).catch((e) => {
+            state.snack_bar = 'Error: failed to park';
+            state.snack_bar_error = true;
+            return e;
         });
     },
     fetchSettings() {
         state.advancedSettings.fetching = true;
-        return fetch('/api/settings').then((response) => {
-            if (response.ok) {
-                return response.json().then((d) => {
-                    state.location_presets.replace(d.location_presets);
-                    state.location_set = d.location;
-                    state.network.ssid = d.network.ssid;
-                    state.network.wpa2key = d.network.wpa2key;
-                    state.network.channel = d.network.channel;
-                    for (const key of Object.keys(d)) {
-                        if (typeof d[key] === 'object') {
-                            for (const key2 of Object.keys(d[key])) {
-                                if (state.advancedSettings.hasOwnProperty(key2)) {
-                                    state.advancedSettings[key] = d[key][key2];
-                                }
-                            }
-                        } else {
-                            if (state.advancedSettings.hasOwnProperty(key)) {
-                                state.advancedSettings[key] = d[key];
+        return fetch('/api/settings').then(handleFetchError).then((response) => {
+            return response.json().then((d) => {
+                state.location_presets.replace(d.location_presets);
+                state.location_set = d.location;
+                state.network.ssid = d.network.ssid;
+                state.network.wpa2key = d.network.wpa2key;
+                state.network.channel = d.network.channel;
+                for (const key of Object.keys(d)) {
+                    if (typeof d[key] === 'object') {
+                        for (const key2 of Object.keys(d[key])) {
+                            if (state.advancedSettings.hasOwnProperty(key2)) {
+                                state.advancedSettings[key] = d[key][key2];
                             }
                         }
+                    } else {
+                        if (state.advancedSettings.hasOwnProperty(key)) {
+                            state.advancedSettings[key] = d[key];
+                        }
                     }
-                    state.advancedSettings.fetching = false;
-                    return d;
-                });
-            }
+                }
+                state.advancedSettings.fetching = false;
+                return d;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to get settings';
+            state.snack_bar_error = true;
+            throw e;
         });
     },
     saveSettings(settings) {
         return fetch('/api/settings', {
             method: 'put',
-            body: JSON.stringify(coord),
+            body: JSON.stringify(settings),
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: failed to save settings';
+            state.snack_bar_error = true;
+            return e;
         });
     },
     setParkPosition() {
         return fetch('/api/set_park_position', {
             method: 'put'
-        }).then((response) => {
-            if (response.ok) {
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed setting park position';
+            state.snack_bar_error = true;
+            return e;
         });
     },
     uploadFirmware(file) {
@@ -382,13 +394,15 @@ const APIHelp = {
         return fetch('/api/firmware_update', {
             method: 'post',
             body: formData
-        }).then((response) => {
-            if (response.ok) {
-                setTimeout(function () {
-                    location.reload(true);
-                }, 50000)
-            }
-        })
+        }).then(handleFetchError).then((response) => {
+            setTimeout(function () {
+                location.reload(true);
+            }, 50000)
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to upload firmware';
+            state.snack_bar_error = true;
+            return e;
+        });
     },
     toggleTracking(track) {
         const formData = new FormData();
@@ -398,16 +412,14 @@ const APIHelp = {
         }
         return fetch(url, {
             method: 'put'
-        }).then((response) => {
-            if (response.ok) {
-                // Just to beat the next status update
-                if (track) {
-                    state.status.tracking = true;
-                } else {
-                    state.status.tracking = false;
-                }
+        }).then(handleFetchError).then((response) => {
+            // Just to beat the next status update
+            if (track) {
+                state.status.tracking = true;
+            } else {
+                state.status.tracking = false;
             }
-        })
+        });
     },
     addLocationPreset(name, lat, long, elevation) {
         return fetch('/api/location_preset', {
@@ -416,10 +428,10 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.text;
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
         });
     },
     delLocationPreset(index) {
@@ -429,10 +441,10 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.text;
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
         });
     },
     setLocation(name, lat, long, elevation) {
@@ -442,10 +454,14 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.text;
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to set location';
+            state.snack_bar_error = true;
+            throw e;
         });
     },
     setTime() {
@@ -455,33 +471,32 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.text;
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to set time';
+            state.snack_bar_error = true;
+            throw e;
         });
-
     },
     fetchWifiScan() {
-        return fetch('/api/wifi_scan').then((response) => {
-            if (response.ok) {
-                return response.json().then((d) => {
-                    state.network.wifi_scan.aps.replace(d.aps);
-                    state.network.wifi_scan.connected.ssid = d.connected.ssid;
-                    state.network.wifi_scan.connected.mac = d.connected.mac;
-                    return d;
-                })
-            }
+        return fetch('/api/wifi_scan').then(handleFetchError).then((response) => {
+            return response.json().then((d) => {
+                state.network.wifi_scan.aps.replace(d.aps);
+                state.network.wifi_scan.connected.ssid = d.connected.ssid;
+                state.network.wifi_scan.connected.mac = d.connected.mac;
+                return d;
+            })
         });
     },
     fetchKnownWifi() {
-        return fetch('/api/wifi_known').then((response) => {
-            if (response.ok) {
-                return response.json().then((d) => {
-                    state.network.wifi_known.replace(d);
-                    return d;
-                })
-            }
+        return fetch('/api/wifi_known').then(handleFetchError).then((response) => {
+            return response.json().then((d) => {
+                state.network.wifi_known.replace(d);
+                return d;
+            })
         });
     },
     setWAP(ssid, wpa2key, channel) {
@@ -491,11 +506,16 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.text;
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to save';
+            state.snack_bar_error = true;
+            throw e;
         });
+        ;
     },
     deleteKnown(ssid, mac) {
         return fetch('/api/wifi_connect', {
@@ -504,10 +524,14 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if (response.ok) {
-                return response.text;
-            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to delete';
+            state.snack_bar_error = true;
+            throw e;
         });
     },
     setWifiConnect(ssid, mac, known, open, password) {
@@ -518,11 +542,11 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then((response) => {
-            if(response.ok) {
-
-            }
-        })
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        });
     }
 
 };

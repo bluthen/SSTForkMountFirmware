@@ -151,7 +151,9 @@ const state = observable({
             password: null,
             password_error: null
         }
-    }
+    },
+    snack_bar: null,
+    snack_bar_error: false
 });
 
 
