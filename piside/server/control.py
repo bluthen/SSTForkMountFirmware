@@ -335,7 +335,7 @@ def below_horizon_limit(altaz, radec):
     if settings.settings['horizon_limit_enabled']:
         dec_gt = settings.settings['horizon_limit_dec']['greater_than']
         dec_lt = settings.settings['horizon_limit_dec']['less_than']
-        print('below_horizon_limit', dec, dec_lt, dec_gt)
+        # print('below_horizon_limit', dec, dec_lt, dec_gt)
         if dec > dec_lt or dec < dec_gt:
             return True
         if 'horizon_limit_points' in settings.settings and \
@@ -848,7 +848,7 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
         dec = float(dec)
         coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     if not slewtocheck(coord):
-        print('NNNNNNNNNNNNNNNNNNNNNNNOOOOOOOOOOOOOOOOOTTTT')
+        # print('NNNNNNNNNNNNNNNNNNNNNNNOOOOOOOOOOOOOOOOOTTTT')
         raise Exception('Slew position is below horizon or in keep-out area.')
     else:
         slew(coord, parking)

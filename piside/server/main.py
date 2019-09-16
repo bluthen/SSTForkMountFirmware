@@ -827,13 +827,13 @@ def root():
 @app.route('/advanced_slew_limits/<path:path>')
 @nocache
 def send_static_advanced_slew(path):
-    return send_from_directory('../client_refactor/dist', path)
+    return send_from_directory('../client_advanced_slew_limits/dist', path)
 
 
 @app.route('/<path:path>')
 @nocache
 def send_static(path):
-    return send_from_directory('../client2/dist', path)
+    return send_from_directory('../client_main/dist', path)
 
 
 def main():
