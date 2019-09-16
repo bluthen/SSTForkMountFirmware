@@ -63,6 +63,9 @@ class App extends React.Component {
             alert(state.page);
         }
 
+        location.hash = state.page;
+
+
         let dialog = null;
         if(state.goto.slewing || state.status.slewing) {
             dialog = <SlewingDialog/>;
@@ -84,6 +87,20 @@ class App extends React.Component {
     }
 }
 
+function handleHashChange() {
+    const hash = location.hash.substring(1);
+    if (state.page !== hash) {
+        state.page = hash;
+        if(state.page === 'goto' || state.page === 'manual') {
+            state.topTabs = state.page;
+        } else {
+            state.topTabs='setup';
+        }
+    }
+}
+
+window.onhashchange = handleHashChange;
+
 render(
     <App/>,
     document.getElementById("root")
@@ -92,3 +109,4 @@ APIHelp.setTime();
 APIHelp.startStatusUpdateInterval();
 APIHelp.startNetworkStateListeners();
 APIHelp.fetchSettings();
+

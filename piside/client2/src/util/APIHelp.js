@@ -296,7 +296,7 @@ const APIHelp = {
             }
         }).then(handleFetchError).catch((e) => {
             state.goto.slewing = false;
-            state.snack_bar = 'Error: '+e.message;
+            state.snack_bar = 'Error: ' + e.message;
             state.snack_bar_error = true;
             throw e;
         });
@@ -559,7 +559,11 @@ const APIHelp = {
         });
     },
     setSlewSettings(slewLimitEnabled, dec_greater_than, dec_less_than) {
-        const req = {horizon_limit_enabled: slewLimitEnabled, dec_greater_than: dec_greater_than, dec_less_than: dec_less_than};
+        const req = {
+            horizon_limit_enabled: slewLimitEnabled,
+            dec_greater_than: dec_greater_than,
+            dec_less_than: dec_less_than
+        };
         return fetch('/api/settings_horizon_limit', {
             method: 'put',
             body: JSON.stringify(req),
