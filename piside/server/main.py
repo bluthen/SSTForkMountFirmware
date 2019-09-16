@@ -200,16 +200,21 @@ def settings_put():
 @app.route('/api/settings_horizon_limit', methods=['PUT'])
 @nocache
 def settings_horizon_limit():
-    enabled = request.form.get('horizon_limit_enabled', None)
-    points = request.form.get('points', None)
-    if not points and enabled is None:
+    reqj = request.json
+    enabled = reqj.get('horizon_limit_enabled', None)
+    points = reqj.get('points', None)
+    dec_greater_than = reqj.get('dec_greater_than', None)
+    dec_less_than = reqj.get('dec_less_than', None)
+    if points is None and enabled is None and dec_greater_than is None:
         return 'Missing points/enable', 400
-    if enabled:
-        enabled = enabled == 'true'
+    if enabled is not None:
         settings.settings['horizon_limit_enabled'] = enabled
         settings.write_settings(settings.settings)
-    if points:
-        points = json.loads(points)
+    if dec_greater_than is not None and dec_less_than is not None:
+        settings.settings['horizon_limit_dec']['greater_than'] = dec_greater_than
+        settings.settings['horizon_limit_dec']['less_than'] = dec_less_than
+        settings.write_settings(settings.settings)
+    if points is not None:
         settings.settings['horizon_limit_points'] = points
         settings.write_settings(settings.settings)
     return 'Saved Slew Setting', 200
@@ -774,7 +779,9 @@ def search_location():
                 city = city + '%'
                 with db_lock:
                     cur = conn.cursor()
-                    cur.execute(('SELECT %s from uscities where city like ? and state_abbr = ? limit 20' % ','.join(columns)), (city, abbr))
+                    cur.execute(
+                        ('SELECT %s from uscities where city like ? and state_abbr = ? limit 20' % ','.join(columns)),
+                        (city, abbr))
                     cities = cur.fetchall()
                     cur.close()
             else:
@@ -783,7 +790,9 @@ def search_location():
                 state = state + '%'
                 with db_lock:
                     cur = conn.cursor()
-                    cur.execute(('SELECT %s from uscities where city like ? and state like ? limit 20' % ','.join(columns)), (city, state))
+                    cur.execute(
+                        ('SELECT %s from uscities where city like ? and state like ? limit 20' % ','.join(columns)),
+                        (city, state))
                     cities = cur.fetchall()
                     cur.close()
     cities = to_list_of_dicts(cities, columns)
@@ -813,6 +822,12 @@ def status_get():
 @nocache
 def root():
     return redirect('/index.html')
+
+
+@app.route('/advanced_slew_limits/<path:path>')
+@nocache
+def send_static_advanced_slew(path):
+    return send_from_directory('../client_refactor/dist', path)
 
 
 @app.route('/<path:path>')

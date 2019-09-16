@@ -1,17 +1,8 @@
 /*globals $ */
-import Formating from './Formating'
-import DirectionControls from './DirectionControls'
 import SettingsMenu from './SettingsMenu'
-import Slewing from './Slewing'
-import Footer from './Footer'
 
-const initStep2 = function(startingSettings) {
-    this.footer = new Footer(this, $('body'), startingSettings);
-    this.settingsMenu = new SettingsMenu(this, $('.App'), startingSettings, this.directionControls);
-
-    this.socket.on('controls_response', function (msg) {
-        console.log(msg);
-    });
+const initStep2 = function() {
+    this.settingsMenu = new SettingsMenu(this, $('.App'));
 
     const isMobile = function () {
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -34,17 +25,7 @@ const initStep2 = function(startingSettings) {
 const App = {
     init: function() {
         delete this.init;
-        console.log(Formating.absoluteURL('/'));
-        this.socket = io(Formating.absoluteURL('/'));
-        this.socket.on('connect', function (msg) {
-            console.log('socket io connect.');
-        });
-
-        $.ajax({
-            url: '/settings',
-            dataType: 'json',
-            success: initStep2.bind(this)
-        });
+        (initStep2.bind(this))();
     }
 };
 

@@ -321,7 +321,7 @@ class SimpleInterval:
         self._func()
 
 
-def below_horizon_limit(altaz):
+def below_horizon_limit(altaz, radec):
     """
     If horizon limit is enabled and earth location is set, it will set if coordinates are below the horizon limits set.
     :param altaz: SkyCoord in altaz frame.
@@ -331,32 +331,39 @@ def below_horizon_limit(altaz):
     """
     az = altaz.az.deg
     alt = altaz.alt.deg
-    if settings.settings['horizon_limit_enabled'] and 'horizon_limit_points' in settings.settings and \
-            settings.settings['horizon_limit_points']:
-        if len(settings.settings['horizon_limit_points']) == 1:
-            if alt <= settings.settings['horizon_limit_points'][0]['alt']:
-                return True
-            else:
-                return False
-        else:
-            for i in range(len(settings.settings['horizon_limit_points']) - 1):
-                point1 = settings.settings['horizon_limit_points'][i]
-                if i + 1 < len(settings.settings['horizon_limit_points']):
-                    point2 = settings.settings['horizon_limit_points'][i + 1]
+    dec = radec.dec.deg
+    if settings.settings['horizon_limit_enabled']:
+        dec_gt = settings.settings['horizon_limit_dec']['greater_than']
+        dec_lt = settings.settings['horizon_limit_dec']['less_than']
+        print('below_horizon_limit', dec, dec_lt, dec_gt)
+        if dec > dec_lt or dec < dec_gt:
+            return True
+        if 'horizon_limit_points' in settings.settings and \
+                settings.settings['horizon_limit_points']:
+            if len(settings.settings['horizon_limit_points']) == 1:
+                if alt <= settings.settings['horizon_limit_points'][0]['alt']:
+                    return True
                 else:
-                    point2 = settings.settings['horizon_limit_points'][0]
-                p1az = point1['az']
-                if point2['az'] < p1az or len(settings.settings['horizon_limit_points']) == 1:
-                    p1az -= 360.0
-
-                point2 = settings.settings['horizon_limit_points'][i + 1]
-                if p1az <= az < point2['az']:
-                    m = (point2['alt'] - point1['alt']) / (point2['az'] - p1az)
-                    b = point1['alt']
-                    if alt < (m * (az - p1az) + b):
-                        return True
+                    return False
+            else:
+                for i in range(len(settings.settings['horizon_limit_points']) - 1):
+                    point1 = settings.settings['horizon_limit_points'][i]
+                    if i + 1 < len(settings.settings['horizon_limit_points']):
+                        point2 = settings.settings['horizon_limit_points'][i + 1]
                     else:
-                        return False
+                        point2 = settings.settings['horizon_limit_points'][0]
+                    p1az = point1['az']
+                    if point2['az'] < p1az or len(settings.settings['horizon_limit_points']) == 1:
+                        p1az -= 360.0
+
+                    point2 = settings.settings['horizon_limit_points'][i + 1]
+                    if p1az <= az < point2['az']:
+                        m = (point2['alt'] - point1['alt']) / (point2['az'] - p1az)
+                        b = point1['alt']
+                        if alt < (m * (az - p1az) + b):
+                            return True
+                        else:
+                            return False
     return False
 
 
@@ -365,16 +372,18 @@ def slewtocheck(skycoord):
     Check if skycoordinate okay to slew or is below horizon limit.
     :param skycoord:
     :type skycoord: astropy.coordinates.SkyCoord
-    :return: true not slewing to a limit
+    :return: true is okay to slew
     :rtype: bool
     """
     if skycoord is None:
         return False
     if hasattr(skycoord, 'ra'):
         altaz = skyconv.icrs_to_altaz(skycoord, atmo_refraction=True)
+        radec = skycoord
     else:  # already AltAz
         altaz = skycoord
-    if below_horizon_limit(altaz):
+        radec = skyconv.altaz_to_icrs(skycoord, atmo_refraction=True)
+    if below_horizon_limit(altaz, radec):
         return False
     else:
         return True
@@ -482,7 +491,7 @@ def send_status():
         status['alt'] = altaz.alt.deg
         status['az'] = altaz.az.deg
         # if settings.runtime_settings['earth_location_set']:
-        below_horizon = below_horizon_limit(altaz)
+        below_horizon = below_horizon_limit(altaz, radec)
         if below_horizon and settings.runtime_settings['tracking']:
             settings.runtime_settings['tracking'] = False
             stepper.set_speed_ra(0)
@@ -839,7 +848,8 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
         dec = float(dec)
         coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     if not slewtocheck(coord):
-        return Exception('Slew position is below horizon or in keep-out area.')
+        print('NNNNNNNNNNNNNNNNNNNNNNNOOOOOOOOOOOOOOOOOTTTT')
+        raise Exception('Slew position is below horizon or in keep-out area.')
     else:
         slew(coord, parking)
 

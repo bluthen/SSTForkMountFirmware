@@ -10,6 +10,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import Button from '@material-ui/core/Button';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
+import APIHelp from './util/APIHelp';
 
 
 
@@ -20,6 +21,10 @@ class SlewLimitsSettings extends React.Component {
     constructor(props) {
         super(props);
         this.uuid = uuidv4()
+    }
+
+    componentDidMount() {
+        APIHelp.fetchSettings();
     }
 
     onGreaterThanChange(e) {
@@ -36,7 +41,7 @@ class SlewLimitsSettings extends React.Component {
         state.slewlimit.greater_than = v;
     }
 
-    onLessThanChange(e) {
+    handleLessThanChange(e) {
         let v = parseFloat(e.currentTarget.value);
         if (isNaN(v)) {
             v = '';
@@ -50,7 +55,7 @@ class SlewLimitsSettings extends React.Component {
         state.slewlimit.less_than = v;
     }
 
-    onSlewBelowHorizonChange(e) {
+    handleSlewBelowHorizonChange(e) {
         let v = e.currentTarget.checked;
         state.slewlimit.enabled = v;
     }
@@ -68,10 +73,14 @@ class SlewLimitsSettings extends React.Component {
         } else {
             state.slewlimit.less_than_error = null;
         }
-        if (state.slewlimit.less_than_error ||  state.slewlimit.greater_than_error) {
+        if (state.slewlimit.less_than_error || state.slewlimit.greater_than_error) {
             return;
         }
+        APIHelp.setSlewSettings(state.slewlimit.enabled, gt, lt);
+    }
 
+    handleAdvancedClicked() {
+        window.open('/advanced_slew_limits/index.html', '_blank')
     }
 
     render() {
@@ -83,7 +92,7 @@ class SlewLimitsSettings extends React.Component {
                     control={
                         <Checkbox
                             color="primary"
-                            onChange={this.onSlewBelowHorizonChange}
+                            onChange={this.handleSlewBelowHorizonChange}
                             checked={state.slewlimit.enabled}
                         />
                     }
@@ -110,7 +119,7 @@ class SlewLimitsSettings extends React.Component {
             </Grid>
             <Grid item xs={3}>
                 <TextField id={this.uuid + '_lessthan'} label={state.slewlimit.less_than_error} error={!!state.slewlimit.less_than_error} value={state.slewlimit.less_than}
-                           onChange={this.onLessThanChange}
+                           onChange={this.handleLessThanChange}
                            type="number" inputProps={{min: -90, max: 90}}
                            InputProps={{
                                endAdornment: <InputAdornment position="end">&deg;</InputAdornment>,

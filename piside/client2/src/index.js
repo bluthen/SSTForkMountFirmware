@@ -91,3 +91,4 @@ render(
 APIHelp.setTime();
 APIHelp.startStatusUpdateInterval();
 APIHelp.startNetworkStateListeners();
+APIHelp.fetchSettings();

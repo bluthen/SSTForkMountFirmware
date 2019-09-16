@@ -7,7 +7,14 @@ import Formatting from './Formatting';
 function handleFetchError(response) {
     if (!response.ok) {
         console.error(response.statusText);
-        throw Error(response.statusText);
+        const t = response.statusText;
+        return response.text().then((t2) => {
+            if (!t2) {
+                throw Error(t);
+            } else {
+                throw Error(t2);
+            }
+        });
     }
     return response;
 }
@@ -288,7 +295,8 @@ const APIHelp = {
                 'Content-Type': 'application/json'
             }
         }).then(handleFetchError).catch((e) => {
-            state.snack_bar = 'Error: Failed to slew';
+            state.goto.slewing = false;
+            state.snack_bar = 'Error: '+e.message;
             state.snack_bar_error = true;
             throw e;
         });
@@ -336,6 +344,9 @@ const APIHelp = {
                 state.network.ssid = d.network.ssid;
                 state.network.wpa2key = d.network.wpa2key;
                 state.network.channel = d.network.channel;
+                state.slewlimit.enabled = d.horizon_limit_enabled;
+                state.slewlimit.greater_than = d.horizon_limit_dec.greater_than;
+                state.slewlimit.less_than = d.horizon_limit_dec.less_than;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
                         for (const key2 of Object.keys(d[key])) {
@@ -515,7 +526,6 @@ const APIHelp = {
             state.snack_bar_error = true;
             throw e;
         });
-        ;
     },
     deleteKnown(ssid, mac) {
         return fetch('/api/wifi_connect', {
@@ -546,6 +556,24 @@ const APIHelp = {
             return response.text().then((t) => {
                 state.snack_bar = t;
             });
+        });
+    },
+    setSlewSettings(slewLimitEnabled, dec_greater_than, dec_less_than) {
+        const req = {horizon_limit_enabled: slewLimitEnabled, dec_greater_than: dec_greater_than, dec_less_than: dec_less_than};
+        return fetch('/api/settings_horizon_limit', {
+            method: 'put',
+            body: JSON.stringify(req),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to save slew settings';
+            state.snack_bar_error = true;
+            throw e;
         });
     }
 

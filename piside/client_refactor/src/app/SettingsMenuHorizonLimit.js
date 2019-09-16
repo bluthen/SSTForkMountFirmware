@@ -3,12 +3,23 @@ import HorizonGraph from './horizonLimit/HorizonGraph';
 import template from './templates/SettingsMenuHorizonLimit.html';
 
 
+function handleFetchError(response) {
+    if (!response.ok) {
+        console.error(response.statusText);
+        throw Error(response.statusText);
+    }
+    return response;
+}
+
+
 const savePoints = _.throttle(function (points) {
-    $.ajax({
-        url: '../settings_horizon_limit',
-        method: 'PUT',
-        data: {points: JSON.stringify(points)}
-    });
+    return fetch('/api/settings_horizon_limit', {
+        method: 'put',
+        body: JSON.stringify({points: points}),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(handleFetchError);
 }, 500);
 
 
@@ -30,12 +41,29 @@ class SettingsMenuHorizonLimit {
             this._graph.points = pcopy;
         });
 
-        App.socket.on('status', (status) => {
-            if (status.hasOwnProperty('alt') && status.alt) {
-                this._lastAltAz = {alt: status.alt, az: status.az};
-            }
-        });
+        const doStatus = () => {
+            $.ajax({
+                url: '/api/status',
+                method: 'GET',
+                success: (status) => {
+                    if (status.hasOwnProperty('alt') && status.alt) {
+                        this._lastAltAz = {alt: status.alt, az: status.az};
+                    }
+                },
+                error: (jq, errorstatus, errortxt) => {
+                    console.error(errorstatus, errortxt, jq.responseText);
+                },
+                complete: () => {
+                    setTimeout(() => {
+                        doStatus();
+                    }, 1000);
+                }
+            });
+        };
 
+        setTimeout(() => {
+            doStatus();
+        }, 0);
 
         const addCurrentPositionPointButton = $('#horizonLimitaddCurrentPositionButton', this._selfDiv);
         addCurrentPositionPointButton.click(() => {
@@ -88,26 +116,10 @@ class SettingsMenuHorizonLimit {
             this._graph.points = points;
         });
 
-        $('#horizonLimitEnable, #horizonLimitDisable', this._selfDiv).change(() => {
-            const enabled = $('#horizonLimitEnable', this._selfDiv).is(':checked');
-            $.ajax({
-                url: '../settings_horizon_limit',
-                method: 'PUT',
-                data: {horizon_limit_enabled: enabled}
-            });
-        });
-
         $.ajax({
-            url: '../settings',
+            url: '/api/settings',
             method: 'GET',
             success: (data) => {
-                if (data.hasOwnProperty('horizon_limit_enabled')) {
-                    if (data.horizon_limit_enabled) {
-                        $('#horizonLimitEnable', this._selfDiv).click();
-                    } else {
-                        $('#horizonLimitDisable', this._selfDiv).click();
-                    }
-                }
                 if (data.hasOwnProperty('horizon_limit_points')) {
                     this._graph.points = data.horizon_limit_points;
                 }

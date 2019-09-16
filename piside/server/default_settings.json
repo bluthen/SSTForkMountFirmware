@@ -37,11 +37,11 @@
   "network": {
     "wifi_device": "wlp2s0",
     "ssid": "ssteq25",
-    "wpa2key": null, 
+    "wpa2key": null,
     "channel": "6",
     "ip": "192.168.23.23",
     "netmask": "255.255.255.0",
-    "dhcp_server": true 
+    "dhcp_server": true
   },
   "polar_align_camera_rotation_x": 1000,
   "polar_align_camera_rotation_y": 800,
@@ -52,6 +52,10 @@
     }
   ],
   "horizon_limit_enabled": false,
+  "horizon_limit_dec": {
+    "greater_than": -90.0,
+    "less_than": 90.0
+  },
   "color_scheme": "default",
   "atmos_refract": true,
   "power_switch": true,

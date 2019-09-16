@@ -6,7 +6,8 @@ module.exports = {
     mode: 'development',
 	devServer: {
 		proxy: {
-			'/api': 'http://localhost:5000'
+			'/api': 'http://localhost:5000',
+			'/advanced_slew_limits': 'http://localhost:5000'
 		}
 	},
     entry: [
