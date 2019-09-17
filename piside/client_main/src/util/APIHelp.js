@@ -347,6 +347,7 @@ const APIHelp = {
                 state.slewlimit.enabled = d.horizon_limit_enabled;
                 state.slewlimit.greater_than = d.horizon_limit_dec.greater_than;
                 state.slewlimit.less_than = d.horizon_limit_dec.less_than;
+                state.slewlimit.model = d.pointing_model;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
                         for (const key2 of Object.keys(d[key])) {
@@ -567,6 +568,23 @@ const APIHelp = {
         return fetch('/api/settings_horizon_limit', {
             method: 'put',
             body: JSON.stringify(req),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to save slew settings';
+            state.snack_bar_error = true;
+            throw e;
+        });
+    },
+    setPointingModel(model) {
+        return fetch('/api/sync', {
+            method: 'post',
+            body: JSON.stringify({model: model}),
             headers: {
                 'Content-Type': 'application/json'
             }

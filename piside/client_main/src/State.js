@@ -136,7 +136,8 @@ const state = observable({
         greater_than: -90.0,
         greater_than_error: null,
         less_than: 90.0,
-        less_than_error: null
+        less_than_error: null,
+        model: null
     },
     network: {
         ssid: null,

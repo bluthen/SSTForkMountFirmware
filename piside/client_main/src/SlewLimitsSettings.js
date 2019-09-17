@@ -11,10 +11,13 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Button from '@material-ui/core/Button';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 import APIHelp from './util/APIHelp';
-
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 
 
 import uuidv4 from 'uuid/v4';
+
+const modelMap = ['single', 'buie', 'affine_all'];
 
 @observer
 class SlewLimitsSettings extends React.Component {
@@ -55,6 +58,10 @@ class SlewLimitsSettings extends React.Component {
         state.slewlimit.less_than = v;
     }
 
+    handleModelChange(e) {
+        state.slewlimit.model = modelMap[parseInt(e.target.value)];
+    }
+
     handleSlewBelowHorizonChange(e) {
         let v = e.currentTarget.checked;
         state.slewlimit.enabled = v;
@@ -76,7 +83,9 @@ class SlewLimitsSettings extends React.Component {
         if (state.slewlimit.less_than_error || state.slewlimit.greater_than_error) {
             return;
         }
-        APIHelp.setSlewSettings(state.slewlimit.enabled, gt, lt);
+        APIHelp.setPointingModel(state.slewlimit.model).then(() => {
+            APIHelp.setSlewSettings(state.slewlimit.enabled, gt, lt);
+        });
     }
 
     handleAdvancedClicked() {
@@ -86,7 +95,6 @@ class SlewLimitsSettings extends React.Component {
     render() {
         return <Grid container spacing={2}>
             <Grid item xs={12}><h2>Slew Limits</h2></Grid>
-            <Grid item xs={2}/>
             <Grid item xs={4}>
                 <FormControlLabel
                     control={
@@ -98,17 +106,27 @@ class SlewLimitsSettings extends React.Component {
                     }
                     label="Enable Slew Limits"/>
             </Grid>
-            <Grid item xs={4}>
-                <Button color="secondary" variant="contained" onClick={this.handleAdvancedClicked}>Advanced Limits Editor&nbsp;&nbsp;<OpenInNewIcon/></Button>
+            <Grid item xs={8}>
+                <Button color="secondary" variant="contained" onClick={this.handleAdvancedClicked}>Advanced Limits
+                    Editor&nbsp;&nbsp;<OpenInNewIcon/></Button>
             </Grid>
-            <Grid item xs={2}/>
+            <Grid item xs={12}>
+                <InputLabel htmlFor={this.uuid + "model-select"}>Pointing Model</InputLabel>
+                <Select id={this.uuid + "model_select"} value={modelMap.indexOf(state.slewlimit.model)}
+                        onChange={this.handleModelChange} name="model">
+                    <MenuItem value="0">Single</MenuItem>
+                    <MenuItem value="1">Buie</MenuItem>
+                    <MenuItem value="2">Affine</MenuItem>
+                </Select>
+            </Grid>
             <Grid item xs={12}>
                 <h3>Allowed Declination</h3>
             </Grid>
             <Grid item xs={3}>
                 <InputLabel htmlFor={this.uuid + '_greaterthan'}>Greater than</InputLabel></Grid>
             <Grid item xs={3}>
-                <TextField label={state.slewlimit.greater_than_error} error={!!state.slewlimit.greater_than_error} value={state.slewlimit.greater_than} id={this.uuid + '_greaterthan'}
+                <TextField label={state.slewlimit.greater_than_error} error={!!state.slewlimit.greater_than_error}
+                           value={state.slewlimit.greater_than} id={this.uuid + '_greaterthan'}
                            onChange={this.onGreaterThanChange}
                            type="number" inputProps={{min: -90, max: 90}}
                            InputProps={{
@@ -118,7 +136,8 @@ class SlewLimitsSettings extends React.Component {
                 <InputLabel>Less than</InputLabel>
             </Grid>
             <Grid item xs={3}>
-                <TextField id={this.uuid + '_lessthan'} label={state.slewlimit.less_than_error} error={!!state.slewlimit.less_than_error} value={state.slewlimit.less_than}
+                <TextField id={this.uuid + '_lessthan'} label={state.slewlimit.less_than_error}
+                           error={!!state.slewlimit.less_than_error} value={state.slewlimit.less_than}
                            onChange={this.handleLessThanChange}
                            type="number" inputProps={{min: -90, max: 90}}
                            InputProps={{
