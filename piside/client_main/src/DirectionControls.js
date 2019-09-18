@@ -53,7 +53,7 @@ class DirectionControls extends React.Component {
             south: this.state.south,
             east: this.state.east,
             west: this.state.west
-        }
+        };
         dirs[direction] = true;
         this.props.onDirectionChange(dirs);
         console.log('down', direction)
@@ -70,7 +70,7 @@ class DirectionControls extends React.Component {
                 south: this.state.south,
                 east: this.state.east,
                 west: this.state.west
-            }
+            };
             dirs[direction] = false;
             this.props.onDirectionChange(dirs);
         }

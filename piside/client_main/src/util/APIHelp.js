@@ -1,3 +1,4 @@
+/* global fetch */
 import state from '../State';
 import {observe} from "mobx";
 import _ from 'lodash';
@@ -406,7 +407,7 @@ const APIHelp = {
         return fetch('/api/firmware_update', {
             method: 'post',
             body: formData
-        }).then(handleFetchError).then((response) => {
+        }).then(handleFetchError).then(() => {
             setTimeout(function () {
                 location.reload(true);
             }, 50000)
@@ -417,20 +418,15 @@ const APIHelp = {
         });
     },
     toggleTracking(track) {
-        const formData = new FormData();
         let url = '/api/start_tracking';
         if (!track) {
             url = '/api/stop_tracking'
         }
         return fetch(url, {
             method: 'put'
-        }).then(handleFetchError).then((response) => {
+        }).then(handleFetchError).then(() => {
             // Just to beat the next status update
-            if (track) {
-                state.status.tracking = true;
-            } else {
-                state.status.tracking = false;
-            }
+            state.status.tracking = track;
         });
     },
     addLocationPreset(name, lat, long, elevation) {

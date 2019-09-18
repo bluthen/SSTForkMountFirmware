@@ -52,8 +52,7 @@ class ObjectSearch extends React.Component {
     }
 
     onSearchChanged(e) {
-        const v = e.currentTarget.value;
-        state.goto.object_search.search_txt = v;
+        state.goto.object_search.search_txt = e.currentTarget.value;
     }
 
     onCoordToggle(e, value) {

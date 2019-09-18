@@ -47,7 +47,7 @@ class App extends React.Component {
         } else if (state.page === 'goto') {
             content = <GotoPage/>;
         } else if (state.page === 'advancedSettings') {
-            console.log('advsetting')
+            console.log('advsetting');
             content = <AdvancedSettings/>;
         } else if(state.page === 'setup') { // Setup
             content = <SetupPage/>

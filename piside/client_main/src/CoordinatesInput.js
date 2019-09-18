@@ -27,7 +27,6 @@ class CoordinatesInput extends React.Component {
     onCoordChange(e, coord, sub) {
 
         let v = e.currentTarget.value;
-        let vlen = v.length;
         v = parseInt(v);
         if (isNaN(v)) {
             v = null;
@@ -65,7 +64,7 @@ class CoordinatesInput extends React.Component {
     }
 
     handleClick(e) {
-        let coords, subkeys;
+        let coords;
         if (state.goto.coordinates.type === 'radec') {
             coords = {'ra': ['h', 'm', 's'], 'dec': ['d', 'm', 's']};
         } else {

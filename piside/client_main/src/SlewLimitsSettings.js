@@ -62,8 +62,7 @@ class SlewLimitsSettings extends React.Component {
     }
 
     handleSlewBelowHorizonChange(e) {
-        let v = e.currentTarget.checked;
-        state.slewlimit.enabled = v;
+        state.slewlimit.enabled = e.currentTarget.checked;
     }
 
     handleSaveClicked() {

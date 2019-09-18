@@ -38,10 +38,6 @@ import APIHelp from './util/APIHelp';
 
 import uuidv4 from 'uuid/v4';
 
-const indent = {
-    paddingLeft: "4ex"
-};
-
 const bold = {
     paddingTop: "3x",
     fontWeight: "bold"
@@ -264,11 +260,11 @@ class LocationSettings extends React.Component {
         }
     }
 
-    saveClicked(e) {
+    saveClicked() {
         if (!state.location.name) {
             state.location.name_error = "Location Name required"
         } else {
-            APIHelp.addLocationPreset(state.location.name, state.location.coord_lat, state.location.coord_long, state.location.coord_elevation).then(()=>{
+            APIHelp.addLocationPreset(state.location.name, state.location.coord_lat, state.location.coord_long, state.location.coord_elevation).then(() => {
                 return APIHelp.fetchSettings();
             });
             state.location.new_step = null;
@@ -285,7 +281,7 @@ class LocationSettings extends React.Component {
 
     genHandleDeletePreset(index) {
         return () => {
-            APIHelp.delLocationPreset(index).then(()=> {
+            APIHelp.delLocationPreset(index).then(() => {
                 return APIHelp.fetchSettings();
             })
         }
@@ -293,7 +289,7 @@ class LocationSettings extends React.Component {
 
     genHandleSetLocation(name, lat, long, elevation) {
         return () => {
-            APIHelp.setLocation(name, lat, long, elevation).then(()=>{
+            APIHelp.setLocation(name, lat, long, elevation).then(() => {
                 return APIHelp.fetchSettings();
             })
         }
@@ -320,7 +316,8 @@ class LocationSettings extends React.Component {
                 icon = <ListItemIcon><CheckCircle/></ListItemIcon>;
             }
             presets.push(
-                <ListItem key={'location_list' + i} button onClick={this.genHandleSetLocation(preset.name, preset.lat, preset.long, preset.elevation)}>
+                <ListItem key={'location_list' + i} button
+                          onClick={this.genHandleSetLocation(preset.name, preset.lat, preset.long, preset.elevation)}>
                     {icon}
                     <ListItemText primary={preset.name} secondary={
                         Formatting.degLat2Str(preset.lat) + '/' + Formatting.degLong2Str(preset.long) + ' ' + preset.elevation + 'm'
