@@ -1,9 +1,7 @@
 import React from "react";
 import CircularProgress from '@material-ui/core/CircularProgress';
 import APIHelp from './util/APIHelp';
-import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-} from 'recharts';
+import {Line, LineChart, XAxis, YAxis,} from 'recharts';
 
 
 class AltChart extends React.Component {

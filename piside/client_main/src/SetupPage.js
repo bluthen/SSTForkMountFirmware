@@ -1,6 +1,5 @@
 import React from "react";
 import state from './State';
-import {observer} from "mobx-react"
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';

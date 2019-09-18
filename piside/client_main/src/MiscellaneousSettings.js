@@ -1,17 +1,11 @@
 import React from "react";
 import {observer} from "mobx-react"
 import state from './State';
-import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
 import Button from '@material-ui/core/Button';
-import CircularProgress from '@material-ui/core/CircularProgress';
 import uuidv4 from 'uuid/v4';
 import APIHelp from './util/APIHelp';
 import TToggle from './TToggle';
-
 
 
 @observer

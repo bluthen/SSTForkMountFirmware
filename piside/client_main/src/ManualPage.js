@@ -8,8 +8,6 @@ import state from './State';
 import {observer} from "mobx-react"
 
 
-
-
 const marks = [
     {value: 3, label: 'Fastest'},
     {value: 2, label: ''},

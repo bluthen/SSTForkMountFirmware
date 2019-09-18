@@ -2,7 +2,6 @@ import React from "react";
 import state from './State';
 import {observer} from "mobx-react"
 import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
 import Grid from '@material-ui/core/Grid';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import InputLabel from '@material-ui/core/InputLabel';

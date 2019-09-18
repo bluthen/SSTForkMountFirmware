@@ -7,7 +7,6 @@ import Grid from '@material-ui/core/Grid';
 import TToggle from './TToggle';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import Button from '@material-ui/core/Button';
-import RootRef from '@material-ui/core/RootRef';
 import Formatting from './util/Formatting';
 import CoordDialog from './CoordDialog';
 

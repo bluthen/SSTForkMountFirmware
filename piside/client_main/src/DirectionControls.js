@@ -1,7 +1,6 @@
 import React from "react";
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import IconButton from '@material-ui/core/IconButton';
-import Grid from '@material-ui/core/Grid';
 
 
 const circle = {
