@@ -313,6 +313,7 @@ const APIHelp = {
             }
         }).then(handleFetchError).then((response) => {
             state.snack_bar = 'Synced';
+            state.snack_bar_error = false;
             return response.json();
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to sync.';
@@ -381,6 +382,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: failed to save settings';
@@ -394,6 +396,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed setting park position';
@@ -439,6 +442,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         });
     },
@@ -452,6 +456,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         });
     },
@@ -465,6 +470,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to set location';
@@ -482,6 +488,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to set time';
@@ -517,6 +524,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to save';
@@ -534,6 +542,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to delete';
@@ -552,6 +561,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         });
     },
@@ -570,6 +580,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to save slew settings';
@@ -587,6 +598,7 @@ const APIHelp = {
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
+                state.snack_bar_error = false;
             });
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to save slew settings';
