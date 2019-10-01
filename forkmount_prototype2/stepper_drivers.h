@@ -12,10 +12,14 @@ extern float prevDECSpeed;
 void stepperInit(void);
 
 void setRASpeed(float speed);
+void setRAMaxAccel(float accel);
+void setRAMaxSpeed(float maxSpeed);
 float getRASpeed(void);
 long getRAPosition(void);
 
 void setDECSpeed(float speed);
+void setDECMaxAccel(float accel);
+void setDECMaxSpeed(float maxSpeed);
 float getDECSpeed(void);
 long getDECPosition(void);
 

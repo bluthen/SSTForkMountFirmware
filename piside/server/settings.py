@@ -3,12 +3,23 @@ import fasteners
 import threading
 import os
 import logging
+import copy
 
 _lock = threading.RLock()
 _plock = threading.RLock()
 
 with open('default_settings.json') as f:
     default_settings = json.load(f)
+
+
+def deepupdate(to_update, odict):
+    for k in to_update:
+        if isinstance(to_update[k], dict) and k in odict and isinstance(odict[k], dict):
+            deepupdate(to_update[k], odict[k])
+        else:
+            if k in odict:
+                to_update[k] = odict[k]
+
 
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
@@ -20,14 +31,16 @@ def write_settings(settings):
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
 def read_settings():
+    print(default_settings)
     with _lock:
         if not os.path.isfile('settings.json'):
-            return default_settings.copy()
+            return copy.deepcopy(default_settings)
         else:
             with open('settings.json') as f:
                 s = json.load(f)
-                s1 = default_settings.copy()
-                s1.update(s)
+                s1 = copy.deepcopy(default_settings)
+                deepupdate(s1, s)
+                print(json.dumps(s1))
                 return s1
 
 

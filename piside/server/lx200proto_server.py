@@ -192,6 +192,7 @@ class LX200Client:
     def process(self, cmd):
         global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
         print('process', cmd)
+        control.set_alive()
         if cmd == ':Aa#':  # Start automatic alignment sequence
             self.write(b'0')
         elif cmd == ':FB#':  # Query focus busy status

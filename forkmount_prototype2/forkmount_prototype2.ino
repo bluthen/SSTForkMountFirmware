@@ -51,6 +51,8 @@ void setup()
   configvars.ra_guide_rate = 20;
   configvars.dec_max_tps = 12000;
   configvars.dec_guide_rate = 6;
+  configvars.ra_accel_tpss = 10000;
+  configvars.dec_accel_tpss = 10000;
   configvars.debug_enabled = false;
   configvars.autoguide_enabled = true;
   configvars.ra_direction = 1;

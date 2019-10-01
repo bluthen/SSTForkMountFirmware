@@ -84,7 +84,6 @@ let statusUpdateIntervalStarted = false;
 const STATUS_DELAY = 1000;
 
 const dirMap = {north: 'up', south: 'down', east: 'right', west: 'left'};
-const manualIntervals = {};
 const oppositeMap = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'};
 
 
@@ -100,26 +99,11 @@ function sendManualRequest(speed, direction) {
 
 
 function manualActive(speed, direction) {
-    //If we are already going opposite direction then ignore.
-    if (manualIntervals.hasOwnProperty(oppositeMap[direction])) {
-        return;
-    }
-    console.log('Pressing: ' + direction);
-    if (manualIntervals.hasOwnProperty(direction)) {
-        clearTimeout(manualIntervals[direction]);
-    }
-    manualIntervals[direction] = setInterval(() => {
-        sendManualRequest(speed, direction)
-    }, 100);
-    sendManualRequest(speed, direction)
+    sendManualRequest(speed, direction);
 }
 
 
 function manualInactive(direction) {
-    if (manualIntervals.hasOwnProperty(direction)) {
-        clearInterval(manualIntervals[direction]);
-        delete manualIntervals[direction];
-    }
     sendManualRequest(null, direction);
 }
 
@@ -352,9 +336,11 @@ const APIHelp = {
                 state.slewlimit.model = d.pointing_model;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
+                        console.log('=== micro object'+key);
                         for (const key2 of Object.keys(d[key])) {
                             if (state.advancedSettings.hasOwnProperty(key2)) {
-                                state.advancedSettings[key] = d[key][key2];
+                                console.log('==== '+key2, d[key][key2]);
+                                state.advancedSettings[key2] = d[key][key2];
                             }
                         }
                     } else {

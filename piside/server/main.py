@@ -144,6 +144,9 @@ def logger_get():
     if logger_name == 'pointing':
         pointing_logger.handlers[0].flush()
         return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
+    if logger_name == 'encoder':
+        control.stepper_logging_file.flush()
+        return send_from_directory('./logs', 'stepper_encoder.csv', as_attachment=True, attachment_filename='stepper_encoder.csv')
 
 
 @app.route('/api/settings', methods=['PUT'])
@@ -162,12 +165,14 @@ def settings_put():
     for key in keys:
         if key in args:
             settings_buffer[key] = float(args[key])
-    keys = ["ra_max_tps", "ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction"]
-    for key in keys:
-        if key in args:
-            if 'micro' not in settings_buffer:
-                settings_buffer['micro'] = {}
-            settings_buffer['micro'][key] = float(args[key])
+    if 'micro' in args:
+        keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "ra_accel_tpss", "dec_accel_tpss"]
+        for key in keys:
+            if key in args['micro']:
+                if 'micro' not in settings_buffer:
+                    settings_buffer['micro'] = {}
+                print('=== settingsb micro '+key, args['micro'][key])
+                settings_buffer['micro'][key] = float(args['micro'][key])
 
     keys = ["atmos_refract", "use_encoders", "limit_encoder_step_fillin"]
     for key in keys:
@@ -186,12 +191,12 @@ def settings_put():
     for key in keys:
         if key in args:
             settings.settings[key] = settings_buffer[key]
-    keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction"]
-    for key in keys:
-        if key in args:
-            if 'micro' not in settings_buffer:
-                settings_buffer['micro'] = {}
-            settings.settings['micro'][key] = float(settings_buffer['micro'][key])
+    if 'micro' in settings_buffer:
+        keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "ra_accel_tpss", "dec_accel_tpss"]
+        for key in keys:
+            if key in settings_buffer['micro']:
+                print('=== settings micro '+key, float(settings_buffer['micro'][key]))
+                settings.settings['micro'][key] = float(settings_buffer['micro'][key])
     settings.write_settings(settings.settings)
     control.micro_update_settings()
     return 'Settings Saved', 200
@@ -808,6 +813,7 @@ def search_location():
 def manual_control():
     message = request.json
     # print("Got %s" + json.dumps(message))
+    control.set_alive()
     control.manual_control(message['direction'], message['speed'])
     return 'Moving', 200
 
@@ -815,6 +821,7 @@ def manual_control():
 @app.route('/api/status', methods=['GET'])
 @nocache
 def status_get():
+    control.set_alive()
     return jsonify(control.last_status)
 
 
@@ -854,8 +861,8 @@ def main():
     lx200proto_thread = threading.Thread(target=lx200proto_server.main)
     lx200proto_thread.start()
 
-    sstchuck_thread = threading.Thread(target=sstchuck.run)
-    sstchuck_thread.start()
+    # sstchuck_thread = threading.Thread(target=sstchuck.run)
+    # sstchuck_thread.start()
 
     hostname = socket.gethostname()
     # TODO: What about when they change hostname? Or can move this to systemd?
@@ -872,7 +879,7 @@ def main():
         sstchuck.terminate()
         lx200proto_server.terminate()
         lx200proto_thread.join()
-        sstchuck_thread.join()
+        # sstchuck_thread.join()
         power_thread.join()
         avahi_process.kill()
     finally:

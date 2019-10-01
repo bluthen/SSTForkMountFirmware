@@ -7,7 +7,7 @@ class StepperControl:
         self.serial = serial.Serial(port, baud, timeout=2)
         self.serial_lock = threading.RLock()
         self.__setting_keys = ['ra_max_tps', 'ra_guide_rate', 'ra_direction', 'dec_max_tps', 'dec_guide_rate',
-                               'dec_direction', 'dec_direction']
+                               'dec_direction', 'dec_direction', 'ra_accel_tpss', 'dec_accel_tpss']
 
     def __read_serial_until_prompt(self):
         s = ""
@@ -49,7 +49,7 @@ class StepperControl:
     def update_settings(self, settings):
         for setting in settings:
             if setting not in self.__setting_keys:
-                raise KeyError('Invalid setting key')
+                raise KeyError('Invalid setting key: '+setting)
         with self.serial_lock:
             for setting in settings:
                 self.serial.write(('set_var %s %f\r' % (setting, settings[setting])).encode())

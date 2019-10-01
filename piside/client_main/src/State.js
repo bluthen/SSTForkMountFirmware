@@ -102,6 +102,8 @@ const state = observable({
         ra_direction: 1,
         dec_direction: 1,
         ra_guide_rate: 0,
+        dec_accel_tpss: 0,
+        ra_accel_tpss: 0,
         ra_slew_fastest: 0,
         ra_slew_faster: 0,
         ra_slew_medium: 0,

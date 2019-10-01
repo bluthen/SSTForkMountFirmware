@@ -11,8 +11,6 @@
     "port": "/dev/serial1"
   },
   "location": null,
-  "dec_max_accel_tpss": 10800,
-  "ra_max_accel_tpss": 10800,
   "ra_slew_fastest": 10800,
   "ra_slew_faster": 5000,
   "ra_slew_slower": 400,
@@ -31,7 +29,9 @@
     "dec_guide_rate": 2.962962962962963,
     "dec_direction": 1,
     "dec_max_tps": 15000,
-    "ra_max_tps": 15000
+    "ra_max_tps": 15000,
+    "dec_accel_tpss": 10800,
+    "ra_accel_tpss": 10800
   },
   "simulation": false,
   "network": {

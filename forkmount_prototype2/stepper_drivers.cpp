@@ -1,6 +1,7 @@
 #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <Encoder.h>
 #include <Arduino.h>
+#include <AccelStepper.h>
 #include "stepper_drivers.h"
 #include "forkmount.h"
 
@@ -28,50 +29,16 @@ static const int DEC_STEPPER_MS1 = 20;
 static const int DEC_STEPPER_MS2 = 19;
 static const int DEC_STEPPER_MS3 = 18;
 
+AccelStepper raStepper(1, RA_STEPPER_STEP_PIN, RA_STEPPER_DIR_PIN);
+AccelStepper decStepper(1, DEC_STEPPER_STEP_PIN, DEC_STEPPER_DIR_PIN);
+
 /* local functions */
 
-static int ra_mode_direction = 9999;
 static int ra_mode_steps = 9999;
-static long ra_total_steps = 0;
-
-static int dec_mode_direction = 9999;
 static int dec_mode_steps = 9999;
-static long dec_total_steps = 0;
 
-static void ra_set_step_direction(boolean forward);
 static void ra_set_step_resolution(boolean full);
-static void ra_step(void);
-static void ra_stepper_forwardstep(void);
-static void ra_stepper_backwardstep(void);
-static void ra_stepper_forwardstep_fast(void);
-static void ra_stepper_backwardstep_fast(void);
-
-static void dec_set_step_direction(boolean forward);
 static void dec_set_step_resolution(boolean full);
-static void dec_step(void);
-static void dec_stepper_forwardstep(void);
-static void dec_stepper_backwardstep(void);
-static void dec_stepper_forwardstep_fast(void);
-static void dec_stepper_backwardstep_fast(void);
-
-
-static void ra_set_step_direction(boolean forward) {
-  if(forward) {
-    if(configvars.ra_direction > 0) {
-      digitalWrite(RA_STEPPER_DIR_PIN, HIGH);      
-    } else {
-      digitalWrite(RA_STEPPER_DIR_PIN, LOW);
-    }
-    ra_mode_direction = MODE_FORWARD;
-  } else {
-    if(configvars.ra_direction > 0) {
-      digitalWrite(RA_STEPPER_DIR_PIN, LOW);      
-    } else {
-      digitalWrite(RA_STEPPER_DIR_PIN, HIGH);      
-    }
-    ra_mode_direction = MODE_BACKWARD;
-  }
-}
 
 void ra_set_step_resolution(boolean full) {
   if(full) {
@@ -84,74 +51,6 @@ void ra_set_step_resolution(boolean full) {
     digitalWrite(RA_STEPPER_MS2, HIGH);
     digitalWrite(RA_STEPPER_MS3, HIGH);
     ra_mode_steps = MODE_SIXTEEN;
-  }  
-}
-
-void ra_step() {
-    digitalWrite(RA_STEPPER_STEP_PIN, HIGH);
-    delayMicroseconds(1);
-    digitalWrite(RA_STEPPER_STEP_PIN, LOW);    
-}
-
-void ra_stepper_forwardstep() {
-  if(ra_mode_steps != MODE_SIXTEEN) {
-    ra_set_step_resolution(false);
-  }
-  if(ra_mode_direction != MODE_FORWARD) {
-    ra_set_step_direction(true);
-  }
-  ra_step();
-  ra_total_steps++;  
-}
-
-void ra_stepper_backwardstep() {
-  if(ra_mode_steps != MODE_SIXTEEN) {
-    ra_set_step_resolution(false);
-  }
-  if(ra_mode_direction != MODE_BACKWARD) {
-    ra_set_step_direction(false);
-  }
-  ra_step();
-  ra_total_steps--;
-}
-
-void ra_stepper_forwardstep_fast() {
-  if(ra_mode_steps != MODE_FULL) {
-    ra_set_step_resolution(true);
-  }
-  if(ra_mode_direction != MODE_FORWARD) {
-    ra_set_step_direction(true);
-  }
-  ra_step();
-  ra_total_steps += MICROSTEPS;
-}
-
-void ra_stepper_backwardstep_fast() {
-  if(ra_mode_steps != MODE_FULL) {
-    ra_set_step_resolution(true);
-  }
-  if(ra_mode_direction != MODE_BACKWARD) {
-    ra_set_step_direction(false);
-  }
-  ra_step();
-  ra_total_steps -= MICROSTEPS;  
-}
-
-void dec_set_step_direction(boolean forward) {
-  if(forward) {
-    if(configvars.dec_direction > 0) {
-      digitalWrite(DEC_STEPPER_DIR_PIN, HIGH);    
-    } else {
-      digitalWrite(DEC_STEPPER_DIR_PIN, LOW);
-    }
-    dec_mode_direction = MODE_FORWARD;
-  } else {
-    if(configvars.dec_direction > 0) {
-      digitalWrite(DEC_STEPPER_DIR_PIN, LOW);      
-    } else {
-      digitalWrite(DEC_STEPPER_DIR_PIN, HIGH);
-    }
-    dec_mode_direction = MODE_BACKWARD;
   }  
 }
 
@@ -169,70 +68,6 @@ void dec_set_step_resolution(boolean full) {
   }    
 }
 
-void dec_step() {
-    digitalWrite(DEC_STEPPER_STEP_PIN, HIGH);
-    delayMicroseconds(1);
-    digitalWrite(DEC_STEPPER_STEP_PIN, LOW);    
-}
-
-void dec_stepper_forwardstep() {
-  if(dec_mode_steps != MODE_SIXTEEN) {
-    dec_set_step_resolution(false);
-  }
-  if(dec_mode_direction != MODE_FORWARD) {
-    dec_set_step_direction(true);
-  }
-  dec_step();
-  dec_total_steps++;  
-}
-
-void dec_stepper_backwardstep() {
-  if(dec_mode_steps != MODE_SIXTEEN) {
-    dec_set_step_resolution(false);
-  }
-  if(dec_mode_direction != MODE_BACKWARD) {
-    dec_set_step_direction(false);
-  }
-  dec_step();
-  dec_total_steps--;
-}
-
-void dec_stepper_forwardstep_fast() {
-  if(dec_mode_steps != MODE_FULL) {
-    dec_set_step_resolution(true);
-  }
-  if(dec_mode_direction != MODE_FORWARD) {
-    dec_set_step_direction(true);
-  }
-  dec_step();
-  dec_total_steps += MICROSTEPS;
-}
-
-void dec_stepper_backwardstep_fast() {
-  if(dec_mode_steps != MODE_FULL) {
-    dec_set_step_resolution(true);
-  }
-  if(dec_mode_direction != MODE_BACKWARD) {
-    dec_set_step_direction(false);
-  }
-  dec_step();
-  dec_total_steps -= MICROSTEPS;  
-}
-
-/* non-local  functions */
-
-static float RASpeed = 0.0;
-static long RACounts = 0;
-static unsigned long RAClock = 0;
-static long RAPosition = 0;
-
-static float DECSpeed = 0.0;
-static long DECCounts = 0;
-static unsigned long DECClock = 0;
-static long DECPosition = 0;
-
-static float count;
-
 boolean ra_autoguiding = false;
 boolean dec_autoguiding = false;
 float prevRASpeed = 0.0;
@@ -246,44 +81,35 @@ void stepperInit() {
   pinMode(RA_STEPPER_MS2, OUTPUT);  
   pinMode(RA_STEPPER_MS3, OUTPUT);  
   ra_set_step_resolution(false);
-  ra_set_step_direction(true);
   pinMode(DEC_STEPPER_DIR_PIN, OUTPUT);
   pinMode(DEC_STEPPER_STEP_PIN, OUTPUT);
   pinMode(DEC_STEPPER_MS1, OUTPUT);  
   pinMode(DEC_STEPPER_MS2, OUTPUT);  
   pinMode(DEC_STEPPER_MS3, OUTPUT);  
   dec_set_step_resolution(false);
-  dec_set_step_direction(true);
-  
-  ra_stepper_backwardstep();
-  dec_stepper_backwardstep();
-  delay(10);
-  ra_stepper_forwardstep();
-  dec_stepper_forwardstep();
-  delay(10);
+
+  raStepper.setSpeed(0.0);
+  decStepper.setSpeed(0.0);
 }
 
 void setRASpeed(float speed) {
-  if(fabs(speed) > configvars.ra_max_tps) {
-    RASpeed = (fabs(speed)/speed) * configvars.ra_max_tps;
-  } else {
-    RASpeed = speed;
-  }
-  RACounts = 0;
-  // RAClock = millis();
-  // For if speed gets set more often than it can do a step
-  if(speed == 0.0 || (millis() - RAClock) > 1000.0* (1.0/speed)) {
-    RAClock = millis();
-  }
+  raStepper.setSpeed(speed);
+}
 
+void setRAMaxAccel(float accel) {
+  raStepper.setAcceleration(accel);
+}
+
+void setRAMaxSpeed(float maxSpeed) {
+  raStepper.setMaxSpeed(maxSpeed);
 }
 
 float getRASpeed() {
-  return RASpeed;
+  return raStepper.speed();
 }
 
 long getRAPosition() {
-  return RAPosition;
+  return raStepper.currentPosition();
 }
 
 long getRAEncoder() {
@@ -311,124 +137,36 @@ long getLastDECEncoder() {
 }
 
 void setDECSpeed(float speed) {
-  if(fabs(speed) > configvars.dec_max_tps) {
-    DECSpeed = (fabs(speed)/speed) * configvars.dec_max_tps;
-  } else {
-    DECSpeed = speed;
-  }
-  DECCounts = 0;
-  // For if speed gets set more often than it can do a step
-  if(speed == 0.0 || (millis() - DECClock) > 1000.0* (1.0/speed)) {
-    DECClock = millis();
-  }
-  
+  decStepper.setSpeed(speed);  
+}
+
+void setDECMaxAccel(float accel) {
+  decStepper.setAcceleration(accel);
+}
+
+void setDECMaxSpeed(float maxSpeed) {
+  decStepper.setMaxSpeed(maxSpeed);
 }
 
 float getDECSpeed() {
-  return DECSpeed;
+  return decStepper.speed();
 }
 
 long getDECPosition() {
-  return DECPosition;
+  return decStepper.currentPosition();
 }
 
 
-int serialLimit = 0;
-elapsedMicros minDelayRA = 0;
-elapsedMicros minDelayDEC = 0;
-
 void runSteppers() {
-  count = RACounts - (RASpeed*((float)(millis() - RAClock))/1000.0);
-  //Serial.println(RASpeed);
-  //Serial.println(RAClock);
-  //Serial.println(RACounts);
-  //Serial.println(count);
+  raStepper.runSpeed();
   if (ra_last_encoder != raEnc.read()) {
     ra_last_encoder = raEnc.read();
-    ra_ticks_in_pulse = 0;
+    ra_ticks_in_pulse = raStepper.currentPosition();
   }
-  if(abs(RASpeed) > MICROSTEP_TO_FULL_THRES) {
-    if (minDelayRA > 500000/(RASpeed/MICROSTEPS)) {
-      minDelayRA = 0;
-      if (count < -MICROSTEPS) {
-        ra_stepper_backwardstep_fast();
-        RACounts += MICROSTEPS;
-        RAPosition += MICROSTEPS;
-        ra_ticks_in_pulse += MICROSTEPS;
-      } else if (count > MICROSTEPS) {
-        ra_stepper_forwardstep_fast();    
-        RACounts -= MICROSTEPS;
-        RAPosition -= MICROSTEPS;
-        ra_ticks_in_pulse -= MICROSTEPS;
-      }
-    }
-  } else {
-    if (minDelayRA > 500000/RASpeed) {
-      minDelayRA = 0;
-      if (count < -1.0) {
-        ra_stepper_backwardstep();
-        RACounts++;
-        RAPosition++;
-        ra_ticks_in_pulse++;
-      } else if (count > 1.0) {
-        ra_stepper_forwardstep();    
-        RACounts--;
-        RAPosition--;
-        ra_ticks_in_pulse--;
-      }
-    }
-  }
-
-  count = DECCounts - (DECSpeed*((float)(millis() - DECClock))/1000.0);
-  serialLimit++;
-  if(serialLimit > 10000) {
-    serialLimit = 0;
-    //Serial.print("dc=");
-    //Serial.print(DECCounts);
-    //Serial.print(",ds=");
-    //Serial.print(DECSpeed);
-    //Serial.print(",ms=");
-    //Serial.print(millis());
-    //Serial.print(",dc=");
-    //Serial.print(DECClock);
-    //Serial.print(",c=");
-    //Serial.println(count);
-  }
-
+  decStepper.runSpeed();
   if (dec_last_encoder != decEnc.read()) {
     dec_last_encoder = decEnc.read();
-    dec_ticks_in_pulse = 0;
-  }
-  if(abs(DECSpeed) > MICROSTEP_TO_FULL_THRES) {
-    if (minDelayDEC > 500000/(DECSpeed/MICROSTEPS)) {
-      minDelayDEC = 0;
-      if (count < -MICROSTEPS) {
-        dec_stepper_backwardstep_fast();
-        DECCounts+=MICROSTEPS;
-        DECPosition+=MICROSTEPS;
-        dec_ticks_in_pulse+=MICROSTEPS;
-      } else if (count > MICROSTEPS) {
-        dec_stepper_forwardstep_fast();    
-        DECCounts-=MICROSTEPS;
-        DECPosition-=MICROSTEPS;
-        dec_ticks_in_pulse-=MICROSTEPS;
-      }
-    }
-  } else {
-    if (minDelayDEC > 500000/DECSpeed) {
-      minDelayDEC = 0;
-      if (count < -1.0) {
-        dec_stepper_backwardstep();
-        DECCounts++;
-        DECPosition++;
-        dec_ticks_in_pulse++;
-      } else if (count > 1.0) {
-        dec_stepper_forwardstep();    
-        DECCounts--;
-        DECPosition--;
-        dec_ticks_in_pulse--;
-      }
-    }
+    dec_ticks_in_pulse = decStepper.runSpeed();
   }
 }
 

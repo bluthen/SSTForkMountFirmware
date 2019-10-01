@@ -35,16 +35,24 @@ void command_set_var() {
 
   if(strcmp(argName, "ra_max_tps") == 0) {
     configvars.ra_max_tps = value;
+    setRAMaxSpeed(value);
   } else if(strcmp(argName, "ra_guide_rate") == 0) {
     configvars.ra_guide_rate = value;
   } else if(strcmp(argName, "ra_direction") == 0) {
     configvars.ra_direction = (int)value;
   } else if(strcmp(argName, "dec_max_tps") == 0) {
     configvars.dec_max_tps = value;
+    setDECMaxSpeed(value);
   } else if(strcmp(argName, "dec_guide_rate") == 0) {
     configvars.dec_guide_rate = value;
   } else if(strcmp(argName, "dec_direction") == 0) {
     configvars.dec_direction = (int)value;
+  } else if(strcmp(argName, "ra_accel_tpss") == 0) {
+    configvars.ra_accel_tpss = value;
+    setRAMaxAccel(value);
+  } else if(strcmp(argName, "dec_accel_tpss") == 0) {
+    configvars.dec_accel_tpss = value;
+    setDECMaxAccel(value);
   } else {
     WSERIAL.print("ERROR: Invalid variable name '");
     WSERIAL.print(argName);
@@ -98,12 +106,16 @@ void command_status() {
   WSERIAL.println(configvars.ra_guide_rate);
   WSERIAL.print("ra_direction=");
   WSERIAL.println(configvars.ra_direction);
+  WSERIAL.print("ra_accel_tpss=");
+  WSERIAL.print(configvars.ra_accel_tpss);
   WSERIAL.print("dec_max_tps=");
   WSERIAL.println(configvars.dec_max_tps);
   WSERIAL.print("dec_guide_rate=");
   WSERIAL.println(configvars.dec_guide_rate);
   WSERIAL.print("dec_direction=");
   WSERIAL.println(configvars.dec_direction);
+  WSERIAL.print("dec_accel_tpss=");
+  WSERIAL.print(configvars.dec_accel_tpss);
   WSERIAL.print("debug:");
   WSERIAL.println(configvars.debug_enabled);
   WSERIAL.print("autoguide:");

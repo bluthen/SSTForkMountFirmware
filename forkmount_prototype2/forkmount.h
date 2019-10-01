@@ -8,6 +8,8 @@ struct CONFIGVARS {
   float ra_guide_rate;
   float dec_max_tps;
   float dec_guide_rate;
+  float ra_accel_tpss;
+  float dec_accel_tpss;
   boolean debug_enabled;
   boolean autoguide_enabled;
   int ra_direction;

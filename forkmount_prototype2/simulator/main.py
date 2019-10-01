@@ -5,8 +5,8 @@ import sys
 serialcom = None
 cmds = {'ra_max_tps': None, 'ra_guide_rate': None, 'ra_direction': None, 'dec_max_tps': None, 'dec_guide_rate': None,
         'dec_direction': None}
-sd = {'RASpeed': 0.0, 'RACounts': 0, 'RAClock': 0, 'RAPosition': 0, 'DECSpeed': 0.0, 'DECCounts': 0,
-      'DECClock': 0, 'DECPosition': 0}
+sd = {'RASpeed': 0.0, 'RAClock': 0, 'RAPosition': 0, 'DECSpeed': 0.0,
+      'DECClock': 0, 'DECPosition': 0, 'RA_v0': 0., 'RA_vi': 0., 'DEC_v0': 0., 'DEC_vi': 0.}
 configvars = {
     'ra_max_tps': 12000,
     'ra_guide_rate': 20,
@@ -15,7 +15,9 @@ configvars = {
     'debug_enabled': 0,
     'autoguide_enabled': 1,
     'ra_direction': 1,
-    'dec_direction': 1
+    'dec_direction': 1,
+    'ra_accel_tpss': 1000,
+    'dec_accel_tpss': 1000,
 }
 
 
@@ -56,6 +58,10 @@ def command_set_var(args):
         configvars['dec_guide_rate'] = value
     elif arg_name == "dec_direction":
         configvars['dec_direction'] = int(value)
+    elif arg_name == 'ra_accel_tpss':
+        configvars['ra_accel_tpss'] = value
+    elif arg_name == 'dec_accel_tpss':
+        configvars['dec_accel_tpss'] = value
     else:
         serialcom.write("ERROR: Invalid variable name '".encode())
         serialcom.write(arg_name.encode())
@@ -94,12 +100,16 @@ def command_status(args):
     swrite("%.7f\r" % configvars['ra_guide_rate'])
     swrite("ra_direction=")
     swrite("%d\r" % configvars['ra_direction'])
+    swrite("ra_accel_tpss=")
+    swrite("%.7f\r" % configvars['ra_accel_tpss'])
     swrite("dec_max_tps=")
     swrite("%.7f\r" % configvars['dec_max_tps'])
     swrite("dec_guide_rate=")
     swrite("%.7f\r" % configvars['dec_guide_rate'])
     swrite("dec_direction=")
     swrite("%.7f\r" % configvars['dec_direction'])
+    swrite("dec_accel_tpss=")
+    swrite("%.7f\r" % configvars['dec_accel_tpss'])
     swrite("debug:")
     swrite("%d\r" % configvars['debug_enabled'])
     swrite("autoguide:")
@@ -158,12 +168,11 @@ def setRASpeed(speed):
         sd['RASpeed'] = (abs(speed) / speed) * configvars['ra_max_tps']
     else:
         sd['RASpeed'] = speed
-    sd['RACounts'] = 0
     sd['RAClock'] = millis()
 
 
 def getRASpeed():
-    return sd['RASpeed']
+    return sd['RA_v0']
 
 
 def getRAPosition():
@@ -175,12 +184,11 @@ def setDECSpeed(speed):
         sd['DECSpeed'] = (abs(speed) / speed) * configvars['dec_max_tps']
     else:
         sd['DECSpeed'] = speed
-    sd['DECCounts'] = 0
     sd['DECClock'] = millis()
 
 
 def getDECSpeed():
-    return sd['DECSpeed']
+    return sd['DEC_v0']
 
 
 def getDECPosition():
@@ -211,14 +219,34 @@ def command_autoguide_enable(args):
 
 
 def run_steppers():
-    count = sd['RACounts'] - (sd['RASpeed'] * (float(millis() - sd['RAClock'])) / 1000.0)
-    # print(sd['RACounts'], sd['RASpeed'], millis(), sd['RAClock'], count)
-    sd['RACounts'] -= int(count)
-    sd['RAPosition'] -= int(count)
+    now = millis()
+    rat = (float(now - sd['RAClock'])) / 1000.0
+    x, v = motion_func(configvars['ra_accel_tpss'], sd['RA_v0'], sd['RAPosition'], rat, sd['RASpeed'])
+    sd['RAPosition'] = x
+    sd['RAClock'] = now
+    sd['RA_v0'] = v
 
-    count = sd['DECCounts'] - (sd['DECSpeed'] * (float(millis() - sd['DECClock'])) / 1000.0)
-    sd['DECCounts'] -= count
-    sd['DECPosition'] -= count
+    rat = (float(now - sd['DECClock'])) / 1000.0
+    x, v = motion_func(configvars['dec_accel_tpss'], sd['DEC_v0'], sd['DECPosition'], rat, sd['DECSpeed'])
+    sd['DECPosition'] = x
+    sd['DECClock'] = now
+    sd['DEC_v0'] = v
+
+
+def motion_func(a, v_0, x_0, t, speed_wanted):
+    # When do we hit v_max
+    if speed_wanted < v_0:
+        a = -abs(a)
+    t_v_max = (speed_wanted - v_0) / a
+    dt_v_max = t - t_v_max
+    if dt_v_max > 0:
+        p = 0.5 * a * t_v_max * t_v_max + v_0 * float(t_v_max) + x_0
+        p += speed_wanted * dt_v_max
+        v = speed_wanted
+    else:
+        v = a * t + v_0
+        p = 0.5 * a * t * t + v_0 * float(t) + x_0
+    return p, v
 
 
 def main():

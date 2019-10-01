@@ -73,6 +73,9 @@ park_sync = False
 cancel_slew = False
 last_status = None
 
+stepper_logging_enabled = True
+stepper_logging_file = None
+
 # Last sync or slew info, if tracking sets radec, else altaz.
 last_slew = {'radec': None, 'altaz': None}
 
@@ -103,6 +106,23 @@ def set_last_slew(coord, obstime=None):
                 else:
                     last_slew['radec'] = None
                     last_slew['altaz'] = coord
+
+
+sls_debounce = None
+
+
+def _set_last_slew_none_run():
+    print('Running set_last_slew(None)')
+    global sls_debounce
+    set_last_slew(None)
+    sls_debounce = None
+
+
+def set_last_slew_none():
+    global sls_debounce
+    if sls_debounce is None:
+        sls_debounce = threading.Timer(0.5, _set_last_slew_none_run)
+        sls_debounce.start()
 
 
 def sync(coord):
@@ -163,8 +183,25 @@ def slew(coord, parking=False):
     thread.start()
 
 
+def motion_x_to_stop(a, v_0, t):
+    if v_0 > 0:
+        a = math.copysign(a, -1)
+    else:
+        a = math.copysign(a, 1)
+    return 0.5 * a * t * t + v_0 * float(t)
+
+
+def motion_time_to_stop(a, v_0):
+    if v_0 > 0:
+        a = math.copysign(a, -1)
+    else:
+        a = math.copysign(a, 1)
+    return -v_0/a
+
+
 def move_to_coord_threadf(wanted_skycoord, parking=False):
     global cancel_slew, slewing
+    slew_stop_time = 1.8
     # sleep_time must be < 1
     sleep_time = 0.1
     loops_to_full_speed = 10.0
@@ -206,65 +243,68 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
             dec_delta = need_step_position['dec'] - status['dep']
             # print(ra_delta, dec_delta)
             if abs(round(ra_delta)) <= ha_close_enough and abs(round(dec_delta)) <= dec_close_enough:
-                break
+                if not parking and settings.runtime_settings['tracking']:
+                    r = settings.settings['ra_track_rate']
+                else:
+                    r = 0
+                if status['ds'] == 0 and status['rs'] == r:
+                    break
 
+            ra_slower_dist = 10 * settings.settings['ra_track_rate']
             if abs(ra_delta) <= ha_close_enough:
                 if not parking and settings.runtime_settings['tracking']:
                     ra_speed = settings.settings['ra_track_rate']
                 else:
                     ra_speed = 0
-            elif abs(ra_delta) < 4 * math.ceil(settings.settings['ra_track_rate']):
+            elif abs(ra_delta) < 2*settings.settings['ra_track_rate']:
                 if not parking and settings.runtime_settings['tracking']:
                     # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = settings.settings['ra_track_rate'] + ra_delta / dt
+                    ra_speed = settings.settings['ra_track_rate']+math.copysign(settings.settings['ra_track_rate'], ra_delta)
                 else:
                     # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = ra_delta / dt
-            elif abs(ra_delta) < settings.settings['ra_slew_fastest'] / 2.0:
+                    ra_speed = math.copysign(settings.settings['ra_track_rate'], ra_delta)
+            elif abs(ra_delta) < 1.5*ra_slower_dist:
+                print('ra_slower_dist')
                 if not parking and settings.runtime_settings['tracking']:
-                    ra_speed = settings.settings['ra_track_rate'] + 2.0 * ra_delta
+                    # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
+                    ra_speed = settings.settings['ra_track_rate'] + math.copysign(ra_slower_dist/2., ra_delta)
                 else:
-                    ra_speed = 2.0 * ra_delta
-                # Short slew otherwise we are slowing down
-                if abs(ra_speed) > abs(status['rs']):
-                    ra_speed = status['rs'] + ra_speed / loops_to_full_speed
-                    if abs(ra_speed) > abs(status['rs']):
-                        ra_speed = ra_delta
-                        # speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                        # speed2 = math.copysign(settings.settings['ra_slew_fastest']*(1.0-sleep_time), ra_delta)
-                        # if abs(speed2) < abs(speed):
-                        #     speed = speed2
-                        # ra_speed = speed
+                    # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
+                    ra_speed = math.copysign(ra_slower_dist/2., ra_delta)
             else:
-                speed = (total_time ** 2.0) * math.copysign(settings.settings['ra_slew_fastest'] / 9.0, ra_delta)
-                if abs(speed) > settings.settings['ra_slew_fastest']:
-                    speed = math.copysign(settings.settings['ra_slew_fastest'], ra_delta)
-                ra_speed = speed
+                a = settings.settings['micro']['ra_accel_tpss']
+                t = motion_time_to_stop(a, status['rs'])
+                x = motion_x_to_stop(a, status['rs'], t)
 
+                if not parking and settings.runtime_settings['tracking']:
+                    c = ra_delta + t * settings.settings['ra_track_rate']
+                    r = settings.settings['ra_track_rate']
+                else:
+                    c = ra_delta
+                    r = 0
+                if abs(x) >= abs(c) - ra_slower_dist:
+                    ra_speed = r
+                else:
+                    ra_speed = math.copysign(settings.settings['ra_slew_fastest'], ra_delta)
+
+            dec_slower_dist = 10 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE
             if abs(dec_delta) < dec_close_enough:
                 dec_speed = 0.0
-            # In case model has dec constantly moving.
-            elif abs(dec_delta) < 4 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE:
-                dec_speed = dec_delta / dt
-            elif abs(dec_delta) < settings.settings['dec_slew_fastest'] / 2.0:
-                dec_speed = dec_delta * 2.0
-                if abs(dec_speed) > abs(status['ds']):
-                    dec_speed = status['ds'] + dec_speed / loops_to_full_speed
-                    if abs(dec_speed) > abs(status['ds']):
-                        dec_speed = dec_delta
-
-                        # speed = ((1.0-sleep_time)/sleep_time) * dec_delta
-                        # speed2 = math.copysign(settings.settings['dec_slew_fastest'] * (1.0-sleep_time), dec_delta)
-                        # if abs(speed2) < abs(speed):
-                        #    speed = speed2
-                        # dec_speed = speed
+            elif abs(dec_delta) < 2*settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE:
+                dec_speed = math.copysign(2*settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE, dec_delta)
+            elif abs(dec_delta) < 1.5*dec_slower_dist:
+                dec_speed = math.copysign(dec_slower_dist/2., dec_delta)
             else:
-                speed = status['ds'] + math.copysign(settings.settings['dec_slew_fastest'] / loops_to_full_speed,
-                                                     dec_delta)
-                if abs(speed) > settings.settings['dec_slew_fastest']:
-                    speed = math.copysign(settings.settings['dec_slew_fastest'], dec_delta)
-                dec_speed = speed
+                a = settings.settings['micro']['dec_accel_tpss']
+                t = motion_time_to_stop(a, status['ds'])
+                x = motion_x_to_stop(a, status['ds'], t)
 
+                if abs(x) >= abs(dec_delta)-dec_slower_dist:
+                    dec_speed = 0.0
+                else:
+                    dec_speed = math.copysign(settings.settings['dec_slew_fastest'], dec_delta)
+
+            print(ra_delta, ra_speed, dec_delta, dec_speed)
             if not math.isclose(status['rs'], ra_speed, rel_tol=0.02):
                 stepper.set_speed_ra(ra_speed)
             if not math.isclose(status['ds'], dec_speed, rel_tol=0.02):
@@ -449,6 +489,11 @@ def calc_status(status):
     return status
 
 
+def stepper_log():
+    s = stepper.get_status()
+    stepper_logging_file.write('%f,%d,%d,%d,%d\n' % (time.time(), s['rp'], s['dp'], s['re'], s['de']))
+
+
 def send_status():
     """
     Sets last_status global and sends last_status to socket.
@@ -514,7 +559,9 @@ def micro_update_settings():
                   'ra_direction': settings.settings['micro']['ra_direction'],
                   'dec_max_tps': settings.settings['dec_slew_fastest'],
                   'dec_guide_rate': settings.settings['micro']['dec_guide_rate'],
-                  'dec_direction': settings.settings['micro']['dec_direction']}
+                  'dec_direction': settings.settings['micro']['dec_direction'],
+                  'ra_accel_tpss': settings.settings['micro']['ra_accel_tpss'],
+                  'dec_accel_tpss': settings.settings['micro']['dec_accel_tpss']}
     stepper.update_settings(key_values)
     if settings.runtime_settings['tracking']:
         stepper.set_speed_ra(settings.settings['ra_track_rate'])
@@ -528,7 +575,7 @@ def init():
     Init point for this module.
     :return:
     """
-    global stepper, status_interval, inited, park_sync, model_real_stepper
+    global stepper, status_interval, inited, park_sync, model_real_stepper, stepper_logging_file
     if inited:
         return
     inited = True
@@ -562,6 +609,12 @@ def init():
     sync(coord)
     park_sync = True
     status_interval = SimpleInterval(send_status, 1)
+    SimpleInterval(alive_check, 3)
+    time.sleep(0.5)
+    if stepper_logging_enabled:
+        stepper_logging_file = open('./logs/stepper_encoder.csv', 'w')
+        stepper_logging_file.write('Time,step_ra,step_dec,enc_ra,enc_dec\n')
+        SimpleInterval(stepper_log, 0.25)
 
 
 def guide_control(direction, time_ms):
@@ -596,9 +649,28 @@ def guide_control(direction, time_ms):
         slew_lock.release()
 
 
-def manual_control(direction, speed, persistant=False):
+# Alive is to make sure we don't have a runaway mount incase there is a network disconnection
+alive_check_flag = False
+is_alive = False
+
+
+def set_alive():
+    global alive_check_flag, is_alive
+    alive_check_flag = True
+    is_alive = True
+
+
+def alive_check():
+    global alive_check_flag, is_alive
+    if not alive_check_flag:
+        is_alive = False
+    else:
+        is_alive = True
+    alive_check_flag = False
+
+
+def manual_control(direction, speed):
     global slew_lock, manual_lock
-    # print('manual_control', direction, speed)
     settings.not_parked()
     with manual_lock:
         got_lock = slew_lock.acquire(blocking=False)
@@ -615,85 +687,44 @@ def manual_control(direction, speed, persistant=False):
             if direction in timers:
                 timers[direction].cancel()
                 del timers[direction]
-            if not speed:
+            print(is_alive, speed)
+            if not is_alive or not speed:
+                status = stepper.get_status()
+                recall = False
                 if direction in ['left', 'right']:
-                    done = False
-                    status = calc_status(stepper.get_status())
-                    # print(status)
-                    if (settings.runtime_settings['tracking'] and status['rs'] != settings.settings['ra_track_rate']) or \
-                            status['rs'] != 0:
-                        sspeed = status['rs'] - math.copysign(settings.settings['ra_slew_fastest'] / 10.0,
-                                                              status['rs'])
-                        if status['rs'] == 0 or abs(sspeed) < settings.settings['ra_track_rate'] or \
-                                sspeed / status['rs'] < 0:
-                            if settings.runtime_settings['tracking']:
-                                sspeed = settings.settings['ra_track_rate']
-                            else:
-                                sspeed = 0
-                            done = True
-                        # print(sspeed)
-                        stepper.set_speed_ra(sspeed)
+                    if settings.runtime_settings['tracking']:
+                        sspeed = settings.settings['ra_track_rate']
                     else:
-                        done = True
-                    if not done:
-                        # print('timer')
-                        timers[direction] = threading.Timer(0.1, partial(manual_control, direction, None))
-                        timers[direction].start()
+                        sspeed = 0
+                    stepper.set_speed_ra(sspeed)
+                    if status['rs'] != sspeed:
+                        recall = True
                 else:
-                    done = False
-                    status = calc_status(stepper.get_status())
+                    stepper.set_speed_dec(0)
                     if status['ds'] != 0:
-                        # print(status)
-                        sspeed = status['ds'] - math.copysign(settings.settings['dec_slew_fastest'] / 10.0,
-                                                              status['ds'])
-                        if status['ds'] == 0 or sspeed / status['ds'] < 0:
-                            sspeed = 0
-                            done = True
-                        # print(sspeed)
-                        stepper.set_speed_dec(sspeed)
-                    else:
-                        done = True
-                    if not done:
-                        timers[direction] = threading.Timer(0.1, partial(manual_control, direction, None))
-                        timers[direction].start()
+                        recall = True
+                # Keep calling until we are settled
+                if recall:
+                    timers[direction] = threading.Timer(1, partial(manual_control, direction, speed))
+                    timers[direction].start()
             else:
                 # If not current manually going other direction
-                status = calc_status(stepper.get_status())
-                # print(status)
                 if OPPOSITE_MANUAL[direction] in timers:
                     return
                 if direction == 'left':
-                    sspeed = status['rs'] - settings.settings['ra_slew_' + speed] / 10.0
-                    # print('ra_slew_'+speed, settings.settings['ra_slew_'+speed]/10.0)
-                    if abs(sspeed) > settings.settings['ra_slew_' + speed]:
-                        sspeed = -settings.settings['ra_slew_' + speed]
-                    # print(sspeed)
-                    stepper.set_speed_ra(sspeed)
+                    stepper.set_speed_ra(-1.0 * settings.settings['ra_slew_' + speed])
                 elif direction == 'right':
-                    sspeed = status['rs'] + settings.settings['ra_slew_' + speed] / 10.0
-                    if abs(sspeed) > settings.settings['ra_slew_' + speed]:
-                        sspeed = settings.settings['ra_slew_' + speed]
-                    # print(sspeed)
-                    stepper.set_speed_ra(sspeed)
+                    stepper.set_speed_ra(settings.settings['ra_slew_' + speed])
                 elif direction == 'up':
-                    # print('--------------- dec up %.1f' % settings.settings['dec_slew_' + speed])
-                    sspeed = status['ds'] + settings.settings['dec_slew_' + speed] / 10.0
-                    if abs(sspeed) > settings.settings['dec_slew_' + speed]:
-                        sspeed = settings.settings['dec_slew_' + speed]
-                    # print(sspeed)
-                    stepper.set_speed_dec(sspeed)
+                    stepper.set_speed_dec(settings.settings['dec_slew_' + speed])
                 elif direction == 'down':
-                    sspeed = status['ds'] - settings.settings['dec_slew_' + speed] / 10.0
-                    if abs(sspeed) > settings.settings['dec_slew_' + speed]:
-                        sspeed = -settings.settings['dec_slew_' + speed]
-                    # print('--------------- dec down -%.1f' % settings.settings['dec_slew_' + speed])
-                    # print(sspeed)
-                    stepper.set_speed_dec(sspeed)
-                if not persistant:
-                    timers[direction] = threading.Timer(0.5, partial(manual_control, direction, None))
-                    timers[direction].start()
+                    stepper.set_speed_dec(-settings.settings['dec_slew_' + speed])
+                # We call this periodically if not alive it will cancel the slewing, if alive it will continue at
+                # speed we are at.
+                timers[direction] = threading.Timer(1, partial(manual_control, direction, speed))
+                timers[direction].start()
         finally:
-            set_last_slew(None)
+            set_last_slew_none()
             slew_lock.release()
 
 

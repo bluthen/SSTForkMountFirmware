@@ -13,39 +13,53 @@ import APIHelp from './util/APIHelp';
 
 
 const settings_map = {
+    ra_ticks_per_degree: {display: 'RA Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
+    dec_ticks_per_degree: {display: 'DEC Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
+    ra_track_rate: {display: 'RA Stepper Tracking', type: 'number', min: 0, endAdornment: 'Step/s'},
+    ra_guide_rate: {display: 'RA Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
+    dec_guide_rate: {display: 'DEC Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
+
+    ra_accel_tpss: {display: 'RA Max Acceleration', type: 'number', min: 0, endAdornment: 'Step/s^2', jsonLevel: 'micro'},
+    dec_accel_tpss: {display: 'DEC Max Acceleration', type: 'number', min: 0, endAdornment: 'Step/s^2', jsonLevel: 'micro'},
+
+
+    ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_fastest: {display: 'DEC Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+
+    ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_faster: {display: 'DEC Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+
+    ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_medium: {display: 'DEC Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+
+    ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_slower: {display: 'DEC Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+
+    ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_slowest: {display: 'DEC Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+
     ra_direction: {display: 'RA Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
     dec_direction: {display: 'DEC Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
-    ra_track_rate: {display: 'Tracking', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    ra_ticks_per_degree: {display: 'RA Scale', type: 'number', min: 0, endAdornment: 'Steps/Degree'},
-    dec_ticks_per_degree: {display: 'DEC', type: 'number', min: 0, endAdornment: 'Steps/Degree'},
+
 
     use_encoders: {display: 'Use Encoders', type: 'boolean'},
     limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean'},
+
     ra_encoder_pulse_per_degree: {
         display: 'RA Encoder Scale',
         type: 'number',
         min: 0,
-        endAdornment: 'pulse/degree'
+        endAdornment: 'pulse/°'
     },
     dec_encoder_pulse_per_degree: {
         display: 'DEC Encoder Scale',
         type: 'number',
         min: 0,
-        endAdornment: 'pulse/degree'
-    },
+        endAdornment: 'pulse/°'
+    }
 
-    ra_guide_rate: {display: 'RA Guide', type: 'number', min: 0, endAdornment: 'Steps/s', jsonLevel: 'micro'},
-    ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    dec_guide_rate: {display: 'DEC Guide', type: 'number', min: 0, endAdornment: 'Steps/s', jsonLevel: 'micro'},
-    dec_slew_fastest: {display: 'DEC Max Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    dec_slew_faster: {display: 'DEC Fast Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    dec_slew_medium: {display: 'DEC Medium Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    dec_slew_slower: {display: 'DEC Slow Slew', type: 'number', min: 0, endAdornment: 'Steps/s'},
-    dec_slew_slowest: {display: 'DEC Slowest Slew', type: 'number', min: 0, endAdornment: 'Steps/s'}
+
+
 };
 
 function makeOnChange(key, setting_map) {
@@ -127,7 +141,7 @@ class AdvancedSettings extends React.Component {
                                                                                          max: settings_map[key].max,
                                                                                          step: settings_map[key].step
                                                                                      }} InputProps={{
-                        endAdornment: <InputAdornment position="end">{settings_map[key].endAdornment}</InputAdornment>
+                        endAdornment: <InputAdornment style={{whiteSpace: 'nowrap'}} position="end">{settings_map[key].endAdornment}</InputAdornment>
                     }} onChange={makeOnChange(key, settings_map[key])}/></Grid>);
                 }
             }
