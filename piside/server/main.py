@@ -7,6 +7,7 @@ from astropy.time import Time as AstroTime
 import time
 
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
+from flask_compress import Compress
 from functools import wraps, update_wrapper
 import json
 import control
@@ -55,6 +56,8 @@ pointing_logger = settings.get_logger('pointing')
 
 RELAY_PIN = 6
 SWITCH_PIN = 5
+
+compress = Compress()
 
 
 # Sets up power switch
@@ -146,7 +149,8 @@ def logger_get():
         return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
     if logger_name == 'encoder':
         control.stepper_logging_file.flush()
-        return send_from_directory('./logs', 'stepper_encoder.csv', as_attachment=True, attachment_filename='stepper_encoder.csv')
+        return send_from_directory('./logs', 'stepper_encoder.csv', as_attachment=True,
+                                   attachment_filename='stepper_encoder.csv')
 
 
 @app.route('/api/settings', methods=['PUT'])
@@ -171,7 +175,7 @@ def settings_put():
             if key in args['micro']:
                 if 'micro' not in settings_buffer:
                     settings_buffer['micro'] = {}
-                print('=== settingsb micro '+key, args['micro'][key])
+                print('=== settingsb micro ' + key, args['micro'][key])
                 settings_buffer['micro'][key] = float(args['micro'][key])
 
     keys = ["atmos_refract", "use_encoders", "limit_encoder_step_fillin"]
@@ -195,7 +199,7 @@ def settings_put():
         keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "ra_accel_tpss", "dec_accel_tpss"]
         for key in keys:
             if key in settings_buffer['micro']:
-                print('=== settings micro '+key, float(settings_buffer['micro'][key]))
+                print('=== settings micro ' + key, float(settings_buffer['micro'][key]))
                 settings.settings['micro'][key] = float(settings_buffer['micro'][key])
     settings.write_settings(settings.settings)
     control.micro_update_settings()
@@ -874,6 +878,7 @@ def main():
         if len(sys.argv) == 2 and sys.argv[1] == '--https':
             make_ssl_devcert('../key')
             ssl_context = ('../key.crt', '../key.key')
+        compress.init_app(app)
         app.run(host="0.0.0.0", debug=False, use_reloader=False, ssl_context=ssl_context)
         power_thread_quit = True
         sstchuck.terminate()
