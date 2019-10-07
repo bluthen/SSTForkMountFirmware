@@ -3,22 +3,19 @@
 
 #include <stdint.h>
 
-struct CONFIGVARS {
-  float ra_max_tps;
-  float ra_guide_rate;
-  float dec_max_tps;
-  float dec_guide_rate;
-  float ra_accel_tpss;
-  float dec_accel_tpss;
-  boolean debug_enabled;
-  boolean autoguide_enabled;
-  int ra_direction;
-  int dec_direction;
-};
+extern volatile float configvars_ra_max_tps;
+extern volatile float configvars_ra_guide_rate;
+extern volatile float configvars_dec_max_tps;
+extern volatile float configvars_dec_guide_rate;
+extern volatile float configvars_ra_accel_tpss;
+extern volatile float configvars_dec_accel_tpss;
+extern volatile boolean configvars_debug_enabled;
+extern volatile boolean configvars_autoguide_enabled;
+extern volatile int configvars_ra_direction;
+extern volatile int configvars_dec_direction;
 
 extern const char* fork_firmware_version;
 
-extern CONFIGVARS configvars;
 
 
 #endif

@@ -34,25 +34,23 @@ void command_set_var() {
   value = atof(argVal);
 
   if(strcmp(argName, "ra_max_tps") == 0) {
-    configvars.ra_max_tps = value;
-    setRAMaxSpeed(value);
+    configvars_ra_max_tps = value;
   } else if(strcmp(argName, "ra_guide_rate") == 0) {
-    configvars.ra_guide_rate = value;
+    configvars_ra_guide_rate = value;
   } else if(strcmp(argName, "ra_direction") == 0) {
-    configvars.ra_direction = (int)value;
+    configvars_ra_direction = (int)value;
   } else if(strcmp(argName, "dec_max_tps") == 0) {
-    configvars.dec_max_tps = value;
-    setDECMaxSpeed(value);
+    configvars_dec_max_tps = value;
   } else if(strcmp(argName, "dec_guide_rate") == 0) {
-    configvars.dec_guide_rate = value;
+    configvars_dec_guide_rate = value;
   } else if(strcmp(argName, "dec_direction") == 0) {
-    configvars.dec_direction = (int)value;
+    configvars_dec_direction = (int)value;
   } else if(strcmp(argName, "ra_accel_tpss") == 0) {
-    configvars.ra_accel_tpss = value;
-    setRAMaxAccel(value);
+    configvars_ra_accel_tpss = value;
+    stepperSnapshot();
   } else if(strcmp(argName, "dec_accel_tpss") == 0) {
-    configvars.dec_accel_tpss = value;
-    setDECMaxAccel(value);
+    configvars_dec_accel_tpss = value;
+    stepperSnapshot();
   } else {
     WSERIAL.print("ERROR: Invalid variable name '");
     WSERIAL.print(argName);
@@ -101,25 +99,25 @@ void command_qs() {
 void command_status() {
   long raPos, decPos, raEnc, decEnc, raTip, decTip;
   WSERIAL.print("ra_max_tps=");
-  WSERIAL.println(configvars.ra_max_tps);
+  WSERIAL.println(configvars_ra_max_tps);
   WSERIAL.print("ra_guide_rate=");
-  WSERIAL.println(configvars.ra_guide_rate);
+  WSERIAL.println(configvars_ra_guide_rate);
   WSERIAL.print("ra_direction=");
-  WSERIAL.println(configvars.ra_direction);
+  WSERIAL.println(configvars_ra_direction);
   WSERIAL.print("ra_accel_tpss=");
-  WSERIAL.print(configvars.ra_accel_tpss);
+  WSERIAL.println(configvars_ra_accel_tpss);
   WSERIAL.print("dec_max_tps=");
-  WSERIAL.println(configvars.dec_max_tps);
+  WSERIAL.println(configvars_dec_max_tps);
   WSERIAL.print("dec_guide_rate=");
-  WSERIAL.println(configvars.dec_guide_rate);
+  WSERIAL.println(configvars_dec_guide_rate);
   WSERIAL.print("dec_direction=");
-  WSERIAL.println(configvars.dec_direction);
+  WSERIAL.println(configvars_dec_direction);
   WSERIAL.print("dec_accel_tpss=");
-  WSERIAL.print(configvars.dec_accel_tpss);
+  WSERIAL.println(configvars_dec_accel_tpss);
   WSERIAL.print("debug:");
-  WSERIAL.println(configvars.debug_enabled);
+  WSERIAL.println(configvars_debug_enabled);
   WSERIAL.print("autoguide:");
-  WSERIAL.println(configvars.autoguide_enabled);
+  WSERIAL.println(configvars_autoguide_enabled);
   WSERIAL.print("ra_speed:");
   WSERIAL.println(getRASpeed());
   WSERIAL.print("dec_speed:");
@@ -206,7 +204,7 @@ void command_help(const char* cmd) {
 }
 
 void command_autoguide_disable() {
-  configvars.autoguide_enabled = false;
+  configvars_autoguide_enabled = false;
   if (ra_autoguiding) {
     setRASpeed(prevRASpeed);
     ra_autoguiding = false;
@@ -221,7 +219,7 @@ void command_autoguide_disable() {
 }
 
 void command_autoguide_enable() {
-  configvars.autoguide_enabled = true;
+  configvars_autoguide_enabled = true;
   print_prompt();
 }
 

@@ -9,6 +9,17 @@
 #include "command.h"
 
 const char* sstversion = "v1.0.0";
+volatile float configvars_ra_max_tps;
+volatile float configvars_ra_guide_rate;
+volatile float configvars_dec_max_tps;
+volatile float configvars_dec_guide_rate;
+volatile float configvars_ra_accel_tpss;
+volatile float configvars_dec_accel_tpss;
+volatile boolean configvars_debug_enabled;
+volatile boolean configvars_autoguide_enabled;
+volatile int configvars_ra_direction;
+volatile int configvars_dec_direction;
+
 
 const static int AUTOGUIDE_DEC_NEGY_PIN = 17;
 const static int AUTOGUIDE_DEC_POSY_PIN = 16;
@@ -16,7 +27,6 @@ const static int AUTOGUIDE_RA_NEGX_PIN = 7;
 const static int AUTOGUIDE_RA_POSX_PIN = 8;
 
 boolean sst_debug = false;
-CONFIGVARS configvars;
 
 void autoguide_init()
 {
@@ -47,16 +57,18 @@ void setup()
   Serial.print(F("StarSync Tracker Fork Mount "));
   Serial.println(sstversion);
   //Some dumb initial values
-  configvars.ra_max_tps = 12000;
-  configvars.ra_guide_rate = 20;
-  configvars.dec_max_tps = 12000;
-  configvars.dec_guide_rate = 6;
-  configvars.ra_accel_tpss = 10000;
-  configvars.dec_accel_tpss = 10000;
-  configvars.debug_enabled = false;
-  configvars.autoguide_enabled = true;
-  configvars.ra_direction = 1;
-  configvars.dec_direction = 1;
+  configvars_ra_max_tps = 12000;
+  configvars_ra_guide_rate = 20;
+  configvars_dec_max_tps = 12000;
+  configvars_dec_guide_rate = 6;
+  configvars_ra_accel_tpss = 10000;
+  configvars_dec_accel_tpss = 10000;
+  configvars_debug_enabled = false;
+  configvars_autoguide_enabled = true;
+  configvars_ra_direction = 1;
+  configvars_dec_direction = 1;
+  configvars_ra_accel_tpss = 10000;
+  configvars_dec_accel_tpss = 10000;
 }
 
 
@@ -83,7 +95,7 @@ void autoguide_read()
 
 void autoguide_run()
 {
-  if(!configvars.autoguide_enabled) {
+  if(!configvars_autoguide_enabled) {
     return;
   }
 
@@ -125,7 +137,7 @@ void autoguide_run()
           dec_autoguiding = true;
           prevDECSpeed = getDECSpeed();        
         }
-        setDECSpeed(prevDECSpeed + configvars.dec_guide_rate);
+        setDECSpeed(prevDECSpeed + configvars_dec_guide_rate);
         if(sst_debug) {
           Serial.print("DEC up ");
         }
@@ -134,7 +146,7 @@ void autoguide_run()
           dec_autoguiding = true;
           prevDECSpeed = getDECSpeed();
         }
-        setDECSpeed(prevDECSpeed - configvars.dec_guide_rate);
+        setDECSpeed(prevDECSpeed - configvars_dec_guide_rate);
         if(sst_debug) {
           Serial.print("DEC down ");
         }
@@ -151,7 +163,7 @@ void autoguide_run()
           prevRASpeed = getRASpeed();
           ra_autoguiding = true;
         }
-        setRASpeed(prevRASpeed + configvars.ra_guide_rate);        
+        setRASpeed(prevRASpeed + configvars_ra_guide_rate);        
         if(sst_debug) {
           Serial.print("RA Right ");
         }
@@ -161,7 +173,7 @@ void autoguide_run()
           ra_autoguiding = true;
           prevRASpeed = getRASpeed();
         }
-        setRASpeed(prevRASpeed - configvars.ra_guide_rate);
+        setRASpeed(prevRASpeed - configvars_ra_guide_rate);
         if(sst_debug) {
           Serial.print("RA Left");
         }

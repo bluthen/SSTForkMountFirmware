@@ -11,6 +11,7 @@ const state = observable({
         directions: {north: false, south: false, east: false, west: false}
     },
     status: {
+        alert: null,
         alt: null,
         az: null,
         de: null,

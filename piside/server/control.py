@@ -46,8 +46,8 @@ import pendulum
 import subprocess
 
 import skyconv
-
 import settings
+import motion
 
 version = "0.0.17"
 version_short = "0.0"
@@ -183,33 +183,11 @@ def slew(coord, parking=False):
     thread.start()
 
 
-def motion_x_to_stop(a, v_0, t):
-    if v_0 > 0:
-        a = math.copysign(a, -1)
-    else:
-        a = math.copysign(a, 1)
-    return 0.5 * a * t * t + v_0 * float(t)
-
-
-def motion_time_to_stop(a, v_0):
-    if v_0 > 0:
-        a = math.copysign(a, -1)
-    else:
-        a = math.copysign(a, 1)
-    return -v_0/a
-
-
 def move_to_coord_threadf(wanted_skycoord, parking=False):
     global cancel_slew, slewing
-    slew_stop_time = 1.8
-    # sleep_time must be < 1
-    sleep_time = 0.1
-    loops_to_full_speed = 10.0
 
     ha_close_enough = 3.0
     dec_close_enough = 3.0
-
-    data = {'time': [], 'rpv': [], 'dpv': [], 'rsp': [], 'dsp': [], 'rv': [], 'dv': [], 'era': [], 'edec': []}
 
     try:
         slew_lock.acquire()
@@ -222,22 +200,10 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
             dec_close_enough = 0
         else:
             need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
-        last_datetime = datetime.datetime.now()
-        started_slewing = last_datetime
-        total_time = 0.0
-        first = True
         while not cancel_slew:
             if not parking:
                 need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
-            now = datetime.datetime.now()
             status = calc_status(stepper.get_status())
-            if first:
-                dt = sleep_time
-                first = False
-            else:
-                dt = (now - last_datetime).total_seconds()
-            last_datetime = now
-            total_time += dt
 
             ra_delta = need_step_position['ha'] - status['rep']
             dec_delta = need_step_position['dec'] - status['dep']
@@ -250,83 +216,60 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
                 if status['ds'] == 0 and status['rs'] == r:
                     break
 
-            ra_slower_dist = 10 * settings.settings['ra_track_rate']
-            if abs(ra_delta) <= ha_close_enough:
-                if not parking and settings.runtime_settings['tracking']:
-                    ra_speed = settings.settings['ra_track_rate']
-                else:
-                    ra_speed = 0
-            elif abs(ra_delta) < 2*settings.settings['ra_track_rate']:
-                if not parking and settings.runtime_settings['tracking']:
-                    # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = settings.settings['ra_track_rate']+math.copysign(settings.settings['ra_track_rate'], ra_delta)
-                else:
-                    # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = math.copysign(settings.settings['ra_track_rate'], ra_delta)
-            elif abs(ra_delta) < 1.5*ra_slower_dist:
-                print('ra_slower_dist')
-                if not parking and settings.runtime_settings['tracking']:
-                    # ra_speed = settings.settings['ra_track_rate'] + ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = settings.settings['ra_track_rate'] + math.copysign(ra_slower_dist/2., ra_delta)
-                else:
-                    # ra_speed = ((1.0-sleep_time)/sleep_time) * ra_delta
-                    ra_speed = math.copysign(ra_slower_dist/2., ra_delta)
+            if not parking and settings.runtime_settings['tracking']:
+                v_track = settings.settings['ra_track_rate']
             else:
-                a = settings.settings['micro']['ra_accel_tpss']
-                t = motion_time_to_stop(a, status['rs'])
-                x = motion_x_to_stop(a, status['rs'], t)
+                v_track = 0
 
-                if not parking and settings.runtime_settings['tracking']:
-                    c = ra_delta + t * settings.settings['ra_track_rate']
-                    r = settings.settings['ra_track_rate']
-                else:
-                    c = ra_delta
-                    r = 0
-                if abs(x) >= abs(c) - ra_slower_dist:
-                    ra_speed = r
-                else:
-                    ra_speed = math.copysign(settings.settings['ra_slew_fastest'], ra_delta)
+            ra_times = motion.calc_speed_sleeps(
+                ra_delta,
+                settings.settings['micro']['ra_accel_tpss'],
+                status['rs'],
+                settings.settings['ra_slew_fastest'],
+                v_track, 'ra')
 
-            dec_slower_dist = 10 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE
-            if abs(dec_delta) < dec_close_enough:
-                dec_speed = 0.0
-            elif abs(dec_delta) < 2*settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE:
-                dec_speed = math.copysign(2*settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE, dec_delta)
-            elif abs(dec_delta) < 1.5*dec_slower_dist:
-                dec_speed = math.copysign(dec_slower_dist/2., dec_delta)
-            else:
-                a = settings.settings['micro']['dec_accel_tpss']
-                t = motion_time_to_stop(a, status['ds'])
-                x = motion_x_to_stop(a, status['ds'], t)
+            print('ra_times', ra_times)
 
-                if abs(x) >= abs(dec_delta)-dec_slower_dist:
-                    dec_speed = 0.0
-                else:
-                    dec_speed = math.copysign(settings.settings['dec_slew_fastest'], dec_delta)
+            dec_times = motion.calc_speed_sleeps(
+                dec_delta,
+                settings.settings['micro']['dec_accel_tpss'],
+                status['ds'],
+                settings.settings['dec_slew_fastest'],
+                0, 'dec'
+            )
 
-            print(ra_delta, ra_speed, dec_delta, dec_speed)
-            if not math.isclose(status['rs'], ra_speed, rel_tol=0.02):
-                stepper.set_speed_ra(ra_speed)
-            if not math.isclose(status['ds'], dec_speed, rel_tol=0.02):
-                stepper.set_speed_dec(dec_speed)
+            print('dec_times', dec_times)
 
-            data['time'].append((now - started_slewing).total_seconds())
-            data['rpv'].append(status['rep'])
-            data['dpv'].append(status['dep'])
-            data['rsp'].append(need_step_position['ha'])
-            data['dsp'].append(need_step_position['dec'])
-            data['rv'].append(ra_speed)
-            data['dv'].append(dec_speed)
-            data['era'].append(need_step_position['ha'] - status['rep'])
-            data['edec'].append(need_step_position['dec'] - status['dep'])
+            combined_times = motion.combine_speed_sleeps(ra_times, dec_times)
+            for t in combined_times:
+                print(t)
+                if t['ra_speed'] is not None:
+                    stepper.set_speed_ra(t['ra_speed'])
+                if t['dec_speed'] is not None:
+                    stepper.set_speed_dec(t['dec_speed'])
+                st = t['sleep']
+                while st > 2.0:
+                    st -= 2.0
+                    time.sleep(2)
+                    if cancel_slew:
+                        break
+                if cancel_slew:
+                    break
+                time.sleep(st)
 
-            time.sleep(sleep_time)
+            if ra_delta > 0:
+                break
 
+        rspeed = 0
         if settings.runtime_settings['tracking']:
-            stepper.set_speed_ra(settings.settings['ra_track_rate'])
-        else:
-            stepper.set_speed_ra(0)
+            rspeed = settings.settings['ra_track_rate']
+        stepper.set_speed_ra(rspeed)
         stepper.set_speed_dec(0.0)
+
+        status = stepper.get_status()
+        while not math.isclose(status['rs'], rspeed, rel_tol=0.02) and math.isclose(status['ds'], 0, rel_tol=0.02):
+            time.sleep(0.25)
+            status = stepper.get_status()
     finally:
         if parking and not cancel_slew:
             settings.parked()
@@ -499,7 +442,7 @@ def send_status():
     Sets last_status global and sends last_status to socket.
     :return:
     """
-    global slewing, last_status, last_slew
+    global slewing, last_status, last_slew, cancel_slew
     status = calc_status(stepper.get_status())
     status['ra'] = None
     status['dec'] = None
@@ -538,6 +481,7 @@ def send_status():
         # if settings.runtime_settings['earth_location_set']:
         below_horizon = below_horizon_limit(altaz, radec)
         if below_horizon and settings.runtime_settings['tracking']:
+            cancel_slew = True
             settings.runtime_settings['tracking'] = False
             stepper.set_speed_ra(0)
             set_last_slew(altaz, obstime=obstime)
@@ -669,9 +613,13 @@ def alive_check():
     alive_check_flag = False
 
 
+compliment_direction = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
+
+
 def manual_control(direction, speed):
     global slew_lock, manual_lock
     settings.not_parked()
+    print(direction, speed)
     with manual_lock:
         got_lock = slew_lock.acquire(blocking=False)
         if not got_lock:
@@ -687,6 +635,10 @@ def manual_control(direction, speed):
             if direction in timers:
                 timers[direction].cancel()
                 del timers[direction]
+            comp = compliment_direction[direction]
+            if comp in timers:
+                timers[comp].cancel()
+                del timers[comp]
             print(is_alive, speed)
             if not is_alive or not speed:
                 status = stepper.get_status()
@@ -697,7 +649,8 @@ def manual_control(direction, speed):
                     else:
                         sspeed = 0
                     stepper.set_speed_ra(sspeed)
-                    if status['rs'] != sspeed:
+                    if not math.isclose(status['rs'], sspeed, rel_tol=0.02):
+                        print('manual stop recall', status['rs'], sspeed)
                         recall = True
                 else:
                     stepper.set_speed_dec(0)
