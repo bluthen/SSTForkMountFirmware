@@ -74,7 +74,7 @@ class TestSkyConv(unittest.TestCase):
         self.assertEqual(hadec.dec.deg, el.lat.deg)
 
     def test_hadec_to_icrs(self):
-        icrs = SkyCoord(ra=283 * u.deg, dec=50.0 * u.deg, frame='icrs')
+        icrs = SkyCoord(ra=223 * u.deg, dec=50.0 * u.deg, frame='icrs')
         hadec = skyconv.icrs_to_hadec(icrs, obstime=obstime, earth_location=el)
         result = skyconv.hadec_to_icrs(hadec, obstime=obstime, earth_location=el)
         self.assertAlmostEqual(icrs.ra.deg, result.ra.deg)

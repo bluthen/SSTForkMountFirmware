@@ -8,6 +8,14 @@ import settings
 
 model_real_stepper = None
 
+HARD_DISABLE_ATMOREFRACTION = True
+
+
+def atmor(a):
+    if HARD_DISABLE_ATMOREFRACTION:
+        return False
+    return a
+
 
 def get_sidereal_time(obstime=None, earth_location=None):
     """
@@ -38,10 +46,12 @@ def icrs_to_hadec(coord, obstime=None, earth_location=None, atmo_refraction=Fals
     :param atmo_refraction: If should correct for atmosphereic refraction
     :return: new hadec coordinate
     """
+    atmo_refraction=atmor(atmo_refraction)
     if atmo_refraction:
         altaz = icrs_to_altaz(coord, earth_location=earth_location, obstime=obstime, atmo_refraction=True)
         coord = altaz_to_icrs(altaz, obstime=obstime, earth_location=earth_location, atmo_refraction=False)
     sr_time = get_sidereal_time(obstime=obstime, earth_location=earth_location)
+    # print('sr_time', sr_time.deg)
     coord = SkyCoord(ra=sr_time - coord.ra, dec=coord.dec, frame='icrs')
     return coord
 
@@ -67,11 +77,16 @@ def hadec_to_icrs(coord, obstime=None, earth_location=None, atmo_refraction=Fals
     :param atmo_refraction: If should take into account atmospheric refraction while converting to ICRS RADec SkyCoord.
     :return: SkyCoord in ICRS Frame as RADec
     """
+    atmo_refraction=atmor(atmo_refraction)
     sr_time = get_sidereal_time(obstime, earth_location=earth_location)
-    coord = SkyCoord(ra=(sr_time.deg - coord.ra.deg) * u.deg, dec=coord.dec.deg * u.deg, frame='icrs')
+    # print('sr_time', sr_time.deg)
+    coord = SkyCoord(ra=sr_time - coord.ra, dec=coord.dec.deg * u.deg, frame='icrs')
+    # print('1', coord)
     if atmo_refraction:
         coord = icrs_to_altaz(coord, earth_location=earth_location, atmo_refraction=False)
+        # print('2', coord)
         coord = altaz_to_icrs(coord, earth_location=earth_location, obstime=obstime, atmo_refraction=True)
+    # print('3', coord)
     return coord
 
 
@@ -163,6 +178,7 @@ def altaz_to_icrs(altaz_coord, earth_location=None, obstime=None, atmo_refractio
         >>> c.ra.deg, c.dec.deg
         (356.5643249365523, 38.12981040209684)
     """
+    atmo_refraction=atmor(atmo_refraction)
     if obstime is None:
         obstime = AstroTime.now()
     if earth_location is None:
@@ -202,6 +218,7 @@ def icrs_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=Fals
         >>> altaz.alt.deg, altaz.az.deg
         (55.558034184006516, 64.41850865846912)
     """
+    atmo_refraction=atmor(atmo_refraction)
     if obstime is None:
         obstime = AstroTime.now()
     if earth_location is None:
@@ -211,6 +228,7 @@ def icrs_to_altaz(coord, earth_location=None, obstime=None, atmo_refraction=Fals
         if atmo_refraction and settings.runtime_settings['earth_location_set']:
             pressure = earth_location_to_pressure(earth_location)
         altaz = coord.transform_to(AltAz(obstime=obstime, location=earth_location, pressure=pressure))
+        # print('before_clean', coord, altaz)
         return clean_altaz(altaz)
     else:
         return None
@@ -230,6 +248,7 @@ def coord_to_steps(coord, sync_info=None, obstime=None, earth_location=None, atm
     :param dec_steps_per_degree: If None uses settings
     :return: dict {'ha': int, 'dec': int}
     """
+    atmo_refraction=atmor(atmo_refraction)
     if type(coord) is dict and 'ha' in coord:  # Already ha dec steps
         return coord
     if hasattr(coord, 'alt'):
@@ -258,6 +277,7 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
     :param dec_steps_per_degree: defaults to settings
     :return: astropy.coordinates.SkyCoord in frame as specified.
     """
+    atmo_refraction=atmor(atmo_refraction)
     if not sync_info:
         sync_info = settings.runtime_settings['sync_info']
     if not ha_steps_per_degree:
@@ -267,12 +287,21 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
     d_ha = (steps['ha'] - sync_info['steps']['ha']) / ha_steps_per_degree
     d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_steps_per_degree
 
+    # print({'d_ha': d_ha, 'steps_ha': steps['ha'], 'sync_ha': sync_info['steps']['ha'], 'ha_spd': ha_steps_per_degree, 'ha_sync_coord': sync_info['coord'].ra.deg})
+
+    # print({'d_dec': d_dec, 'steps_dec': steps['dec'], 'sync_dec': sync_info['steps']['dec'], 'dec_spd': dec_steps_per_degree, 'dec_sync_coord': sync_info['coord'].dec.deg})
+
+
     ha_deg = clean_deg(sync_info['coord'].ra.deg + d_ha)
+    # print({'frame': frame, 'ha_deg': ha_deg})
     dec_deg, pole_count = clean_deg(sync_info['coord'].dec.deg + d_dec, True)
+    # print({'frame': frame, 'dec_deg': dec_deg})
     if pole_count % 2 > 0:
         ha_deg = clean_deg(ha_deg + 180.0)
+    # print({'frame': frame, 'dec_deg': dec_deg})
 
     hadec_coord = SkyCoord(ra=ha_deg * u.deg, dec=dec_deg * u.deg, frame='icrs')
+    # print('hadec_coord', hadec_coord)
     if inverse_model:
         hadec_coord = model_real_stepper.inverse_transform_point(hadec_coord)
     if frame == 'hadec':

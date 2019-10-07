@@ -410,7 +410,7 @@ def clear_sync():
 @nocache
 def do_sync():
     reqj = request.json
-    ra = reqj.get('ra')
+    ra = reqj.get('ra', None)
     dec = reqj.get('dec', None)
     alt = reqj.get('alt', None)
     az = reqj.get('az', None)

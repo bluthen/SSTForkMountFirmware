@@ -137,8 +137,11 @@ def sync(coord):
     if hasattr(coord, 'ra'):
         coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=True)
     elif hasattr(coord, 'alt'):
+        print(coord)
         coord = skyconv.altaz_to_icrs(coord, obstime=obstime, atmo_refraction=False)
+        print(coord)
         coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=False)
+        print(coord)
 
     if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
             skyconv.model_real_stepper.size() > 0:
@@ -152,6 +155,7 @@ def sync(coord):
     else:
         park_sync = False
         sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': coord}
+        print('Setting sync_info', sync_info)
         settings.runtime_settings['sync_info'] = sync_info
         if settings.settings['pointing_model'] in ['single', 'buie']:
             if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
@@ -187,6 +191,7 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
     global cancel_slew, slewing
 
     ha_close_enough = 3.0
+    ha_close_enough = 2 * settings.settings['ra_track_rate']
     dec_close_enough = 3.0
 
     try:
@@ -207,58 +212,70 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
 
             ra_delta = need_step_position['ha'] - status['rep']
             dec_delta = need_step_position['dec'] - status['dep']
-            # print(ra_delta, dec_delta)
+            print(ra_delta, dec_delta)
             if abs(round(ra_delta)) <= ha_close_enough and abs(round(dec_delta)) <= dec_close_enough:
-                if not parking and settings.runtime_settings['tracking']:
-                    r = settings.settings['ra_track_rate']
-                else:
-                    r = 0
-                if status['ds'] == 0 and status['rs'] == r:
-                    break
+                break
 
-            if not parking and settings.runtime_settings['tracking']:
-                v_track = settings.settings['ra_track_rate']
+            if abs(round(ra_delta)) < ha_close_enough and abs(ra_delta) < 10 * settings.settings['ra_track_rate']:
+                # Settling
+                start = datetime.datetime.now()
+                status = stepper.get_status()
+                rep = status['rep']
+                target = rep + ra_delta
+                pos = 0
+                if ra_delta > 0:
+                    pos = 1
+                speed = math.copysign((pos + 4) * settings.settings['ra_track_rate'], ra_delta)
+                stepper.set_speed_ra(speed)
+                while abs(status[rep] - target) < ha_close_enough:
+                    time.sleep(0.1)
+                    if not parking and settings.runtime_settings['tracking']:
+                        target += (datetime.datetime.now() - start).total_seconds() * settings.settings['ra_track_rate']
             else:
-                v_track = 0
+                if not parking and settings.runtime_settings['tracking']:
+                    v_track = settings.settings['ra_track_rate']
+                else:
+                    v_track = 0
 
-            ra_times = motion.calc_speed_sleeps(
-                ra_delta,
-                settings.settings['micro']['ra_accel_tpss'],
-                status['rs'],
-                settings.settings['ra_slew_fastest'],
-                v_track, 'ra')
+                ra_times = motion.calc_speed_sleeps(
+                    ra_delta,
+                    settings.settings['micro']['ra_accel_tpss'],
+                    status['rs'],
+                    settings.settings['ra_slew_fastest'],
+                    v_track, 'ra')
 
-            # print('ra_times', ra_times)
+                # print('ra_times', ra_times)
 
-            dec_times = motion.calc_speed_sleeps(
-                dec_delta,
-                settings.settings['micro']['dec_accel_tpss'],
-                status['ds'],
-                settings.settings['dec_slew_fastest'],
-                0, 'dec'
-            )
+                dec_times = motion.calc_speed_sleeps(
+                    dec_delta,
+                    settings.settings['micro']['dec_accel_tpss'],
+                    status['ds'],
+                    settings.settings['dec_slew_fastest'],
+                    0, 'dec'
+                )
 
-            # print('dec_times', dec_times)
+                # print('dec_times', dec_times)
 
-            combined_times = motion.combine_speed_sleeps(ra_times, dec_times)
-            for t in combined_times:
-                # print(t)
-                if t['ra_speed'] is not None:
-                    stepper.set_speed_ra(t['ra_speed'])
-                if t['dec_speed'] is not None:
-                    stepper.set_speed_dec(t['dec_speed'])
-                st = t['sleep']
-                while st > 2.0:
-                    st -= 2.0
-                    time.sleep(2)
+                combined_times = motion.combine_speed_sleeps(ra_times, dec_times)
+                for t in combined_times:
+                    # print(t)
+                    if t['ra_speed'] is not None:
+                        stepper.set_speed_ra(t['ra_speed'])
+                    if t['dec_speed'] is not None:
+                        stepper.set_speed_dec(t['dec_speed'])
+                    st = t['sleep']
+                    while st > 2.0:
+                        st -= 2.0
+                        time.sleep(2)
+                        if cancel_slew:
+                            break
                     if cancel_slew:
                         break
-                if cancel_slew:
-                    break
-                time.sleep(st)
+                    time.sleep(st)
 
-            if ra_delta > 0:
-                break
+                # TODO: Doesn't seem to be moving enough.
+                # if ra_delta > 0:
+                #    break
 
         rspeed = 0
         if settings.runtime_settings['tracking']:
@@ -462,6 +479,7 @@ def send_status():
                 radec = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']}, frame='icrs',
                                                obstime=obstime,
                                                atmo_refraction=True, inverse_model=True)
+                # print('After steps_to_coord', radec)
                 altaz = skyconv.icrs_to_altaz(radec, obstime=obstime, atmo_refraction=True)
                 if not slewing:
                     set_last_slew(radec, obstime=obstime)

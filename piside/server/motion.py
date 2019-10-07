@@ -32,6 +32,9 @@ def calc_speed_sleeps(delta, a, v_0, v_max, v_track, type):
         v_track = 0
     ret = []
     t_maxv, x_maxv = t_x_vmax(a, v_0, v_max)
+    while abs(2*x_maxv) >= abs(delta):
+        v_max = v_max/10.0
+        t_maxv, x_maxv = t_x_vmax(a, v_0, v_max)
     if abs(2 * x_maxv) >= abs(delta):
         # print({'a': a, 'v_0': v_0, 'd2': delta/2.0})
         t_hdelta = t_at_x(a, v_0, delta / 2.0)
