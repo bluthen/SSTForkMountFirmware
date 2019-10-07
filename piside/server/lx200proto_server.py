@@ -163,12 +163,12 @@ class LX200Client:
         max_buffer = 1024
         while not kill:
             b = self.socket.recv(1024)
-            print('read2', b)
+            # print('read2', b)
             if len(b) == 0:
-                print('Socket done')
+                # print('Socket done')
                 return
             buffer += b.decode('utf8')
-            print('Buffer: ', buffer)
+            # print('Buffer: ', buffer)
             cmdbuf = ""
             last_idx = -1
             for i in range(len(buffer)):
@@ -191,7 +191,7 @@ class LX200Client:
 
     def process(self, cmd):
         global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
-        print('process', cmd)
+        # print('process', cmd)
         control.set_alive()
         if cmd == ':Aa#':  # Start automatic alignment sequence
             self.write(b'0')
@@ -362,7 +362,7 @@ class LX200Client:
             elif cmd[2] in ['n', 's', 'e', 'w']:  # PRIORITY DONE
                 # slew
                 # Set interval
-                print('LX200 Manual Slew', slew_speed)
+                # print('LX200 Manual Slew', slew_speed)
                 if slew_intervals[cmd[2]]:
                     slew_intervals[cmd[2]].cancel()
                 slew_intervals[cmd[2]] = control.SimpleInterval(
@@ -483,7 +483,7 @@ class LX200Client:
                     lon = 360.0 - 180
                 else:
                     lon = -lon
-                print('LX200: Set Long', lon)
+                # print('LX200: Set Long', lon)
                 try:
                     control.set_location(settings.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
                     self.write(b'1')
@@ -519,7 +519,7 @@ class LX200Client:
                 hour = m.group(1)
                 minute = m.group(2)
                 second = m.group(3)
-                print('Trying to set time')
+                # print('Trying to set time')
 
                 t = "%s:%s:%s" % (hour, minute, second)
                 dstr2 = pendulum.now(tz=localtime_utc_offset).isoformat().split('T')
@@ -586,7 +586,7 @@ class LX200Client:
                     seconds = 0.0
                 try:
                     lat = dec_to_deg(sign * float(deg), float(minute), float(seconds))
-                    print('Set lat:', lat)
+                    # print('Set lat:', lat)
                     control.set_location(lat,
                                          settings.runtime_settings['earth_location'].lon.deg,
                                          1000.0, 'site1')

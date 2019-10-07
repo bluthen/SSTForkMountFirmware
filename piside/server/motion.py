@@ -33,12 +33,12 @@ def calc_speed_sleeps(delta, a, v_0, v_max, v_track, type):
     ret = []
     t_maxv, x_maxv = t_x_vmax(a, v_0, v_max)
     if abs(2 * x_maxv) >= abs(delta):
-        print({'a': a, 'v_0': v_0, 'd2': delta/2.0})
+        # print({'a': a, 'v_0': v_0, 'd2': delta/2.0})
         t_hdelta = t_at_x(a, v_0, delta / 2.0)
         v_hdelta = v_at_t(a, v_0, v_max, t_hdelta)
         t_total = 2 * t_hdelta / (1.0 - v_track / v_hdelta)
         t_track = t_total - 2 * t_hdelta
-        print({'t_maxv': t_maxv, 'x_maxv': x_maxv, 'delta': delta, 't_hdelta': t_hdelta, 't_track': t_track})
+        # print({'t_maxv': t_maxv, 'x_maxv': x_maxv, 'delta': delta, 't_hdelta': t_hdelta, 't_track': t_track})
         ret.append({'type': type, 'speed': v_hdelta, 'csleep': 0})
         ret.append({'type': type, 'speed': None, 'csleep': t_hdelta + t_track})
         ret.append({'type': type, 'speed': v_trackcopy, 'csleep': ret[1]['csleep']})
@@ -47,7 +47,7 @@ def calc_speed_sleeps(delta, a, v_0, v_max, v_track, type):
         t_c = (delta - 2 * x_maxv) / v_max
         t_total = (2 * t_maxv + t_c) / (1 - v_track / v_max)
         t_track = t_total - (2.0 * t_maxv + t_c)
-        print(t_maxv, t_c, t_track)
+        # print(t_maxv, t_c, t_track)
         ret.append({'type': type, 'speed': v_max, 'csleep': 0})
         ret.append({'type': type, 'speed': None, 'csleep': t_maxv + t_c + t_track})
         ret.append({'type': type, 'speed': v_trackcopy, 'csleep': ret[1]['csleep']})

@@ -112,8 +112,8 @@ sls_debounce = None
 
 
 def _set_last_slew_none_run():
-    print('Running set_last_slew(None)')
     global sls_debounce
+    # print('Running set_last_slew(None)')
     set_last_slew(None)
     sls_debounce = None
 
@@ -228,7 +228,7 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
                 settings.settings['ra_slew_fastest'],
                 v_track, 'ra')
 
-            print('ra_times', ra_times)
+            # print('ra_times', ra_times)
 
             dec_times = motion.calc_speed_sleeps(
                 dec_delta,
@@ -238,11 +238,11 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
                 0, 'dec'
             )
 
-            print('dec_times', dec_times)
+            # print('dec_times', dec_times)
 
             combined_times = motion.combine_speed_sleeps(ra_times, dec_times)
             for t in combined_times:
-                print(t)
+                # print(t)
                 if t['ra_speed'] is not None:
                     stepper.set_speed_ra(t['ra_speed'])
                 if t['dec_speed'] is not None:
@@ -619,7 +619,7 @@ compliment_direction = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 
 def manual_control(direction, speed):
     global slew_lock, manual_lock
     settings.not_parked()
-    print(direction, speed)
+    # print(direction, speed)
     with manual_lock:
         got_lock = slew_lock.acquire(blocking=False)
         if not got_lock:
@@ -639,7 +639,7 @@ def manual_control(direction, speed):
             if comp in timers:
                 timers[comp].cancel()
                 del timers[comp]
-            print(is_alive, speed)
+            # print(is_alive, speed)
             if not is_alive or not speed:
                 status = stepper.get_status()
                 recall = False
@@ -650,7 +650,7 @@ def manual_control(direction, speed):
                         sspeed = 0
                     stepper.set_speed_ra(sspeed)
                     if not math.isclose(status['rs'], sspeed, rel_tol=0.02):
-                        print('manual stop recall', status['rs'], sspeed)
+                        # print('manual stop recall', status['rs'], sspeed)
                         recall = True
                 else:
                     stepper.set_speed_dec(0)

@@ -31,7 +31,7 @@ def write_settings(settings):
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
 def read_settings():
-    print(default_settings)
+    # print(default_settings)
     with _lock:
         if not os.path.isfile('settings.json'):
             return copy.deepcopy(default_settings)
@@ -40,7 +40,7 @@ def read_settings():
                 s = json.load(f)
                 s1 = copy.deepcopy(default_settings)
                 deepupdate(s1, s)
-                print(json.dumps(s1))
+                # print(json.dumps(s1))
                 return s1
 
 
