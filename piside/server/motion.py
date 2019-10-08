@@ -29,32 +29,31 @@ def calc_speed_sleeps(delta, a, v_0, v_max, v_track, type):
     if delta < 0:
         a = math.copysign(a, -1)
         v_max = math.copysign(v_max, -1)
-        v_track = 0
+        # v_track = 0
     ret = []
     t_maxv, x_maxv = t_x_vmax(a, v_0, v_max)
-    while abs(2*x_maxv) >= abs(delta):
-        v_max = v_max/10.0
-        t_maxv, x_maxv = t_x_vmax(a, v_0, v_max)
     if abs(2 * x_maxv) >= abs(delta):
         # print({'a': a, 'v_0': v_0, 'd2': delta/2.0})
         t_hdelta = t_at_x(a, v_0, delta / 2.0)
         v_hdelta = v_at_t(a, v_0, v_max, t_hdelta)
         t_total = 2 * t_hdelta / (1.0 - v_track / v_hdelta)
         t_track = t_total - 2 * t_hdelta
+        if t_track < 0:
+            # We need v_max to be slower
+            return calc_speed_sleeps(delta, a, v_0, v_hdelta/2.0, v_track, type)
         # print({'t_maxv': t_maxv, 'x_maxv': x_maxv, 'delta': delta, 't_hdelta': t_hdelta, 't_track': t_track})
-        ret.append({'type': type, 'speed': v_hdelta, 'csleep': 0})
-        ret.append({'type': type, 'speed': None, 'csleep': t_hdelta + t_track})
-        ret.append({'type': type, 'speed': v_trackcopy, 'csleep': ret[1]['csleep']})
-        ret.append({'type': type, 'speed': None, 'csleep': ret[1]['csleep'] + t_hdelta})
+        ret.append({'type': type, 'speed': v_hdelta, 'sleep': t_hdelta + t_track})
+        ret.append({'type': type, 'speed': v_trackcopy, 'sleep': t_hdelta})
     else:
         t_c = (delta - 2 * x_maxv) / v_max
         t_total = (2 * t_maxv + t_c) / (1 - v_track / v_max)
         t_track = t_total - (2.0 * t_maxv + t_c)
+        if t_track > t_c:
+            # We need v_max to be slower
+            return calc_speed_sleeps(delta, a, v_0, v_max/2, v_track, type)
         # print(t_maxv, t_c, t_track)
-        ret.append({'type': type, 'speed': v_max, 'csleep': 0})
-        ret.append({'type': type, 'speed': None, 'csleep': t_maxv + t_c + t_track})
-        ret.append({'type': type, 'speed': v_trackcopy, 'csleep': ret[1]['csleep']})
-        ret.append({'type': type, 'speed': None, 'csleep': ret[1]['csleep'] + t_maxv})
+        ret.append({'type': type, 'speed': v_max, 'sleep': t_maxv + t_c + t_track})
+        ret.append({'type': type, 'speed': v_trackcopy, 'sleep': t_maxv})
     return ret
 
 

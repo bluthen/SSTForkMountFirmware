@@ -187,6 +187,105 @@ def slew(coord, parking=False):
     thread.start()
 
 
+def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enough=0):
+    steps = False
+    if type(wanted_skycoord) is dict and 'ha' in wanted_skycoord:
+        need_step_position = {'ha': wanted_skycoord['ha'], 'dec': wanted_skycoord['dec']}
+        close_enough = 0
+        steps = True
+    else:
+        need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
+    count = 0
+    while not cancel_slew:
+        count += 1
+        if not steps and count == 1 and not parking:
+            need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
+        status = calc_status(stepper.get_status())
+
+        if axis == 'ra':
+            delta = need_step_position['ha'] - status['rep']
+            status_pos_key = 'rep'
+        else:
+            delta = need_step_position['dec'] - status['dep']
+            status_pos_key = 'dep'
+
+        if abs(round(delta)) <= close_enough:
+            break
+
+        if axis == 'ra':
+            pos = 0
+            if delta > 0:
+                pos = 1
+            settle_speed = math.copysign((pos + 4) * settings.settings['ra_track_rate'], delta)
+            settle_thresh = 10 * settings.settings['ra_track_rate']
+        else:
+            settle_speed = math.copysign(4 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE, delta)
+            settle_thresh = 10 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE
+
+        if abs(delta) < settle_thresh:
+            # Settling
+            start = datetime.datetime.now()
+            status = calc_status(stepper.get_status())
+            target = status[status_pos_key] + delta
+            if axis == 'ra':
+                stepper.set_speed_ra(settle_speed)
+            else:
+                stepper.set_speed_dec(settle_speed)
+            while abs(status[status_pos_key] - target) < close_enough:
+                status = calc_status(stepper.get_status())
+                time.sleep(0.1)
+                if axis == 'ra' and not parking and settings.runtime_settings['tracking']:
+                    target += (datetime.datetime.now() - start).total_seconds() * settings.settings['ra_track_rate']
+        else:
+            if axis == 'ra':
+                if not parking and settings.runtime_settings['tracking']:
+                    v_track = settings.settings['ra_track_rate']
+                else:
+                    v_track = 0
+
+                times = motion.calc_speed_sleeps(
+                    delta,
+                    settings.settings['micro']['ra_accel_tpss'],
+                    status['rs'],
+                    settings.settings['ra_slew_fastest'],
+                    v_track, 'ra')
+            else:
+                times = motion.calc_speed_sleeps(
+                    delta,
+                    settings.settings['micro']['dec_accel_tpss'],
+                    status['ds'],
+                    settings.settings['dec_slew_fastest'],
+                    0, 'dec'
+                )
+
+            # print('dec_times', dec_times)
+
+            for t in times:
+                # print(t)
+                if t['speed'] is not None:
+                    if axis == 'ra':
+                        stepper.set_speed_ra(t['speed'])
+                    else:
+                        stepper.set_speed_dec(t['speed'])
+                st = t['sleep']
+                while st > 2.0:
+                    st -= 2.0
+                    time.sleep(2)
+                    if cancel_slew:
+                        break
+                if cancel_slew:
+                    break
+                time.sleep(st)
+
+    if axis == 'ra':
+        rspeed = 0
+        if not parking and settings.runtime_settings['tracking']:
+            rspeed = settings.settings['ra_track_rate']
+        stepper.set_speed_ra(rspeed)
+    else:
+        stepper.set_speed_dec(0.0)
+
+
 def move_to_coord_threadf(wanted_skycoord, parking=False):
     global cancel_slew, slewing
 
@@ -199,83 +298,17 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
         stepper.autoguide_disable()
         slewing = True
         cancel_slew = False
-        if type(wanted_skycoord) is dict and 'ha' in wanted_skycoord:
-            need_step_position = {'ha': wanted_skycoord['ha'], 'dec': wanted_skycoord['dec']}
-            ha_close_enough = 0
-            dec_close_enough = 0
-        else:
-            need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
-        while not cancel_slew:
-            if not parking:
-                need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
-            status = calc_status(stepper.get_status())
 
-            ra_delta = need_step_position['ha'] - status['rep']
-            dec_delta = need_step_position['dec'] - status['dep']
-            print(ra_delta, dec_delta)
-            if abs(round(ra_delta)) <= ha_close_enough and abs(round(dec_delta)) <= dec_close_enough:
-                break
+        # Threads
+        ra_thread = threading.Thread(target=_move_to_coord_threadf,
+                                     args=(wanted_skycoord, 'ra', parking, ha_close_enough))
+        ra_thread.start()
+        dec_thread = threading.Thread(target=_move_to_coord_threadf,
+                                      args=(wanted_skycoord, 'dec', parking, dec_close_enough))
+        dec_thread.start()
 
-            if abs(round(ra_delta)) < ha_close_enough and abs(ra_delta) < 10 * settings.settings['ra_track_rate']:
-                # Settling
-                start = datetime.datetime.now()
-                status = stepper.get_status()
-                rep = status['rep']
-                target = rep + ra_delta
-                pos = 0
-                if ra_delta > 0:
-                    pos = 1
-                speed = math.copysign((pos + 4) * settings.settings['ra_track_rate'], ra_delta)
-                stepper.set_speed_ra(speed)
-                while abs(status[rep] - target) < ha_close_enough:
-                    time.sleep(0.1)
-                    if not parking and settings.runtime_settings['tracking']:
-                        target += (datetime.datetime.now() - start).total_seconds() * settings.settings['ra_track_rate']
-            else:
-                if not parking and settings.runtime_settings['tracking']:
-                    v_track = settings.settings['ra_track_rate']
-                else:
-                    v_track = 0
-
-                ra_times = motion.calc_speed_sleeps(
-                    ra_delta,
-                    settings.settings['micro']['ra_accel_tpss'],
-                    status['rs'],
-                    settings.settings['ra_slew_fastest'],
-                    v_track, 'ra')
-
-                # print('ra_times', ra_times)
-
-                dec_times = motion.calc_speed_sleeps(
-                    dec_delta,
-                    settings.settings['micro']['dec_accel_tpss'],
-                    status['ds'],
-                    settings.settings['dec_slew_fastest'],
-                    0, 'dec'
-                )
-
-                # print('dec_times', dec_times)
-
-                combined_times = motion.combine_speed_sleeps(ra_times, dec_times)
-                for t in combined_times:
-                    # print(t)
-                    if t['ra_speed'] is not None:
-                        stepper.set_speed_ra(t['ra_speed'])
-                    if t['dec_speed'] is not None:
-                        stepper.set_speed_dec(t['dec_speed'])
-                    st = t['sleep']
-                    while st > 2.0:
-                        st -= 2.0
-                        time.sleep(2)
-                        if cancel_slew:
-                            break
-                    if cancel_slew:
-                        break
-                    time.sleep(st)
-
-                # TODO: Doesn't seem to be moving enough.
-                # if ra_delta > 0:
-                #    break
+        ra_thread.join()
+        dec_thread.join()
 
         rspeed = 0
         if settings.runtime_settings['tracking']:

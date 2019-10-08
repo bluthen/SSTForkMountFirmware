@@ -37,6 +37,8 @@ class CoordinatesInput extends React.Component {
         }
         if (v > sub.max || v < sub.min) {
             state.goto.coordinates[coord + '_error'][sub.key] = 'invalid value';
+        } else {
+            state.goto.coordinates[coord + '_error'][sub.key] = null;
         }
         console.log(sub, v);
     }
