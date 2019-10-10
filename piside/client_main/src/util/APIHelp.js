@@ -3,6 +3,7 @@ import state from '../State';
 import {observe} from "mobx";
 import _ from 'lodash';
 import Formatting from './Formatting';
+import Papa from 'papaparse';
 
 
 function handleFetchError(response) {
@@ -208,7 +209,7 @@ const APIHelp = {
         observe(state.status, 'alert', () => {
             if (state.status.alert) {
                 console.error('Alert Errot: ', state.status.alert);
-                state.snack_bar = 'Error: '+state.status.alert;
+                state.snack_bar = 'Error: ' + state.status.alert;
                 state.snack_bar_error = true;
             }
         });
@@ -342,12 +343,13 @@ const APIHelp = {
                 state.slewlimit.greater_than = d.horizon_limit_dec.greater_than;
                 state.slewlimit.less_than = d.horizon_limit_dec.less_than;
                 state.slewlimit.model = d.pointing_model;
+                state.misc.encoder_logging = d.encoder_logging;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
-                        console.log('=== micro object'+key);
+                        console.log('=== micro object' + key);
                         for (const key2 of Object.keys(d[key])) {
                             if (state.advancedSettings.hasOwnProperty(key2)) {
-                                console.log('==== '+key2, d[key][key2]);
+                                console.log('==== ' + key2, d[key][key2]);
                                 state.advancedSettings[key2] = d[key][key2];
                             }
                         }
@@ -599,6 +601,55 @@ const APIHelp = {
             state.snack_bar_error = true;
             throw e;
         });
+    },
+    clearLog(name) {
+        return fetch('/api/logger', {
+            method: 'delete',
+            body: JSON.stringify({name: name}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+                state.snack_bar_error = false;
+            });
+        });
+    },
+    toggleLog(name, enabled) {
+        return fetch('/api/logger', {
+            method: 'put',
+            body: JSON.stringify({name: name, enabled: enabled}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+                state.snack_bar_error = false;
+            });
+        });
+    },
+    getLogData(name) {
+        if (name === 'encoder') {
+            return fetch('/api/logger?name=encoder&ts=' + (new Date().getTime()), {}).then(handleFetchError).then((response) => {
+                return response.text().then((t) => {
+                    //console.log(t)
+                    return new Promise((resolve, reject) => {
+                        Papa.parse(t, {
+                            header: true,
+                            fastMode: true,
+                            worker: true,
+                            skipEmptyLines: true,
+                            complete: (results, file) => {
+                                resolve(results.data);
+                                console.log('test ', results, file);
+                            }
+                        });
+                    });
+                });
+            });
+        }
     }
 
 };

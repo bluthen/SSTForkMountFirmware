@@ -229,7 +229,6 @@ class LocationSettings extends React.Component {
         const long = state.location.coord_long;
         const elevation = state.location.coord_elevation;
 
-        console.log('bob', state.location.coord_long);
         if (lat === null || isNaN(lat)) {
             state.location.coord_lat_error = 'required';
         } else if (lat < -90 || lat > 90) {

@@ -10,6 +10,9 @@ const state = observable({
         speed: 'fastest',
         directions: {north: false, south: false, east: false, west: false}
     },
+    misc: {
+      encoder_logging: false
+    },
     status: {
         alert: null,
         alt: null,

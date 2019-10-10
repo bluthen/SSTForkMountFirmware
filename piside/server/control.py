@@ -73,8 +73,10 @@ park_sync = False
 cancel_slew = False
 last_status = None
 
-stepper_logging_enabled = True
-stepper_logging_file = None
+encoder_logging_enabled = False
+encoder_logging_file = None
+encoder_logging_clear = False
+encoder_logging_interval = None
 
 # Last sync or slew info, if tracking sets radec, else altaz.
 last_slew = {'radec': None, 'altaz': None}
@@ -482,9 +484,41 @@ def calc_status(status):
     return status
 
 
-def stepper_log():
+def start_stop_encoder_logger(enabled):
+    global encoder_logging_file, encoder_logging_interval, encoder_logging_enabled
+    if enabled and not encoder_logging_enabled:
+        encoder_logging_enabled = True
+        encoder_logging_file = open('./logs/stepper_encoder.csv', 'w')
+        encoder_logging_file.write('Time,step_ra,step_dec,enc_ra,enc_dec,ra_over_raenc,dec_over_decenc\n')
+        encoder_logging_interval = SimpleInterval(encoder_log, 0.25)
+    elif not enabled and encoder_logging_enabled:
+        encoder_logging_enabled = False
+        if encoder_logging_file:
+            encoder_logging_file.close()
+            encoder_logging_file = None
+        if encoder_logging_interval:
+            encoder_logging_interval.cancel()
+            encoder_logging_interval = None
+
+
+def encoder_log():
+    global encoder_logging_clear
+    if encoder_logging_clear:
+        start_stop_encoder_logger(False)
+        start_stop_encoder_logger(True)
+        encoder_logging_clear = False
     s = stepper.get_status()
-    stepper_logging_file.write('%f,%d,%d,%d,%d\n' % (time.time(), s['rp'], s['dp'], s['re'], s['de']))
+    if s['re'] != 0:
+        rp_over_re = s['rp'] / float(s['re'])
+    else:
+        rp_over_re = 999.0
+    if s['de'] != 0:
+        dp_over_de = s['dp'] / float(s['de'])
+    else:
+        dp_over_de = 999.0
+    encoder_logging_file.write(
+        '%f,%d,%d,%d,%d,%.2f,%.2f\n' % (time.time(), s['rp'], s['dp'], s['re'], s['de'], rp_over_re, dp_over_de))
+    encoder_logging_file.flush()
 
 
 def send_status():
@@ -570,7 +604,7 @@ def init():
     Init point for this module.
     :return:
     """
-    global stepper, status_interval, inited, park_sync, model_real_stepper, stepper_logging_file
+    global stepper, status_interval, inited, park_sync, model_real_stepper, encoder_logging_file
     if inited:
         return
     inited = True
@@ -606,10 +640,6 @@ def init():
     status_interval = SimpleInterval(send_status, 1)
     SimpleInterval(alive_check, 3)
     time.sleep(0.5)
-    if stepper_logging_enabled:
-        stepper_logging_file = open('./logs/stepper_encoder.csv', 'w')
-        stepper_logging_file.write('Time,step_ra,step_dec,enc_ra,enc_dec\n')
-        SimpleInterval(stepper_log, 0.25)
 
 
 def guide_control(direction, time_ms):

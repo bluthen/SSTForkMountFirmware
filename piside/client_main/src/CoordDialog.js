@@ -64,7 +64,6 @@ class CoordDialog extends React.Component {
     }
 
     render() {
-        console.log('render');
         return <Dialog open maxwidth="xs" onClose={this.handleClose}>
             <DialogTitle>Object Title</DialogTitle>
             <DialogContent>

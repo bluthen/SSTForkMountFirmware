@@ -5,6 +5,7 @@ from astropy.coordinates import solar_system_ephemeris, SkyCoord
 import astropy.units as u
 from astropy.time import Time as AstroTime
 import time
+import copy
 
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
 from flask_compress import Compress
@@ -124,7 +125,10 @@ def version():
 @app.route('/api/settings')
 @nocache
 def settings_get():
-    return jsonify(settings.settings)
+    s = copy.deepcopy(settings.settings)
+    s['encoder_logging'] = control.encoder_logging_enabled
+    print(s)
+    return jsonify(s)
 
 
 @app.route('/api/hostname')
@@ -147,10 +151,38 @@ def logger_get():
     if logger_name == 'pointing':
         pointing_logger.handlers[0].flush()
         return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
-    if logger_name == 'encoder':
-        control.stepper_logging_file.flush()
+    elif logger_name == 'encoder':
+        if control.encoder_logging_enabled:
+            control.encoder_logging_file.flush()
         return send_from_directory('./logs', 'stepper_encoder.csv', as_attachment=True,
                                    attachment_filename='stepper_encoder.csv')
+
+
+@app.route('/api/logger', methods=['DELETE'])
+@nocache
+def logger_clear():
+    args = request.json
+    logger_name = args.get('name')
+    if logger_name == 'encoder':
+        control.encoder_logging_clear = True
+        return 'Clearing encoder log', 200
+    return 'Invalid logger', 400
+
+
+@app.route('/api/logger', methods=['PUT'])
+@nocache
+def logger_put():
+    args = request.json
+    logger_name = args.get('name')
+    enabled = args.get('enabled')
+    if logger_name == 'encoder':
+        control.start_stop_encoder_logger(enabled)
+        if enabled:
+            return 'Starting logger', 200
+        else:
+            return 'Stopping logging', 200
+    else:
+        return 'Invalid logger', 400
 
 
 @app.route('/api/settings', methods=['PUT'])

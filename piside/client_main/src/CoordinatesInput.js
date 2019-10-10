@@ -40,11 +40,9 @@ class CoordinatesInput extends React.Component {
         } else {
             state.goto.coordinates[coord + '_error'][sub.key] = null;
         }
-        console.log(sub, v);
     }
 
     onSubFocus(e, ref) {
-        console.log('subfocus', ref);
         ref.current.select();
     }
 

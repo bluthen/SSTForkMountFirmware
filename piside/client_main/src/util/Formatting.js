@@ -55,8 +55,8 @@ const Formatting = {
     dmsDEC2deg(d, m, s) {
         const sign = Math.sign(d);
         return parseFloat(d) +
-            sign*parseFloat(m) / 60.0 +
-            sign*parseFloat(s) / (60.0 * 60.0);
+            sign * parseFloat(m) / 60.0 +
+            sign * parseFloat(s) / (60.0 * 60.0);
     },
     degDEC2Str(dec) {
         if (dec !== null) {
@@ -73,13 +73,32 @@ const Formatting = {
         let h = date.getHours();
         let m = date.getMinutes();
         if (h < 10) {
-            h = '0' + h
+            h = '0' + h;
         }
         if (m < 10) {
-            m = '0' + m
+            m = '0' + m;
         }
         return h + ':' + m;
+    },
+
+    dateHourMinuteSecondStr(date) {
+        const ret = Formatting.dateHourMinuteStr(date);
+        let s = date.getSeconds();
+        if (s < 10) {
+            s = '0' + s;
+        }
+        return ret + ':' + s;
+    },
+
+    dateHourMinuteSecondMSStr(date) {
+        const ret = Formatting.dateHourMinuteSecondStr(date);
+        let s = parseInt(date.getMilliseconds() / 10, 10);
+        if (s < 10) {
+            s = '0' + s;
+        }
+        return ret + '.' + s;
     }
+
 
 };
 

@@ -14,7 +14,7 @@ def t_at_x(a, v_0, x):
     s = 1.0
     if a < 0.0:
         s = -1.0
-    return (-v_0 + s * math.sqrt(v_0 * v_0 + 2 * a * x))/a
+    return (-v_0 + s * math.sqrt(v_0 * v_0 + 2 * a * x)) / a
 
 
 def v_at_t(a, v_0, v_max, t):
@@ -40,7 +40,7 @@ def calc_speed_sleeps(delta, a, v_0, v_max, v_track, type):
         t_track = t_total - 2 * t_hdelta
         if t_track < 0:
             # We need v_max to be slower
-            return calc_speed_sleeps(delta, a, v_0, v_hdelta/2.0, v_track, type)
+            return calc_speed_sleeps(delta, a, v_0, v_hdelta / 2.0, v_track, type)
         # print({'t_maxv': t_maxv, 'x_maxv': x_maxv, 'delta': delta, 't_hdelta': t_hdelta, 't_track': t_track})
         ret.append({'type': type, 'speed': v_hdelta, 'sleep': t_hdelta + t_track})
         ret.append({'type': type, 'speed': v_trackcopy, 'sleep': t_hdelta})
@@ -50,28 +50,8 @@ def calc_speed_sleeps(delta, a, v_0, v_max, v_track, type):
         t_track = t_total - (2.0 * t_maxv + t_c)
         if t_track > t_c:
             # We need v_max to be slower
-            return calc_speed_sleeps(delta, a, v_0, v_max/2, v_track, type)
+            return calc_speed_sleeps(delta, a, v_0, v_max / 2, v_track, type)
         # print(t_maxv, t_c, t_track)
         ret.append({'type': type, 'speed': v_max, 'sleep': t_maxv + t_c + t_track})
         ret.append({'type': type, 'speed': v_trackcopy, 'sleep': t_maxv})
-    return ret
-
-
-def combine_speed_sleeps(ra_times, dec_times):
-    # First one from both are combined
-    a = []
-    a.extend(ra_times)
-    a.extend(dec_times)
-    a = sorted(a, key=lambda s: s['csleep'])
-    t = 0
-    ret = []
-    ctime = 0
-    for r in a:
-        t = {'ra_speed': None, 'dec_speed': None, 'sleep': r['csleep'] - ctime}
-        if r['type'] == 'ra':
-            t['ra_speed'] = r['speed']
-        else:
-            t['dec_speed'] = r['speed']
-        ctime += t['sleep']
-        ret.append(t)
     return ret

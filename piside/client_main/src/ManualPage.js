@@ -26,7 +26,6 @@ class ManualPage extends React.Component {
     }
 
     handleDirectionChange(directions) {
-        console.log("change", directions);
         state.manual.directions.north = directions.north;
         state.manual.directions.south = directions.south;
         state.manual.directions.east = directions.east;

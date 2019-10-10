@@ -105,14 +105,12 @@ class AdvancedSettings extends React.Component {
     }
 
     render() {
-        console.log('whats the problem?');
         const settings = [];
         let spinner = null;
         if (state.advancedSettings.fetching) {
             spinner = <CircularProgress/>
         } else {
             for (let key in settings_map) {
-                console.log(key);
                 if (settings_map[key].type === 'boolean') {
                     let checked;
                     if (settings_map[key].map) {
