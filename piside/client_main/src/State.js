@@ -11,7 +11,7 @@ const state = observable({
         directions: {north: false, south: false, east: false, west: false}
     },
     misc: {
-      encoder_logging: false
+        encoder_logging: false
     },
     status: {
         alert: null,
@@ -158,6 +158,11 @@ const state = observable({
             password: null,
             password_error: null
         }
+    },
+    encoderGraph: {
+        left: ['step_ra', 'enc_ra', 'step_dec', 'enc_dec'],
+        hide: [],
+        right: ['ra_over_raenc', 'dec_over_decenc']
     },
     snack_bar: null,
     snack_bar_error: false
