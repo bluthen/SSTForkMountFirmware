@@ -139,7 +139,7 @@ export default function TriTransferList(props) {
                                     inputProps={{'aria-labelledby': labelId}}
                                 />
                             </ListItemIcon>
-                            <ListItemText id={labelId} primary={`${value + 1}`}/>
+                            <ListItemText id={labelId} primary={`${value}`}/>
                         </ListItem>
                     );
                 })}
