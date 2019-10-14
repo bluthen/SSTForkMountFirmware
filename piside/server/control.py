@@ -508,14 +508,8 @@ def encoder_log():
         start_stop_encoder_logger(True)
         encoder_logging_clear = False
     s = stepper.get_status()
-    if s['re'] != 0:
-        rp_over_re = s['rp'] / float(s['re'])
-    else:
-        rp_over_re = 999.0
-    if s['de'] != 0:
-        dp_over_de = s['dp'] / float(s['de'])
-    else:
-        dp_over_de = 999.0
+    rp_over_re = s['rl']
+    dp_over_de = s['dl']
     encoder_logging_file.write(
         '%f,%d,%d,%d,%d,%.2f,%.2f\n' % (time.time(), s['rp'], s['dp'], s['re'], s['de'], rp_over_re, dp_over_de))
     encoder_logging_file.flush()
