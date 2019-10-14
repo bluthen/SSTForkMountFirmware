@@ -59,7 +59,7 @@ AXIS_DEC = 2
 
 timers = {}
 OPPOSITE_MANUAL = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
-DEFAULT_PARK = {'alt': 180, 'az': 10}
+DEFAULT_PARK = {'az': 180, 'alt': 10}
 slew_lock = threading.RLock()
 set_last_slew_lock = threading.RLock()
 manual_lock = threading.RLock()
