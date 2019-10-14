@@ -6,6 +6,8 @@
 
 static Encoder raEnc(9, 10);
 static Encoder decEnc(11, 12);
+static long last_ra_ticks_in_pulse = 0;
+static long last_dec_ticks_in_pulse = 0;
 static long ra_ticks_in_pulse = 0;
 static long dec_ticks_in_pulse = 0;
 static long ra_last_encoder = 0;
@@ -268,6 +270,15 @@ void stepperInit() {
   delay(100);
 }
 
+
+void directionUpdated() {
+  // Fixes possible direction error.
+  // TODO: Should we stop moving?
+  ra_mode_direction = 9999;
+  dec_mode_direction = 9999;
+}
+
+
 void setRASpeed(float speed) {
   if(fabs(speed) > configvars_ra_max_tps) {
     RASpeed = (fabs(speed)/speed) * configvars_ra_max_tps;
@@ -335,6 +346,15 @@ long getDECPosition() {
   return DECPosition;
 }
 
+long getRALastTicksPerEncoder() {
+  return last_ra_ticks_in_pulse;
+}
+
+long getDECLastTicksPerEncoder() {
+  return last_dec_ticks_in_pulse;
+}
+
+
 
 elapsedMillis debugTimer = 0;
 void motion_func(float a, float v_0, long x_0, double t, float speed_wanted, long &position, float& speed) {
@@ -372,6 +392,7 @@ void runSteppers() {
   
   if (ra_last_encoder != raEnc.read()) {
     ra_last_encoder = raEnc.read();
+    last_ra_ticks_in_pulse = ra_ticks_in_pulse;
     ra_ticks_in_pulse = 0;
   }
   if (should_position <= -1) {
@@ -390,6 +411,7 @@ void runSteppers() {
 
   if (dec_last_encoder != decEnc.read()) {
     dec_last_encoder = decEnc.read();
+    last_dec_ticks_in_pulse = dec_ticks_in_pulse;
     dec_ticks_in_pulse = 0;
   }
   if (should_position <= -1) {

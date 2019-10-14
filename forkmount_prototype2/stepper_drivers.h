@@ -10,6 +10,7 @@ extern volatile float prevRASpeed;
 extern volatile float prevDECSpeed;
 
 void stepperInit(void);
+void directionUpdated(void);
 
 void setRASpeed(float speed);
 float getRASpeed(void);
@@ -27,6 +28,10 @@ long getRATicksInPulse(void);
 long getDECTicksInPulse(void);
 long getLastRAEncoder(void);
 long getLastDECEncoder(void);
+
+long getRALastTicksPerEncoder(void);
+long getDECLastTicksPerEncoder(void);
+
 
 void runSteppers(void);
 

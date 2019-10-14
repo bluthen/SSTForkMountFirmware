@@ -16,6 +16,7 @@ void command_set_var() {
   char* argName;
   char* argVal;
   float value;
+  int oldv;
 
   argName = cmd.next();
   argVal = cmd.next();
@@ -38,13 +39,21 @@ void command_set_var() {
   } else if(strcmp(argName, "ra_guide_rate") == 0) {
     configvars_ra_guide_rate = value;
   } else if(strcmp(argName, "ra_direction") == 0) {
+    oldv = configvars_ra_direction;
     configvars_ra_direction = (int)value;
+    if (oldv != configvars_ra_direction) {
+      directionUpdated();
+    }
   } else if(strcmp(argName, "dec_max_tps") == 0) {
     configvars_dec_max_tps = value;
   } else if(strcmp(argName, "dec_guide_rate") == 0) {
     configvars_dec_guide_rate = value;
   } else if(strcmp(argName, "dec_direction") == 0) {
+    oldv = configvars_ra_direction;
     configvars_dec_direction = (int)value;
+    if (oldv != configvars_ra_direction) {
+      directionUpdated();
+    }
   } else if(strcmp(argName, "ra_accel_tpss") == 0) {
     configvars_ra_accel_tpss = value;
     stepperSnapshot();
@@ -61,7 +70,7 @@ void command_set_var() {
 
 
 void command_qs() {
-  long raPos, decPos, raEnc, decEnc, raTip, decTip;
+  long raPos, decPos, raEnc, decEnc, raTip, decTip, raltpe, decltpe;
   //TODO: Maybe make binary status so we don't get close to tracking tick interval?
   WSERIAL.print("rs:");
   WSERIAL.println(getRASpeed());
@@ -71,6 +80,8 @@ void command_qs() {
   decPos = getDECPosition();
   raEnc = getRAEncoder();
   decEnc = getDECEncoder();
+  raltpe = getRALastTicksPerEncoder();
+  decltpe = getDECLastTicksPerEncoder();
   if (getLastRAEncoder() != raEnc) {
     raTip = 0;
   } else {
@@ -93,6 +104,10 @@ void command_qs() {
   WSERIAL.println(raTip);
   WSERIAL.print("di:");
   WSERIAL.println(decTip);
+  WSERIAL.print("rl:");
+  WSERIAL.println(raltpe);
+  WSERIAL.print("dl:");
+  WSERIAL.println(decltpe);
   print_prompt();  
 }
 
@@ -122,6 +137,11 @@ void command_status() {
   WSERIAL.println(getRASpeed());
   WSERIAL.print("dec_speed:");
   WSERIAL.println(getDECSpeed());
+  WSERIAL.print("ra_tpe:");
+  WSERIAL.println(getRALastTicksPerEncoder());
+  WSERIAL.print("dec_tpe:");
+  WSERIAL.println(getDECLastTicksPerEncoder());
+
 
   raPos = getRAPosition();
   decPos = getDECPosition();
