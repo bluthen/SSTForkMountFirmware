@@ -346,7 +346,7 @@ const APIHelp = {
                 state.misc.encoder_logging = d.encoder_logging;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
-                        //console.log('=== micro object' + key);
+                        console.log('=== micro object' + key);
                         for (const key2 of Object.keys(d[key])) {
                             if (state.advancedSettings.hasOwnProperty(key2)) {
                                 // console.log('==== ' + key2, d[key][key2]);

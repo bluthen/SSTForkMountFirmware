@@ -221,6 +221,8 @@ def settings_put():
             settings_buffer[key] = str(args[key])
 
     keys = ["color_scheme", "atmos_refract", "ra_track_rate", "ra_slew_fastest", "ra_slew_faster", "ra_slew_medium",
+            "ra_encoder_pulse_per_degree", "dec_encoder_pulse_per_degree",
+            "use_encoders", "limit_encoder_step_fillin",
             "ra_slew_slower", "ra_slew_slowest", "dec_slew_fastest", "dec_slew_faster", "dec_slew_medium",
             "dec_slew_slower", "dec_slew_slowest", "ra_ticks_per_degree", "dec_ticks_per_degree", "time_autosync",
             "polar_align_camera_rotation_x", "polar_align_camera_rotation_y"]

@@ -48,13 +48,11 @@ const settings_map = {
     ra_encoder_pulse_per_degree: {
         display: 'RA Encoder Scale',
         type: 'number',
-        min: 0,
         endAdornment: 'pulse/°'
     },
     dec_encoder_pulse_per_degree: {
         display: 'DEC Encoder Scale',
         type: 'number',
-        min: 0,
         endAdornment: 'pulse/°'
     }
 

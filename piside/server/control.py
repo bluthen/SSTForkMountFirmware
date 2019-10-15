@@ -200,7 +200,7 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
     count = 0
     while not cancel_slew:
         count += 1
-        if not steps and count == 1 and not parking:
+        if not steps and count != 1 and not parking:
             need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
         status = calc_status(stepper.get_status())
 
@@ -470,10 +470,10 @@ def calc_status(status):
         ri = status['ri']
         di = status['di']
         if settings.settings['limit_encoder_step_fillin']:
-            if abs(status['ri']) > ra_steps_per_encoder:
-                ri = int(ra_steps_per_encoder)
-            if abs(status['di']) > dec_steps_per_encoder:
-                di = int(dec_steps_per_encoder)
+            if abs(status['ri']) > abs(ra_steps_per_encoder):
+                ri = math.copysign(ri, ra_steps_per_encoder)
+            if abs(status['di']) > abs(dec_steps_per_encoder):
+                di = math.copysign(di, dec_steps_per_encoder)
         rep = status['re'] * ra_steps_per_encoder + ri
         dep = status['de'] * dec_steps_per_encoder + di
     else:
