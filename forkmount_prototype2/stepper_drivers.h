@@ -2,7 +2,7 @@
 #define __STEPPER_DRIVERS_H
 
 #define MICROSTEPS 16
-#define MICROSTEP_TO_FULL_THRES 800
+#define MICROSTEP_TO_FULL_THRES 4000
 
 extern volatile boolean ra_autoguiding;
 extern volatile boolean dec_autoguiding;

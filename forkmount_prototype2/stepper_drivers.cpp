@@ -390,7 +390,7 @@ void runSteppers() {
   RARealSpeed = real_speed;
   should_position = should_position - RAPosition;
 
-  if (abs(real_speed) > 4000) {
+  if (abs(real_speed) > MICROSTEP_TO_FULL_THRES) {
     increment = MICROSTEPS;
   }
   
