@@ -356,7 +356,6 @@ long getDECLastTicksPerEncoder() {
 
 
 
-elapsedMillis debugTimer = 0;
 void motion_func(float a, float v_0, long x_0, double t, float speed_wanted, long &position, float& speed) {
   double t_v_max, dt_v_max;
   float v;
@@ -386,21 +385,24 @@ void runSteppers() {
   long should_position;
   long increment = 1;
   float real_speed;
+  bool fast = false;
   motion_func(configvars_ra_accel_tpss, ra_v0, ra_x0, t, RASpeed, should_position, real_speed);
   RARealSpeed = real_speed;
   should_position = should_position - RAPosition;
 
   if (abs(real_speed) > MICROSTEP_TO_FULL_THRES) {
     increment = MICROSTEPS;
+    fast = true;
   }
-  
+
   if (ra_last_encoder != raEnc.read()) {
     ra_last_encoder = raEnc.read();
     last_ra_ticks_in_pulse = ra_ticks_in_pulse;
     ra_ticks_in_pulse = 0;
   }
+
   if (should_position <= -1*increment) {
-    if (increment == MICROSTEPS) {
+    if (fast) {
       ra_stepper_backwardstep_fast();
     } else {
       ra_stepper_backwardstep();
@@ -408,7 +410,7 @@ void runSteppers() {
     RAPosition -= increment;
     ra_ticks_in_pulse -= increment;
   } else if (should_position >= increment) {
-    if (increment == MICROSTEPS) {
+    if (fast) {
       ra_stepper_forwardstep_fast();          
     } else {
       ra_stepper_forwardstep();    
@@ -421,13 +423,22 @@ void runSteppers() {
   DECRealSpeed = real_speed;
   should_position = should_position - DECPosition;
 
+  if (abs(real_speed) > MICROSTEP_TO_FULL_THRES) {
+    increment = MICROSTEPS;
+    fast = true;
+  } else {
+    increment = 1;
+    fast = false;
+  }
+
   if (dec_last_encoder != decEnc.read()) {
     dec_last_encoder = decEnc.read();
     last_dec_ticks_in_pulse = dec_ticks_in_pulse;
     dec_ticks_in_pulse = 0;
   }
+
   if (should_position <= -1*increment) {
-    if (increment == MICROSTEPS) {
+    if (fast) {
       dec_stepper_backwardstep_fast();      
     } else {
       dec_stepper_backwardstep();
@@ -435,7 +446,7 @@ void runSteppers() {
     DECPosition -= increment;
     dec_ticks_in_pulse -= increment;
   } else if (should_position >= increment) {
-    if (increment == MICROSTEPS) {
+    if (fast) {
       dec_stepper_forwardstep_fast();
     } else {
       dec_stepper_forwardstep();          

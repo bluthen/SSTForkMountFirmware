@@ -24,18 +24,15 @@ const settings_map = {
 
 
     ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_fastest: {display: 'DEC Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-
     ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_faster: {display: 'DEC Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-
     ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_medium: {display: 'DEC Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-
     ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_slower: {display: 'DEC Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-
     ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Step/s'},
+
+    dec_slew_fastest: {display: 'DEC Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_faster: {display: 'DEC Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_medium: {display: 'DEC Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_slower: {display: 'DEC Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
     dec_slew_slowest: {display: 'DEC Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
 
     ra_direction: {display: 'RA Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
