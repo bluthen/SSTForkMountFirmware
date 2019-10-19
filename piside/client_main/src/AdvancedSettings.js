@@ -70,7 +70,7 @@ function makeOnChange(key, setting_map) {
     return (e) => {
         if (setting_map.type === 'number') {
             const v = e.currentTarget.value;
-            if ((v !== '-' && v !== '-.') || (settings_map.hasOwnProperty('min') && settings_map.min >= 0)) {
+            if ((v !== '' && v !== '-' && v !== '-.') || (settings_map.hasOwnProperty('min') && settings_map.min >= 0)) {
                 state.advancedSettings[key] = parseFloat(v);
             } else {
                 state.advancedSettings[key] = v;
