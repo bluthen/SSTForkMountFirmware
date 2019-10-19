@@ -851,15 +851,16 @@ def search_location():
 def manual_control():
     message = request.json
     # print("Got %s" + json.dumps(message))
-    control.set_alive()
-    control.manual_control(message['direction'], message['speed'])
+    control.set_alive(message['client_id'])
+    control.manual_control(message['direction'], message['speed'], message['client_id'])
     return 'Moving', 200
 
 
 @app.route('/api/status', methods=['GET'])
 @nocache
 def status_get():
-    control.set_alive()
+    client_id = request.args.get('client_id')
+    control.set_alive(client_id)
     return jsonify(control.last_status)
 
 

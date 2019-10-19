@@ -19,8 +19,20 @@ const settings_map = {
     ra_guide_rate: {display: 'RA Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
     dec_guide_rate: {display: 'DEC Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
 
-    ra_accel_tpss: {display: 'RA Max Acceleration', type: 'number', min: 0, endAdornment: 'Step/s^2', jsonLevel: 'micro'},
-    dec_accel_tpss: {display: 'DEC Max Acceleration', type: 'number', min: 0, endAdornment: 'Step/s^2', jsonLevel: 'micro'},
+    ra_accel_tpss: {
+        display: 'RA Max Acceleration',
+        type: 'number',
+        min: 0,
+        endAdornment: 'Step/s^2',
+        jsonLevel: 'micro'
+    },
+    dec_accel_tpss: {
+        display: 'DEC Max Acceleration',
+        type: 'number',
+        min: 0,
+        endAdornment: 'Step/s^2',
+        jsonLevel: 'micro'
+    },
 
 
     ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
@@ -52,16 +64,17 @@ const settings_map = {
         type: 'number',
         endAdornment: 'pulse/°'
     }
-
-
-
 };
 
 function makeOnChange(key, setting_map) {
     return (e) => {
         if (setting_map.type === 'number') {
             const v = e.currentTarget.value;
-            state.advancedSettings[key] = parseFloat(v);
+            if ((v !== '-' && v !== '-.') || (settings_map.hasOwnProperty('min') && settings_map.min >= 0)) {
+                state.advancedSettings[key] = parseFloat(v);
+            } else {
+                state.advancedSettings[key] = v;
+            }
         } else if (setting_map.type === 'boolean') {
             let v = e.target.checked;
             if (setting_map.map) {
@@ -79,21 +92,29 @@ class AdvancedSettings extends React.Component {
         this.uuid = uuidv4();
     }
 
-    componentDidMount(){
+    componentDidMount() {
         APIHelp.fetchSettings();
     }
 
     handleSave() {
         const resp = {};
-        for(const key of Object.keys(settings_map)) {
+        for (const key of Object.keys(settings_map)) {
             const jl = settings_map[key].jsonLevel;
             if (jl) {
-                if(!resp[jl]) {
+                if (!resp[jl]) {
                     resp[jl] = {};
                 }
-                resp[jl][key] = state.advancedSettings[key];
+                if (typeof state.advancedSettings[key] === 'string') {
+                    resp[jl][key] = 0;
+                } else {
+                    resp[jl][key] = state.advancedSettings[key];
+                }
             } else {
-                resp[key] = state.advancedSettings[key];
+                if (typeof state.advancedSettings[key] === 'string') {
+                    resp[key] = 0;
+                } else {
+                    resp[key] = state.advancedSettings[key];
+                }
             }
         }
         APIHelp.saveSettings(resp);
@@ -103,7 +124,7 @@ class AdvancedSettings extends React.Component {
         const settings = [];
         let spinner = null;
         if (state.advancedSettings.fetching) {
-            spinner = <CircularProgress/>
+            spinner = <CircularProgress/>;
         } else {
             for (let key in settings_map) {
                 if (settings_map[key].type === 'boolean') {
@@ -125,23 +146,25 @@ class AdvancedSettings extends React.Component {
                         label={settings_map[key].display}
                     /></Grid>);
                 } else {
-                    settings.push(<Grid item key={key + this.uuid} xs={4}><TextField value={state.advancedSettings[key]}
-                                                                                     label={settings_map[key].display}
-                                                                                     key={key}
-                                                                                     type={settings_map[key].type}
-                                                                                     inputProps={{
-                                                                                         min: settings_map[key].min,
-                                                                                         max: settings_map[key].max,
-                                                                                         step: settings_map[key].step
-                                                                                     }} InputProps={{
-                        endAdornment: <InputAdornment style={{whiteSpace: 'nowrap'}} position="end">{settings_map[key].endAdornment}</InputAdornment>
-                    }} onChange={makeOnChange(key, settings_map[key])}/></Grid>);
+                    settings.push(<Grid item key={key + this.uuid} xs={4}>
+                        <TextField value={state.advancedSettings[key]}
+                                   label={settings_map[key].display}
+                                   key={key}
+                                   type={settings_map[key].type}
+                                   inputProps={{
+                                       min: settings_map[key].min,
+                                       max: settings_map[key].max,
+                                       step: settings_map[key].step
+                                   }} InputProps={{
+                            endAdornment: <InputAdornment style={{whiteSpace: 'nowrap'}}
+                                                          position="end">{settings_map[key].endAdornment}</InputAdornment>
+                        }} onChange={makeOnChange(key, settings_map[key])}/>
+                    </Grid>);
                 }
             }
             settings.push(<Grid item key={'save' + this.uuid} xs={12} style={{textAlign: "center"}}>
                 <Button color="primary" variant="contained" onClick={this.handleSave}>Save</Button>
-            </Grid>)
-
+            </Grid>);
         }
         return <Grid container spacing={3}>
             {settings}

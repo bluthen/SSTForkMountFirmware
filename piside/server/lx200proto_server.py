@@ -2,11 +2,11 @@ import socket
 import traceback
 import datetime
 import re
+import uuid
 import threading
 import control
 import pendulum
 import settings
-from functools import partial
 
 ourport = 10002
 kill = False
@@ -90,6 +90,7 @@ def dec_to_deg(deg, minutes, seconds=0.0):
 
 class LX200Client:
     def __init__(self, socket_conn, client_address):
+        self.client_id = str(uuid.uuid4())
         self.socket = socket_conn
         self.client_address = client_address
         self.buf = ""
@@ -192,7 +193,7 @@ class LX200Client:
     def process(self, cmd):
         global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
         # print('process', cmd)
-        control.set_alive()
+        control.set_alive(self.client_id)
         if cmd == ':Aa#':  # Start automatic alignment sequence
             self.write(b'0')
         elif cmd == ':FB#':  # Query focus busy status
@@ -274,6 +275,7 @@ class LX200Client:
                 self.write(b'SU#')
             elif cmd == ':GR#':  # telescope RA PRIORITY DONE
                 # self.write(b'HH:MM:SS#')
+                control.set_alive(self.client_id)
                 self.write(ra_format(control.last_status['ra']).encode())
             elif cmd == ':Gr#':  # current target RA
                 self.write(b'HH:MM:SS#')
@@ -365,8 +367,8 @@ class LX200Client:
                 # print('LX200 Manual Slew', slew_speed)
                 if slew_intervals[cmd[2]]:
                     slew_intervals[cmd[2]].cancel()
-                slew_intervals[cmd[2]] = control.SimpleInterval(
-                    partial(control.manual_control, manual_slew_map[cmd[2]], slew_speed), 0.1)
+                control.set_alive(self.client_id)
+                control.manual_control(manual_slew_map[cmd[2]], slew_speed, self.client_id)
         elif cmd == ':P#':
             self.write(b'LOW PRECISION')
         elif cmd[1] == 'Q':
@@ -382,13 +384,13 @@ class LX200Client:
                     if slew_intervals[d]:
                         slew_intervals[d].cancel()
                         slew_intervals[d] = None
-                        control.manual_control(manual_slew_map[d], None)
+                        control.manual_control(manual_slew_map[d], None, self.client_id)
                 control.cancel_slews()
             elif cmd[2] in ['e', 'n', 'w', 's']:  # halt slew by direction # PRIORITY DONE
                 if slew_intervals[cmd[2]]:
                     slew_intervals[cmd[2]].cancel()
                     slew_intervals[cmd[2]] = None
-                control.manual_control(manual_slew_map[cmd[2]], None)
+                control.manual_control(manual_slew_map[cmd[2]], None, self.client_id)
         # rotators :r+# :r-# :rn# :rh# :rC# :rc# :rq#
         elif cmd[1] == 'R':
             # slew rate

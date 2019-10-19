@@ -669,29 +669,28 @@ def guide_control(direction, time_ms):
 
 
 # Alive is to make sure we don't have a runaway mount incase there is a network disconnection
-alive_check_flag = False
-is_alive = False
+alive_check_flag = {}
+is_alive = {}
 
 
-def set_alive():
-    global alive_check_flag, is_alive
-    alive_check_flag = True
-    is_alive = True
+def set_alive(client_id):
+    alive_check_flag[client_id] = True
+    is_alive[client_id] = True
 
 
 def alive_check():
-    global alive_check_flag, is_alive
-    if not alive_check_flag:
-        is_alive = False
-    else:
-        is_alive = True
-    alive_check_flag = False
+    for key in alive_check_flag:
+        if not alive_check_flag[key]:
+            is_alive[key] = False
+        else:
+            is_alive[key] = True
+        alive_check_flag[key] = False
 
 
 compliment_direction = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
 
 
-def manual_control(direction, speed):
+def manual_control(direction, speed, client_id):
     global slew_lock, manual_lock
     settings.not_parked()
     # print(direction, speed)
@@ -715,7 +714,7 @@ def manual_control(direction, speed):
                 timers[comp].cancel()
                 del timers[comp]
             # print(is_alive, speed)
-            if not is_alive or not speed:
+            if not is_alive[client_id] or not speed:
                 status = stepper.get_status()
                 recall = False
                 if direction in ['left', 'right']:
@@ -733,7 +732,7 @@ def manual_control(direction, speed):
                         recall = True
                 # Keep calling until we are settled
                 if recall:
-                    timers[direction] = threading.Timer(1, partial(manual_control, direction, speed))
+                    timers[direction] = threading.Timer(1, partial(manual_control, direction, speed, client_id))
                     timers[direction].start()
             else:
                 # If not current manually going other direction
@@ -749,7 +748,7 @@ def manual_control(direction, speed):
                     stepper.set_speed_dec(-settings.settings['dec_slew_' + speed])
                 # We call this periodically if not alive it will cancel the slewing, if alive it will continue at
                 # speed we are at.
-                timers[direction] = threading.Timer(1, partial(manual_control, direction, speed))
+                timers[direction] = threading.Timer(1, partial(manual_control, direction, speed, client_id))
                 timers[direction].start()
         finally:
             set_last_slew_none()

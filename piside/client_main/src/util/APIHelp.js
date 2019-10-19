@@ -23,7 +23,7 @@ function handleFetchError(response) {
 
 
 function getStatus() {
-    return fetch('/api/status').then(handleFetchError).then((response) => {
+    return fetch('/api/status?client_id='+state.client_id).then(handleFetchError).then((response) => {
         return response.json();
     });
 }
@@ -91,7 +91,7 @@ const oppositeMap = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up
 function sendManualRequest(speed, direction) {
     return fetch('/api/manual_control', {
         method: 'post',
-        body: JSON.stringify({speed: speed, direction: direction}),
+        body: JSON.stringify({speed: speed, direction: direction, client_id: state.client_id}),
         headers: {
             'Content-Type': 'application/json'
         }

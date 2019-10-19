@@ -1,7 +1,9 @@
 import {observable, toJS} from "mobx";
+import uuidv4 from 'uuid/v4';
 
 
 const state = observable({
+    client_id: uuidv4(),
     page: 'manual',
     topTabs: 'manual',
     coordDisplay: 'radec',
