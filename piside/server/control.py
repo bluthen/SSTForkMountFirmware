@@ -148,25 +148,29 @@ def sync(coord):
     if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
             skyconv.model_real_stepper.size() > 0:
         stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
-                                               frame=skyconv.model_real_stepper.frame(), obstime=obstime)
+                                               frame=skyconv.model_real_stepper.frame(), inverse_model=True,
+                                               obstime=obstime)
         if skyconv.model_real_stepper.frame() == 'hadec':
-            model_real_stepper.add_point(coord, stepper_coord)
+            skyconv.model_real_stepper.add_point(coord, stepper_coord)
         else:  # AltAz model frame
+            print(coord, stepper_coord)
             coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
-            model_real_stepper.add_point(coord, stepper_coord)
+            skyconv.model_real_stepper.add_point(coord, stepper_coord)
     else:
         park_sync = False
         sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': coord}
         print('Setting sync_info', sync_info)
         settings.runtime_settings['sync_info'] = sync_info
         if settings.settings['pointing_model'] in ['single', 'buie']:
+            print(settings.settings['pointing_model'], 'sync')
             if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
                 skyconv.model_real_stepper = pointing_model.PointingModelBuie()
             skyconv.model_real_stepper.clear()
             skyconv.model_real_stepper.add_point(coord, coord)
         else:  # affine model
+            print('affine sync')
             if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelAffine):
-                skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+                skyconv.model_real_stepper = pointing_model.PointingModelAffine()
             coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
             skyconv.model_real_stepper.clear()
             skyconv.model_real_stepper.add_point(coord, coord)
@@ -598,7 +602,7 @@ def init():
     Init point for this module.
     :return:
     """
-    global stepper, status_interval, inited, park_sync, model_real_stepper, encoder_logging_file
+    global stepper, status_interval, inited, park_sync, encoder_logging_file
     if inited:
         return
     inited = True
@@ -607,7 +611,7 @@ def init():
     # Open serial port
     stepper = stepper_control.StepperControl(settings.settings['microserial']['port'],
                                              settings.settings['microserial']['baud'])
-    model_real_stepper = pointing_model.PointingModelBuie()
+    skyconv.model_real_stepper = pointing_model.PointingModelBuie()
     update_location()
     micro_update_settings()
 

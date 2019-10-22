@@ -6,6 +6,7 @@ import astropy.units as u
 from astropy.time import Time as AstroTime
 import time
 import copy
+import traceback
 
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
 from flask_compress import Compress
@@ -457,6 +458,7 @@ def do_sync():
     try:
         size = control.set_sync(ra, dec, alt, az)
     except Exception as e:
+        traceback.print_tb(e)
         return str(e), 400
     return jsonify({'text': 'Sync Points: ' + str(size)})
 
