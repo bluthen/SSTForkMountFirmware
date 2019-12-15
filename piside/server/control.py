@@ -809,6 +809,18 @@ def start_tracking():
     set_last_slew(last_slew['altaz'])
 
 
+def park_scope():
+    stop_tracking()
+    if not settings.settings['park_position']:
+        coord = SkyCoord(alt=DEFAULT_PARK['alt'] * u.deg,
+                         az=DEFAULT_PARK['az'] * u.deg, frame='altaz')
+    else:
+        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
+                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
+    slew(coord, parking=True)
+
+
+
 def set_time(iso_timestr):
     """
     Try to set the system time

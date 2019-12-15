@@ -551,14 +551,7 @@ def unset_park_position():
 @app.route('/api/park', methods=['PUT'])
 @nocache
 def do_park():
-    control.stop_tracking()
-    if not settings.settings['park_position']:
-        coord = SkyCoord(alt=control.DEFAULT_PARK['alt'] * u.deg,
-                         az=control.DEFAULT_PARK['az'] * u.deg, frame='altaz')
-    else:
-        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
-    control.slew(coord, parking=True)
+    control.park_scope()
     return 'Parking.', 200
 
 

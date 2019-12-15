@@ -312,16 +312,25 @@ class LX200Client:
                 self.write(az_format(control.last_status['az']).encode())
         elif cmd[1] == 'h':
             # if cmd == ':hN#':  # autostar sleep scope
-            # elif cmd == ':hP#':  # slew to park position
-            # elif cmd == ':hS#':  # set current position as park position
-            # elif cmd == ':hW#':  # autostar wake up scope
-            if cmd == ':h?#':  # autostar query home status
+            if cmd == ':hP#':  # slew to park position
+                control.park_scope()
+                slew_commanded()
+            elif cmd == ':hS#':  # set current position as park position
+                control.set_park_position_here()
+            elif cmd == ':hW#':  # autostar wake up scope
+                control.start_tracking()
+            elif cmd == ':h?#':  # autostar query home status
                 self.write(b'0')
             elif cmd[2] == 'I':
                 # m = self.re_autostar_settime_cmd.match(cmd)  # Autostar settime
                 self.write(b'1')
         # :H#'  toggle 24 and 12 hour time format
-        # :I#  # stop and restart scope
+        # :I#  # stop and restart scope -- kstars unpark
+        elif cmd == ':I#':
+            # TODO: Need to do more for kstars to know we are unparked.
+            # self.process(':Q#')
+            control.start_tracking()
+            # self.write(b'0')
         elif cmd[1] == 'L':
             # :LB# :LCNNNN# :LF#
             if cmd == ':Lf#':
