@@ -3,6 +3,7 @@ import math
 import affine_fit
 import settings
 import json
+import sys
 import scipy
 import scipy.optimize
 
@@ -131,21 +132,21 @@ def buie_model(xdata, r, dr, dd, dt, i, c, gamma, nu, e, phi):
     :param phi: latitude
     :return:
     """
-    xdataT = xdata.T
-    tau = xdataT[0] * math.pi / 180.0
-    delta = xdataT[1] * math.pi / 180.0
+    xdata_t = xdata.T
+    tau = xdata_t[0] * math.pi / 180.0
+    delta = xdata_t[1] * math.pi / 180.0
 
     a1 = gamma * numpy.cos(nu)
     a2 = gamma * numpy.sin(nu)
     x = numpy.cos(tau)
     y = numpy.sin(tau)
     x_hat = numpy.cos(delta)
-    T = numpy.tan(delta)
-    S = 1 / x_hat
+    delta_tan = numpy.tan(delta)
+    s = 1 / x_hat
     z = numpy.sin(phi) * x_hat - numpy.cos(phi) * numpy.sin(delta) * x
 
     d = delta - (dd - a1 * x - a2 * y - e * z + dr * delta)
-    t = tau - (dt + T * (a2 * x - a1 * y - i) + S * (c + e * y * numpy.cos(phi)) + r * tau)
+    t = tau - (dt + delta_tan * (a2 * x - a1 * y - i) + s * (c + e * y * numpy.cos(phi)) + r * tau)
 
     return numpy.array([(180.0 / math.pi) * t, (180.0 / math.pi) * d]).T
 
@@ -227,16 +228,32 @@ class PointingModelBuie:
                 fdec = [from_point.dec.deg]
         self.__from_points = SkyCoord(ra=fra * u.deg, dec=fdec * u.deg, frame='icrs')
 
-        if self.__model == 'buie':
+        # Act just like single if number of points is only 1
+        if len(self.__from_points) > 1:
             p0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             if len(self.__to_points) < len(p0):
                 p0 = p0[0:len(self.__to_points)]
             xdata = numpy.array([self.__from_points.ra.deg, self.__from_points.dec.deg]).T
             ydata = numpy.array(self.__to_points)
-            self.__buie_vals = scipy.optimize.leastsq(buie_model_error, p0, args=(xdata, ydata))[0]
+            # Default maxfev=800 fails in some unit tests
+            result = scipy.optimize.leastsq(buie_model_error, numpy.array(p0), args=(xdata, ydata), full_output=True,
+                                            maxfev=1600)
+            result_ier = result[4]
+            result_msg = result[3]
+            # print(result[2]['fvec'], len(self.__from_points))
+            if result_ier in [1, 2, 3, 4]:
+                self.__buie_vals = result[0]
+            else:
+                print('WARNING: model failed, using single point model until successful. ' +
+                      'scipy.optimize.leastsq: ier={result_ier:d}, mesg={result_msg:s}'.format(result_ier=result_ier,
+                                                                                               result_msg=result_msg),
+                      file=sys.stderr)
+                # Had problem with least squares, use single point model until successful
+                self.__buie_vals = None
 
     def transform_point(self, point):
-        if self.__model == 'buie' and self.__buie_vals is not None:
+        if self.__buie_vals is not None:
+            # print('buie_vals', self.__buie_vals)
             p0 = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
             p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals):]])
             new_point = buie_model(numpy.array([[point.ra.deg, point.dec.deg]]), *p0)
@@ -245,12 +262,21 @@ class PointingModelBuie:
             return point
 
     def inverse_transform_point(self, point):
-        if self.__model == 'buie' and self.__buie_vals is not None:
+        if self.__buie_vals is not None:
             def our_func(coord):
                 new_point = self.transform_point(SkyCoord(ra=coord[0] * u.deg, dec=coord[1] * u.deg, frame='icrs'))
-                return (new_point.ra.deg-point.ra.deg)**2.0+(new_point.dec.deg-point.dec.deg)**2.0
-            inv_point = scipy.optimize.fmin(our_func, [point.ra.deg, point.dec.deg])
-            return SkyCoord(ra=inv_point[0]*u.deg, dec=inv_point[1]*u.deg, frame='icrs')
+                return (new_point.ra.deg - point.ra.deg) ** 2.0 + (new_point.dec.deg - point.dec.deg) ** 2.0
+
+            results = scipy.optimize.fmin(our_func, [point.ra.deg, point.dec.deg], disp=False, full_output=True,
+                                          maxfun=1600)
+            inv_point = results[0]
+            warnflag = results[4]
+            if warnflag in [1, 2]:
+                # TODO: Not sure if this will change until model has change, maybe can set/check model update flag
+                print('WARNING: model failed, using single point model until successful. ', file=sys.stderr)
+                return point
+            else:
+                return SkyCoord(ra=inv_point[0] * u.deg, dec=inv_point[1] * u.deg, frame='icrs')
         else:
             return point
 

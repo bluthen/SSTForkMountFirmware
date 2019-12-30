@@ -362,7 +362,7 @@ class LX200Client:
                         return
                     self.write(b'0')
                 except Exception as e:
-                    print(e)
+                    traceback.print_exc()
                     self.write(b'1Unable to slew#')
             elif cmd[2] == 'g':  # PRIORITY2
                 # move guide telescope
@@ -499,7 +499,7 @@ class LX200Client:
                     control.set_location(settings.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
                     self.write(b'1')
                 except Exception as e:
-                    print(e)
+                    traceback.print_exc()
                     self.write(b'0')
             elif cmd[2] == 'G':  # PRIORITY
                 m = self.re_set_site_hours_add_utc.match(cmd)
@@ -603,7 +603,7 @@ class LX200Client:
                                          1000.0, 'site1')
                     self.write(b'1')
                 except Exception as e:
-                    print(e)
+                    traceback.print_exc()
                     self.write(b'0')
 
             elif cmd[2] == 'T':

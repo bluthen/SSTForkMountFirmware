@@ -135,45 +135,46 @@ def sync(coord):
     global park_sync
     status = calc_status(stepper.get_status())
     obstime = AstroTime.now()
-    set_last_slew(coord, obstime=obstime)
-    if hasattr(coord, 'ra'):
-        coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=True)
-    elif hasattr(coord, 'alt'):
-        print(coord)
-        coord = skyconv.altaz_to_icrs(coord, obstime=obstime, atmo_refraction=False)
-        print(coord)
-        coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=False)
-        print(coord)
+    with set_last_slew_lock:
+        set_last_slew(coord, obstime=obstime)
+        if hasattr(coord, 'ra'):
+            coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=True)
+        elif hasattr(coord, 'alt'):
+            # print(coord)
+            coord = skyconv.altaz_to_icrs(coord, obstime=obstime, atmo_refraction=False)
+            # print(coord)
+            coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=False)
+            # print(coord)
 
-    if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
-            skyconv.model_real_stepper.size() > 0:
-        stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
-                                               frame=skyconv.model_real_stepper.frame(), inverse_model=True,
-                                               obstime=obstime)
-        if skyconv.model_real_stepper.frame() == 'hadec':
-            skyconv.model_real_stepper.add_point(coord, stepper_coord)
-        else:  # AltAz model frame
-            print(coord, stepper_coord)
-            coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
-            skyconv.model_real_stepper.add_point(coord, stepper_coord)
-    else:
-        park_sync = False
-        sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': coord}
-        print('Setting sync_info', sync_info)
-        settings.runtime_settings['sync_info'] = sync_info
-        if settings.settings['pointing_model'] in ['single', 'buie']:
-            print(settings.settings['pointing_model'], 'sync')
-            if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
-                skyconv.model_real_stepper = pointing_model.PointingModelBuie()
-            skyconv.model_real_stepper.clear()
-            skyconv.model_real_stepper.add_point(coord, coord)
-        else:  # affine model
-            print('affine sync')
-            if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelAffine):
-                skyconv.model_real_stepper = pointing_model.PointingModelAffine()
-            coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
-            skyconv.model_real_stepper.clear()
-            skyconv.model_real_stepper.add_point(coord, coord)
+        if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
+                skyconv.model_real_stepper.size() > 0:
+            stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
+                                                   frame=skyconv.model_real_stepper.frame(), inverse_model=True,
+                                                   obstime=obstime)
+            if skyconv.model_real_stepper.frame() == 'hadec':
+                skyconv.model_real_stepper.add_point(coord, stepper_coord)
+            else:  # AltAz model frame
+                print(coord, stepper_coord)
+                coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
+                skyconv.model_real_stepper.add_point(coord, stepper_coord)
+        else:
+            park_sync = False
+            sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': coord}
+            print('Setting sync_info', sync_info)
+            settings.runtime_settings['sync_info'] = sync_info
+            if settings.settings['pointing_model'] in ['single', 'buie']:
+                print(settings.settings['pointing_model'], 'sync')
+                if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
+                    skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+                skyconv.model_real_stepper.clear()
+                skyconv.model_real_stepper.add_point(coord, coord)
+            else:  # affine model
+                print('affine sync')
+                if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelAffine):
+                    skyconv.model_real_stepper = pointing_model.PointingModelAffine()
+                coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
+                skyconv.model_real_stepper.clear()
+                skyconv.model_real_stepper.add_point(coord, coord)
 
 
 def slew(coord, parking=False):
@@ -869,7 +870,6 @@ def set_location(lat, long, elevation, name):
     try:
         update_location()
     except Exception as e:
-        print(e)
         settings.settings['location'] = old_location
         traceback.print_exc(file=sys.stdout)
         raise
