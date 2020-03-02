@@ -19,6 +19,8 @@ volatile boolean configvars_debug_enabled;
 volatile boolean configvars_autoguide_enabled;
 volatile int configvars_ra_direction;
 volatile int configvars_dec_direction;
+volatile int configvars_dec_disable;
+volatile int configvars_ra_disable;
 
 
 const static int AUTOGUIDE_DEC_NEGY_PIN = 17;
@@ -69,6 +71,8 @@ void setup()
   configvars_dec_direction = 1;
   configvars_ra_accel_tpss = 10000;
   configvars_dec_accel_tpss = 10000;
+  configvars_dec_disable = 0;
+  configvars_ra_disable = 0;
 }
 
 
@@ -199,4 +203,3 @@ void loop()
   command_read_serial();
   runSteppers();
 }
-

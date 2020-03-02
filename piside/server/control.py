@@ -588,6 +588,8 @@ def micro_update_settings():
                   'dec_max_tps': settings.settings['dec_slew_fastest'],
                   'dec_guide_rate': settings.settings['micro']['dec_guide_rate'],
                   'dec_direction': settings.settings['micro']['dec_direction'],
+                  'dec_disable': settings.settings['micro']['dec_disable'],
+                  'ra_disable': settings.settings['micro']['ra_disable'],
                   'ra_accel_tpss': settings.settings['micro']['ra_accel_tpss'],
                   'dec_accel_tpss': settings.settings['micro']['dec_accel_tpss']}
     stepper.update_settings(key_values)

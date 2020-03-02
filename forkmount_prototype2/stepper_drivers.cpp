@@ -95,9 +95,11 @@ void ra_set_step_resolution(boolean full) {
 }
 
 void ra_step() {
+  if(!configvars_ra_disable) {
     digitalWrite(RA_STEPPER_STEP_PIN, HIGH);
     delayMicroseconds(1);
     digitalWrite(RA_STEPPER_STEP_PIN, LOW);    
+  }
 }
 
 void ra_stepper_forwardstep() {
@@ -177,9 +179,11 @@ void dec_set_step_resolution(boolean full) {
 }
 
 void dec_step() {
+  if(!configvars_dec_disable) {
     digitalWrite(DEC_STEPPER_STEP_PIN, HIGH);
     delayMicroseconds(1);
     digitalWrite(DEC_STEPPER_STEP_PIN, LOW);    
+  }
 }
 
 void dec_stepper_forwardstep() {
@@ -460,4 +464,3 @@ void runSteppers() {
     stepperSnapshot();
   }
 }
-

@@ -54,6 +54,10 @@ void command_set_var() {
     if (oldv != configvars_ra_direction) {
       directionUpdated();
     }
+  } else if(strcmp(argName, "dec_disable") == 0) {
+    configvars_dec_disable = (int)value;
+  } else if(strcmp(argName, "ra_disable") == 0) {
+    configvars_ra_disable = (int)value;
   } else if(strcmp(argName, "ra_accel_tpss") == 0) {
     configvars_ra_accel_tpss = value;
     stepperSnapshot();
@@ -119,6 +123,8 @@ void command_status() {
   WSERIAL.println(configvars_ra_guide_rate);
   WSERIAL.print("ra_direction=");
   WSERIAL.println(configvars_ra_direction);
+  WSERIAL.print("ra_disable=");
+  WSERIAL.println(configvars_ra_disable);
   WSERIAL.print("ra_accel_tpss=");
   WSERIAL.println(configvars_ra_accel_tpss);
   WSERIAL.print("dec_max_tps=");
@@ -127,6 +133,8 @@ void command_status() {
   WSERIAL.println(configvars_dec_guide_rate);
   WSERIAL.print("dec_direction=");
   WSERIAL.println(configvars_dec_direction);
+  WSERIAL.print("dec_disable=");
+  WSERIAL.println(configvars_dec_disable);
   WSERIAL.print("dec_accel_tpss=");
   WSERIAL.println(configvars_dec_accel_tpss);
   WSERIAL.print("debug:");
@@ -260,4 +268,3 @@ void command_init(void) {
 void command_read_serial() {
   cmd.readSerial();
 }
-

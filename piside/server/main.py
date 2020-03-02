@@ -1,35 +1,35 @@
-from astropy.utils import iers
-import astropy.time
-import astropy.coordinates
-from astropy.coordinates import solar_system_ephemeris, SkyCoord
-import astropy.units as u
-from astropy.time import Time as AstroTime
-import time
 import copy
-import traceback
-
-from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
-from flask_compress import Compress
-from functools import wraps, update_wrapper
-import json
-import control
-import threading
+import datetime
+import logging
+import os
 import re
+import socket
 import sqlite3
 import subprocess
-import datetime
-import tempfile
-import zipfile
-import os
-import settings
-import sstchuck
-import network
 import sys
-import socket
-import lx200proto_server
-import skyconv
+import tempfile
+import threading
+import time
+import traceback
+import zipfile
+from functools import wraps, update_wrapper
 
+import astropy.coordinates
+import astropy.time
+import astropy.units as u
+from astropy.coordinates import solar_system_ephemeris, SkyCoord
+from astropy.time import Time as AstroTime
+from astropy.utils import iers
+from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
+from flask_compress import Compress
 from werkzeug.serving import make_ssl_devcert
+
+import control
+import lx200proto_server
+import network
+import settings
+import skyconv
+import sstchuck
 
 iers.conf.auto_download = False
 iers.auto_max_age = None
@@ -49,6 +49,7 @@ power_thread_quit = False
 
 st_queue = None
 app = Flask(__name__, static_folder='../client_refactor/dist/')
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 # socketio = SocketIO(app, async_mode='threading', logger=False, engineio_logger=False)
 settings_json_lock = threading.RLock()
 db_lock = threading.RLock()
@@ -128,7 +129,7 @@ def version():
 def settings_get():
     s = copy.deepcopy(settings.settings)
     s['encoder_logging'] = control.encoder_logging_enabled
-    print(s)
+    # print(s)
     return jsonify(s)
 
 
@@ -203,7 +204,8 @@ def settings_put():
         if key in args:
             settings_buffer[key] = float(args[key])
     if 'micro' in args:
-        keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "ra_accel_tpss", "dec_accel_tpss"]
+        keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "dec_disable", "ra_disable",
+                "ra_accel_tpss", "dec_accel_tpss"]
         for key in keys:
             if key in args['micro']:
                 if 'micro' not in settings_buffer:
@@ -231,7 +233,8 @@ def settings_put():
         if key in args:
             settings.settings[key] = settings_buffer[key]
     if 'micro' in settings_buffer:
-        keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "ra_accel_tpss", "dec_accel_tpss"]
+        keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "dec_disable", "ra_disable",
+                "ra_accel_tpss", "dec_accel_tpss"]
         for key in keys:
             if key in settings_buffer['micro']:
                 print('=== settings micro ' + key, float(settings_buffer['micro'][key]))
@@ -677,7 +680,7 @@ def search_object():
     stars = to_list_of_dicts(stars, ['type'] + stars_columns)
     # Alt az
     for ob in dso:
-        print(ob['ra'], ob['dec'], ob['r1'], ob['r2'])
+        # print(ob['ra'], ob['dec'], ob['r1'], ob['r2'])
         ob['ra'] = float(ob['ra']) * (360. / 24.)
         ob['dec'] = float(ob['dec'])
         if not ob['mag']:

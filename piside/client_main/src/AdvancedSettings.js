@@ -50,6 +50,8 @@ const settings_map = {
     ra_direction: {display: 'RA Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
     dec_direction: {display: 'DEC Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
 
+    ra_disable: {display: 'RA Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
+    dec_disable: {display: 'DEC Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
 
     use_encoders: {display: 'Use Encoders', type: 'boolean'},
     limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean'},
