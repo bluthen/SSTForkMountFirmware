@@ -53,7 +53,8 @@ const settings_map = {
     ra_disable: {display: 'RA Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
     dec_disable: {display: 'DEC Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
 
-    use_encoders: {display: 'Use Encoders', type: 'boolean'},
+    ra_use_encoder: {display: 'Use Encoders w/RA', type: 'boolean'},
+    dec_use_encoder: {display: 'Use Encoders w/DEC', type: 'boolean'},
     limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean'},
 
     ra_encoder_pulse_per_degree: {

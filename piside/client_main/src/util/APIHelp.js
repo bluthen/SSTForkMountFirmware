@@ -208,7 +208,7 @@ const APIHelp = {
         });
         observe(state.status, 'alert', () => {
             if (state.status.alert) {
-                console.error('Alert Errot: ', state.status.alert);
+                console.error('Alert Error: ', state.status.alert);
                 state.snack_bar = 'Error: ' + state.status.alert;
                 state.snack_bar_error = true;
             }

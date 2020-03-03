@@ -73,6 +73,8 @@ park_sync = False
 cancel_slew = False
 last_status = None
 
+encoder_error = None
+
 encoder_logging_enabled = False
 encoder_logging_file = None
 encoder_logging_clear = False
@@ -467,22 +469,37 @@ def calc_status(status):
     :rtype status: dict
     :return: Updates status but also returns it.
     """
-    if settings.settings['use_encoders']:
+    global cancel_slew, encoder_error
+    if settings.settings['ra_use_encoder']:
         ra_steps_per_encoder = settings.settings['ra_ticks_per_degree'] / settings.settings[
             'ra_encoder_pulse_per_degree']
-        dec_steps_per_encoder = settings.settings['dec_ticks_per_degree'] / settings.settings[
-            'dec_encoder_pulse_per_degree']
         ri = status['ri']
-        di = status['di']
         if settings.settings['limit_encoder_step_fillin']:
             if abs(status['ri']) > abs(ra_steps_per_encoder):
                 ri = math.copysign(ri, ra_steps_per_encoder)
-            if abs(status['di']) > abs(dec_steps_per_encoder):
-                di = math.copysign(di, dec_steps_per_encoder)
+            if abs(status['ri']) > abs(10 * settings.settings['ra_ticks_per_degree']):
+                # Something wrong with encoder/motor
+                cancel_slew = True
+                encoder_error = 'Movement not detected by RA Encoder'
+                stepper.update_settings({'ra_disable': True})
         rep = status['re'] * ra_steps_per_encoder + ri
-        dep = status['de'] * dec_steps_per_encoder + di
     else:
         rep = status['rp']
+
+    if settings.settings['dec_use_encoder']:
+        dec_steps_per_encoder = settings.settings['dec_ticks_per_degree'] / settings.settings[
+            'dec_encoder_pulse_per_degree']
+        di = status['di']
+        if settings.settings['limit_encoder_step_fillin']:
+            if abs(status['di']) > abs(dec_steps_per_encoder):
+                di = math.copysign(di, dec_steps_per_encoder)
+            if abs(status['di']) > abs(10 * settings.settings['dec_ticks_per_degree']):
+                # Something wrong with encoder/motor
+                cancel_slew = True
+                encoder_error = 'Movement not detected by DEC Encoder'
+                stepper.update_settings({'dec_disable': True})
+        dep = status['de'] * dec_steps_per_encoder + di
+    else:
         dep = status['dp']
     status['rep'] = rep
     status['dep'] = dep
@@ -525,7 +542,7 @@ def send_status():
     Sets last_status global and sends last_status to socket.
     :return:
     """
-    global slewing, last_status, last_slew, cancel_slew
+    global slewing, last_status, last_slew, cancel_slew, encoder_error
     status = calc_status(stepper.get_status())
     status['ra'] = None
     status['dec'] = None
@@ -571,6 +588,12 @@ def send_status():
             set_last_slew(altaz, obstime=obstime)
             status['alert'] = 'In horizon limit, tracking stopped'
         # print(altaz)
+    if encoder_error:
+        status['alert'] = encoder_error
+        if encoder_error[-1] == ' ':
+            encoder_error = encoder_error.strip()
+        else:
+            encoder_error = encoder_error + ' '
     status['slewing'] = slewing
     status['tracking'] = settings.runtime_settings['tracking']
     last_status = status
@@ -821,7 +844,6 @@ def park_scope():
         coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
                          az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
     slew(coord, parking=True)
-
 
 
 def set_time(iso_timestr):
