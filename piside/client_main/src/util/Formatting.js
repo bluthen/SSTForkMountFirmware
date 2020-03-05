@@ -48,9 +48,9 @@ const Formatting = {
     },
     hmsRA2deg(h, m, s) {
         return (360.0 / 24) *
-            parseFloat(h) +
+            (parseFloat(h) +
             parseFloat(m) / 60.0 +
-            parseFloat(s) / (60.0 * 60.0);
+            parseFloat(s) / (60.0 * 60.0));
     },
     dmsDEC2deg(d, m, s) {
         const sign = Math.sign(d);
