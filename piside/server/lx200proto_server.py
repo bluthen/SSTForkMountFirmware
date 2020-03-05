@@ -82,8 +82,7 @@ def ra_to_deg(hours, minutes, seconds=0.0):
     return (hours + minutes / 60.0 + seconds / 3600.0) * (360.0 / 24.0)
 
 
-def dec_to_deg(deg, minutes, seconds=0.0):
-    sign = 1.0 if deg > 0 else -1.0
+def dec_to_deg(sign, deg, minutes, seconds=0.0):
     deg = abs(deg)
     return sign * (deg + minutes / 60 + seconds / 3600)
 
@@ -419,20 +418,22 @@ class LX200Client:
             if cmd[2] == 'a':  # PRIORITY2 DONE
                 if self.re_set_target_object_alt_hp.match(cmd):  # high precision set target object
                     m = self.re_set_target_object_alt_hp.match(cmd)
-                    deg = m.group(1)
-                    minute = m.group(2)
-                    seconds = m.group(3)
+                    sign = -1.0 if m.group(1) == '-' else 1.0
+                    deg = m.group(2)
+                    minute = m.group(3)
+                    seconds = m.group(4)
                     target['ra'] = None
                     target['dec'] = None
-                    target['alt'] = dec_to_deg(float(deg), float(minute), float(seconds))
+                    target['alt'] = dec_to_deg(sign, float(deg), float(minute), float(seconds))
                     self.write(b'1')
                 elif self.re_set_target_object_alt.match(cmd):  # low precision set target object
                     m = self.re_set_target_object_alt.match(cmd)
-                    deg = m.group(1)
-                    minute = m.group(2)
+                    sign = -1.0 if m.group(1) == '-' else 1.0
+                    deg = m.group(2)
+                    minute = m.group(3)
                     target['ra'] = None
                     target['dec'] = None
-                    target['alt'] = dec_to_deg(float(deg), float(minute))
+                    target['alt'] = dec_to_deg(sign, float(deg), float(minute))
                     self.write(b'1')
             elif cmd[2] == 'b':
                 # m = self.re_set_bright_limit.match(cmd)
@@ -461,7 +462,7 @@ class LX200Client:
                     deg = m.group(2)
                     minutes = m.group(3)
                     seconds = m.group(4)
-                    target['dec'] = dec_to_deg(sign * float(deg), float(minutes), float(seconds))
+                    target['dec'] = dec_to_deg(sign, float(deg), float(minutes), float(seconds))
                     target['alt'] = None
                     target['az'] = None
                     self.write(b'1')  # 0 if not accepted/valid
@@ -470,7 +471,7 @@ class LX200Client:
                     sign = -1 if m.group(1) == '-' else 1.0
                     deg = m.group(2)
                     minutes = m.group(3)
-                    target['dec'] = dec_to_deg(sign * float(deg), float(minutes))
+                    target['dec'] = dec_to_deg(sign, float(deg), float(minutes))
                     target['alt'] = None
                     target['az'] = None
                     self.write(b'1')  # 0 if not accepted/valid
@@ -489,7 +490,7 @@ class LX200Client:
                 deg = m.group(1)
                 minutes = m.group(2)
 
-                lon = dec_to_deg(float(deg), float(minutes))
+                lon = dec_to_deg(1.0, float(deg), float(minutes))
                 if lon > 180:
                     lon = 360.0 - 180
                 else:
@@ -596,7 +597,7 @@ class LX200Client:
                     minute = m.group(3)
                     seconds = 0.0
                 try:
-                    lat = dec_to_deg(sign * float(deg), float(minute), float(seconds))
+                    lat = dec_to_deg(sign, float(deg), float(minute), float(seconds))
                     # print('Set lat:', lat)
                     control.set_location(lat,
                                          settings.runtime_settings['earth_location'].lon.deg,
