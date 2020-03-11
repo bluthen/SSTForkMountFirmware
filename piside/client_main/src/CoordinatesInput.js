@@ -1,6 +1,6 @@
 import React from "react";
 import state from './State';
-import {observer} from "mobx-react"
+import {observer} from "mobx-react";
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
@@ -9,6 +9,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import Button from '@material-ui/core/Button';
 import Formatting from './util/Formatting';
 import CoordDialog from './CoordDialog';
+import CalibrationTable from './CalibrationTable';
 
 @observer
 class CoordinatesInput extends React.Component {
@@ -126,7 +127,7 @@ class CoordinatesInput extends React.Component {
     }
 
     render() {
-        let field1, field2, dialog = null;
+        let field1, field2, dialog = null, calibration_table= null;
         if (this.props.coordinateType === 'radec') {
             field1 = this.fieldGen('ra', [{key: 'h', min: 0, max: 23, adornment: 'h', ref: this.one, nextRef: this.two},
                 {key: 'm', min: 0, max: 59, adornment: 'm', ref: this.two, nextRef: this.three},
@@ -153,12 +154,16 @@ class CoordinatesInput extends React.Component {
             dialog = <CoordDialog/>;
         }
 
+        if (state.misc.calibration_logging) {
+            calibration_table = <Grid item xs={12}><CalibrationTable/></Grid>
+        }
+
         return <Typography component="div">
             <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
                 <Grid item xs={4}/>
                 <Grid item xs={4}>
                     <TToggle offLabel="RA/Dec" onLabel="Alt/Az" checked={this.props.coordinateType === 'altaz'}
-                                        onChange={this.props.onTypeChange}/>
+                             onChange={this.props.onTypeChange}/>
                 </Grid>
                 <Grid item xs={4}/>
                 <Grid item xs={2}>
@@ -175,6 +180,7 @@ class CoordinatesInput extends React.Component {
                     <Button variant="contained" color="primary" buttonRef={this.buttonRef} onClick={this.handleClick}>Slew/Sync</Button>
                 </Grid>
             </Grid>
+            {calibration_table}
             {dialog}
         </Typography>
     }

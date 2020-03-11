@@ -344,6 +344,7 @@ const APIHelp = {
                 state.slewlimit.less_than = d.horizon_limit_dec.less_than;
                 state.slewlimit.model = d.pointing_model;
                 state.misc.encoder_logging = d.encoder_logging;
+                state.misc.calibration_logging = d.calibration_logging;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
                         console.log('=== micro object' + key);
@@ -647,6 +648,12 @@ const APIHelp = {
                             }
                         });
                     });
+                });
+            });
+        } else if (name === 'calibration') {
+            return fetch('/api/logger?name=calibration&ts=' + (new Date().getTime()), {}).then(handleFetchError).then((response) => {
+                return response.json().then((t) => {
+                    state.calibrationLogs.replace(t);
                 });
             });
         }

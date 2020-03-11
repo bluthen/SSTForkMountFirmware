@@ -97,9 +97,22 @@ const Formatting = {
             s = '0' + s;
         }
         return ret + '.' + s;
+    },
+    deltaDegRA: function(frompt, topt) {
+        const d_1 = topt - frompt;
+        const d_2 = 360.0 + d_1;
+        const d_3 = d_1 - 360;
+        const ar = [d_1, d_2, d_3];
+        const absar = [Math.abs(d_1), Math.abs(d_2), Math.abs(d_3)];
+        const idx = absar.indexOf(Math.min.apply(Math, absar));
+        return ar[idx];
+    },
+    deltaDegDec: function(frompt, topt) {
+        return topt-frompt;
+    },
+    deg2arcseconds: function(pt) {
+        return pt*60.*60.;
     }
-
-
 };
 
 export default Formatting;

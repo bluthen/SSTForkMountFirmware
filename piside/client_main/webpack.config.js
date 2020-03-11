@@ -8,7 +8,8 @@ module.exports = {
 		proxy: {
 			'/api': 'http://localhost:5000',
 			'/advanced_slew_limits': 'http://localhost:5000'
-		}
+		},
+		hot: true
 	},
     entry: [
         './src/index'

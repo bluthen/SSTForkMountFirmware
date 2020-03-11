@@ -129,6 +129,7 @@ def version():
 def settings_get():
     s = copy.deepcopy(settings.settings)
     s['encoder_logging'] = control.encoder_logging_enabled
+    s['calibration_logging'] = settings.runtime_settings['calibration_logging']
     # print(s)
     return jsonify(s)
 
@@ -153,6 +154,17 @@ def logger_get():
     if logger_name == 'pointing':
         pointing_logger.handlers[0].flush()
         return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
+    elif logger_name == 'calibration':
+        ret = []
+        for row in control.calibration_log:
+            # TODO: just support ra/dec right now add others
+            if 'sync' in row and 'slewto' in row and 'slewfrom' in row:
+                ret.append({
+                    'slewfrom': {'ra': row['slewfrom'].ra.deg, 'dec': row['slewfrom'].dec.deg},
+                    'slewto': {'ra': row['slewto'].ra.deg, 'dec': row['slewto'].dec.deg},
+                    'sync': {'ra': row['sync'].ra.deg, 'dec': row['sync'].dec.deg}
+                })
+        return jsonify(ret)
     elif logger_name == 'encoder':
         if control.encoder_logging_enabled:
             control.encoder_logging_file.flush()
@@ -168,6 +180,9 @@ def logger_clear():
     if logger_name == 'encoder':
         control.encoder_logging_clear = True
         return 'Clearing encoder log', 200
+    elif logger_name == 'calibration':
+        control.calibration_log = []
+        return 'Calibration log cleared', 200
     return 'Invalid logger', 400
 
 
@@ -183,6 +198,9 @@ def logger_put():
             return 'Starting logger', 200
         else:
             return 'Stopping logging', 200
+    elif logger_name == 'calibration':
+        settings.runtime_settings['calibration_logging'] = enabled
+        return 'Calibration setting set', 200
     else:
         return 'Invalid logger', 400
 

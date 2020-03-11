@@ -48,6 +48,13 @@ class MiscellaneousSettings extends React.Component {
         APIHelp.toggleLog('encoder', enabled);
     }
 
+    calibrationLoggingChanged(e) {
+        const enabled = e.target.checked;
+        state.misc.calibration_logging = enabled;
+        // Tell server to start logging.
+        APIHelp.toggleLog('calibration', enabled);
+    }
+
     clearEncoderClicked() {
         APIHelp.clearLog('encoder');
     }
@@ -86,6 +93,19 @@ class MiscellaneousSettings extends React.Component {
                     />
                 </Button>
                 <Button color="secondary" variant="contained" onClick={this.handleFirmwareUpdate}>Upload</Button>
+            </Grid>
+            <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
+                <h3>Calibration Tools</h3>
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            value="toggle"
+                            color="primary"
+                            checked={state.misc.calibration_logging}
+                            onChange={this.calibrationLoggingChanged}
+                        />
+                    }
+                    label="Enable Calibration Table"/>
             </Grid>
             <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
                 <h3>Encoder Debugging</h3>

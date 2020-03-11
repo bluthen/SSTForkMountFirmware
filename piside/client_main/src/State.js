@@ -13,7 +13,8 @@ const state = observable({
         directions: {north: false, south: false, east: false, west: false}
     },
     misc: {
-        encoder_logging: false
+        encoder_logging: false,
+        calibration_logging: false
     },
     status: {
         alert: null,
@@ -125,6 +126,19 @@ const state = observable({
         dec_slew_medium: 0,
         dec_slew_slower: 0,
         dec_slew_slowest: 0
+    },
+    calibrationLogs: [],
+    calibrationTable: {
+        correction_factor: 70,
+        ra_ticks_per_degree: 0,
+        dec_ticks_per_degree: 0,
+        ra_encoder_pulse_per_degree: 0,
+        dec_encoder_pulse_per_degree: 0,
+        mean_percent_ra: 0,
+        mean_percent_dec: 0,
+        table_data: [],
+        table_select: [],
+        select_all: false
     },
     location_presets: [],
     location_set: {name: 'Unknown', lat: 0, long: 0, elevation: 0},

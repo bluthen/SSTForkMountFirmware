@@ -18,6 +18,8 @@ configvars = {
     'dec_direction': 1,
     'ra_accel_tpss': 1000,
     'dec_accel_tpss': 1000,
+    'dec_disable': 0,
+    'ra_disable': 0
 }
 
 
@@ -62,6 +64,10 @@ def command_set_var(args):
         configvars['ra_accel_tpss'] = value
     elif arg_name == 'dec_accel_tpss':
         configvars['dec_accel_tpss'] = value
+    elif arg_name == 'dec_disable':
+        configvars['dec_disable'] = value
+    elif arg_name == 'ra_disable':
+        configvars['ra_disable'] = value
     else:
         serialcom.write("ERROR: Invalid variable name '".encode())
         serialcom.write(arg_name.encode())

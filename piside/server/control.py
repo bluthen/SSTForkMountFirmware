@@ -85,6 +85,8 @@ last_slew = {'radec': None, 'altaz': None}
 
 pointing_logger = settings.get_logger('pointing')
 
+calibration_log = []
+
 
 def set_last_slew(coord, obstime=None):
     if not obstime:
@@ -917,6 +919,8 @@ def set_sync(ra=None, dec=None, alt=None, az=None):
         coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     else:
         raise Exception('Missing Coordinates')
+    if settings.runtime_settings['calibration_logging'] and len(calibration_log) > 0:
+        calibration_log[-1]['sync'] = coord
     sync(coord)
     return skyconv.model_real_stepper.size()
 
@@ -949,6 +953,10 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
         # print('NNNNNNNNNNNNNNNNNNNNNNNOOOOOOOOOOOOOOOOOTTTT')
         raise Exception('Slew position is below horizon or in keep-out area.')
     else:
+        if settings.runtime_settings['calibration_logging']:
+            calibration_log.append({
+                'slewfrom': SkyCoord(ra=last_status['ra']*u.deg, dec=last_status['dec']*u.deg, frame='icrs'),
+                'slewto': coord})
         slew(coord, parking)
 
 
