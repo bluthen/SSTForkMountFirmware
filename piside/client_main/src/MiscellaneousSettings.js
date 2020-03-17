@@ -9,6 +9,7 @@ import uuidv4 from 'uuid/v4';
 import APIHelp from './util/APIHelp';
 import TToggle from './TToggle';
 import EncoderGraph from './EncoderGraph';
+import UpdateDialog from './UpdateDialog';
 
 
 @observer
@@ -24,6 +25,7 @@ class MiscellaneousSettings extends React.Component {
 
     componentDidMount() {
         APIHelp.fetchSettings();
+        APIHelp.fetchVersion();
     }
 
     handleParkClicked() {
@@ -33,6 +35,8 @@ class MiscellaneousSettings extends React.Component {
     handleFirmwareUpdate(e) {
         const file = this.firmwareRef.current.files[0];
         APIHelp.uploadFirmware(file);
+        state.updateDialog.timer = null;
+        state.updateDialog.show = true;
     }
 
     onTrackingChange(e, tracking) {
@@ -67,6 +71,10 @@ class MiscellaneousSettings extends React.Component {
     }
 
     render() {
+        let dialog = null;
+        if(state.updateDialog.show) {
+            dialog = <UpdateDialog/>;
+        }
         return <Grid container spacing={3}>
             <Grid item xs={12}/>
             <Grid item xs={4}/>
@@ -79,7 +87,7 @@ class MiscellaneousSettings extends React.Component {
                 <Button color="primary" variant="contained" onClick={this.handleParkClicked}>Set Park Position</Button>
             </Grid>
             <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
-                <h3>Update mount Firmware</h3>
+                <h3>Update mount Firmware (Installed: {state.version.version}/{state.version.version_date})</h3>
                 <Button color="primary"
                         variant="contained"
                         component="label"
@@ -131,6 +139,7 @@ class MiscellaneousSettings extends React.Component {
             <Grid item xs={12}>
                 <EncoderGraph height={500} width={"100%"} data={this.state.encoderData}/>
             </Grid>
+            {dialog}
         </Grid>;
     }
 }

@@ -23,7 +23,7 @@ function handleFetchError(response) {
 
 
 function getStatus() {
-    return fetch('/api/status?client_id='+state.client_id).then(handleFetchError).then((response) => {
+    return fetch('/api/status?client_id=' + state.client_id).then(handleFetchError).then((response) => {
         return response.json();
     });
 }
@@ -330,6 +330,19 @@ const APIHelp = {
             return e;
         });
     },
+    fetchVersion() {
+        return fetch('/api/version').then(handleFetchError).then((response) => {
+            return response.json().then((d) => {
+                state.version.version = d.version;
+                state.version.version_date = d.version_date;
+            });
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to get version';
+            state.snack_bar_error = true;
+            throw e;
+        });
+        ;
+    },
     fetchSettings() {
         state.advancedSettings.fetching = true;
         return fetch('/api/settings').then(handleFetchError).then((response) => {
@@ -408,9 +421,18 @@ const APIHelp = {
             method: 'post',
             body: formData
         }).then(handleFetchError).then(() => {
-            setTimeout(function () {
-                location.reload(true);
-            }, 50000)
+            state.updateDialog.timer = 50;
+            const to = function () {
+                setTimeout(function () {
+                    state.updateDialog.timer = state.updateDialog.timer - 1;
+                    if (state.updateDialog.timer <= 0) {
+                        location.reload(true);
+                    } else {
+                        to();
+                    }
+                }, 1000);
+            };
+            to();
         }).catch((e) => {
             state.snack_bar = 'Error: Failed to upload firmware';
             state.snack_bar_error = true;

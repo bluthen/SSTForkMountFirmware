@@ -8,6 +8,7 @@ const state = observable({
     topTabs: 'manual',
     coordDisplay: 'radec',
     fatal_error: null,
+    version: {version: "", version_date: ""},
     manual: {
         speed: 'fastest',
         directions: {north: false, south: false, east: false, west: false}
@@ -184,6 +185,7 @@ const state = observable({
         hide: [],
         right: ['ra_over_raenc', 'dec_over_decenc']
     },
+    updateDialog: {timer: null, show: false},
     snack_bar: null,
     snack_bar_error: false
 });
