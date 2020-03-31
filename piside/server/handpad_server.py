@@ -138,7 +138,7 @@ class HandpadServer:
             self.serial = None
 
     def println(self, text, line):
-        self.serial.write('@D{line:d}{text:s}!'.format(text=text, line=line).encode())
+        self.serial.write('@D{line:d}{text:s}!'.format(text=text[0:20], line=line).encode())
         self.__read_serial_cmd()
 
     def clearall(self):
@@ -161,14 +161,14 @@ class HandpadServer:
         s = self.__read_serial_cmd()
         if len(s) > 2:
             return s[len(s) - 2]
-        return None
+        return ''
 
     def pressed(self):
         self.serial.write('@K!'.encode())
         s = self.__read_serial_cmd()
         if len(s) > 2:
             return s[len(s) - 2]
-        return None
+        return ''
 
 
     def run(self):

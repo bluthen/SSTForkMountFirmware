@@ -14,6 +14,8 @@ import db
 import zeroconfserver
 import network
 
+import settings
+
 # TODO This global limits us to one handpad.
 hserver = None
 kill = False
@@ -670,6 +672,7 @@ class ManualSlewMenu:
     def input(self):
         hin = hserver.input()
         pressed = hserver.pressed()
+        control.set_alive(client_id)
         if hin:
             if hin == 'S':
                 for d in ['up', 'left', 'down', 'right']:
@@ -677,27 +680,43 @@ class ManualSlewMenu:
                 return "escape"
         if len(pressed) > 0:
             if 'U' in pressed:
+                # print('up pressed')
                 control.manual_control('up', self.speed, client_id)
-            if 'D' in pressed:
+            if 'U' not in self.last_pressed and 'D' in pressed:
+                # print('down pressed')
                 control.manual_control('down', self.speed, client_id)
-            if 'L' in pressed:
+            if 'R' not in self.last_pressed and 'L' in pressed:
+                # print('left pressed')
                 control.manual_control('left', self.speed, client_id)
-            if 'R' in pressed:
+            if 'L' not in self.last_pressed and 'R' in pressed:
+                # print('right pressed')
                 control.manual_control('right', self.speed, client_id)
         if len(self.last_pressed) > 0:
             if 'U' in self.last_pressed and 'U' not in pressed:
                 control.manual_control('up', None, client_id)
-            if 'D' in self.last_pressed and 'D' in pressed:
+            if 'D' in self.last_pressed and 'D' not in pressed:
                 control.manual_control('down', None, client_id)
-            if 'L' in self.last_pressed and 'L' in pressed:
+            if 'L' in self.last_pressed and 'L' not in pressed:
                 control.manual_control('left', None, client_id)
-            if 'R' in self.last_pressed and 'R' in pressed:
+            if 'R' in self.last_pressed and 'R' not in pressed:
                 control.manual_control('right', None, client_id)
         self.last_pressed = pressed
         return "stay"
 
     def run_loop(self):
+        hserver.clearall()
+        hserver.println(self.speed.capitalize() + ' Slew', 0)
+        hserver.println('Press and hold', 1)
+        hserver.println('Direction buttons', 2)
+        last_coord = (-1, -1)
         while not kill:
+            if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
+                coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
+                                 frame='icrs').to_string(
+                    'hmsdms')
+                coord = re.sub(r'\.\d+s', 's', coord)
+                hserver.println(coord, 3)
+                last_coord = (control.last_status['ra'], control.last_status['dec'])
             leave = self.input()
             if leave == "base":
                 return "base"
@@ -737,6 +756,50 @@ class WifiMenu:
             elif leave == "escape":
                 return "stay"
             time.sleep(0.1)
+
+
+class LocationPreset:
+    def __init__(self, name, lat, long, elevation):
+        self.lat = lat
+        self.long = long
+        self.elevation = elevation
+        self.name = name
+
+    def run_loop(self):
+        control.set_location(self.lat, self.long, self.elevation, self.name)
+        m = InfoMenu('Location Set')
+        return m.run_loop()
+
+
+class LocationPresets:
+    def __init__(self):
+        pass
+
+    def run_loop(self):
+        p = {}
+        for preset in settings.settings['location_presets']:
+            p[preset['name']] = LocationPreset(preset['name'], preset['lat'], preset['long'], preset['elevation'])
+        m = {'Location Presets': p}
+        return Menu(m).run_loop()
+
+
+class ParkMenu:
+    def __init__(self):
+        pass
+
+    def run_loop(self):
+        stop = thinking('Parking')
+        control.park_scope()
+        time.sleep(1)
+        while control.last_status['slewing']:
+            time.sleep(0.25)
+        stop['stop'] = True
+        stop['thread'].join()
+        hserver.clearall()
+        hserver.println('Park Complete', 0)
+        hserver.println('Turn off mount', 1)
+        while True:
+            time.sleep(1)
 
 
 named_stars = ['Achernar', 'Acrux', 'Adhara', 'Albireo', 'Aldebaran', 'Alhna', 'Alioth', 'Alkaid', 'Alnilan', 'Alphard',
@@ -787,10 +850,10 @@ menu_structure = {
                 "Wifi": WifiMenu()
             },
             "Location/GPS": {
-                'Presets': {},
-                'GPS': {}
+                'Presets': LocationPresets(),
+                'GPS': InfoMenu('Not Implemented')
             }
         },
-        "Park": {}
+        "Park": ParkMenu()
     }
 }

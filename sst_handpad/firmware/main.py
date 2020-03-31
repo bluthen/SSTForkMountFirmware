@@ -120,7 +120,7 @@ def main_loop():
                 button_sequence.clear()
             elif cmd == '@J!':
                 outf('@{sequence:s}!'.format(sequence=''.join(buttons_released)))
-            elif cmd == '@J!':
+            elif cmd == '@K!':
                 outf('@{sequence:s}!'.format(sequence=''.join(buttons_pressed)))
             elif cmd[1] == 'D':
                 line = int(cmd[2])

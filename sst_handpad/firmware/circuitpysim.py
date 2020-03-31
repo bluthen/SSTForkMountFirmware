@@ -162,6 +162,7 @@ class PWMOut:
 
 hold_mode = False
 hold_time = 0.1
+hold_ctime = 0
 
 
 def set_input_buttons():
@@ -170,14 +171,16 @@ def set_input_buttons():
     # if i != -1:
     #     print(i)
     now = time.time()
+    if i == 104 and (now - hold_ctime) > 0.1:  # h - hold mode
+        hold_mode = not hold_mode
+        if hold_mode:
+            # print('hold mode')
+            hold_time = 10
+        else:
+            # print('hold mode off')
+            hold_time = 0.1
     for button in _all_buttons:
-        if i == 104:  # h - hold mode
-            hold_mode = not hold_mode
-            if hold_mode:
-                hold_time = 10
-            else:
-                hold_time = 0.1
-        elif i == button.cinput:
+        if i == button.cinput:
             # since pull up
             button.value = (not button.pull == Pull.UP)
             button.ctime = now
