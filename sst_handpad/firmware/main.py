@@ -5,19 +5,18 @@ import adafruit_debouncer
 from adafruit_debouncer import Debouncer
 
 # Uncomment if simulation
-from circuitpysim import board
-from circuitpysim import DigitalInOut, Direction, Pull
-from circuitpysim import PWMOut
-import circuitpysim as characterlcd
-
-SIMULATION = True
+# from circuitpysim import board
+# from circuitpysim import DigitalInOut, Direction, Pull
+# from circuitpysim import PWMOut
+# import circuitpysim as characterlcd
+# SIMULATION = True
 
 # Uncomment if real
-# import board
-# from digitalio import DigitalInOut, Direction, Pull
-# from pulseio import PWMOut
-# import adafruit_character_lcd.character_lcd as characterlcd
-# SIMULATION = False
+import board
+from digitalio import DigitalInOut, Direction, Pull
+from pulseio import PWMOut
+import adafruit_character_lcd.character_lcd as characterlcd
+SIMULATION = False
 
 
 version = 1
@@ -45,7 +44,8 @@ availf = None
 def setup():
     global lcd, inf, outf, availf
     # Digital input with pullup on D7, D9, and D10
-    for p in {'U': board.A4, 'E': board.A3, 'D': board.A5, 'L': board.A1, 'R': board.A2, 'S': board.D2}.items():
+    for p in {'U': board.A4, 'E': board.A3, 'D': board.A2, 'L': board.A5, 'R': board.A1, 'S': board.D2}.items():
+
         but = DigitalInOut(p[1])
         but.direction = Direction.INPUT
         but.pull = Pull.UP
@@ -82,12 +82,12 @@ def setup():
 def read_cmd():
     s = ""
     found_at = False
-    start = time.time()
-    while time.time() - start < .1:
+    start = time.monotonic()
+    while time.monotonic() - start < .1:
         avail = availf()
         if avail > 0:
             s += inf(avail)
-            start = time.time()
+            start = time.monotonic()
         if not found_at:
             idx = s.find('@')
             if idx >= 0:

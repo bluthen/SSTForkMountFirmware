@@ -64,11 +64,13 @@ class HandpadServer:
 
     def write_line(self, line_num, line_str):
         self.serial.write(('@D{line_num:d}{line_str:s}!' % line_num, line_str).encode())
-        self.__read_serial_cmd()
+        s=self.__read_serial_cmd()
+        print('write_line', s)
 
     def get_buttons(self):
         self.serial.write('@B!'.encode())
         s = self.__read_serial_cmd()
+        print('get_buttons', s)
         ret = []
         for i in range(1, len(s), 2):
             d = s[i]
@@ -80,12 +82,12 @@ class HandpadServer:
         all_devices = []
         diff_devices = []
         for s in serial.tools.list_ports.grep('/dev/ttyACM\d+'):
-            if s not in self.last_devices:
+            if s.device not in self.last_devices:
                 diff_devices.append(s.device)
             all_devices.append(s.device)
-        # TODO Remove when testing
-        all_devices=['/dev/pts/6']
-        diff_devices=['/dev/pts/6']
+        # # TODO Remove when testing
+        # all_devices=['/dev/pts/6']
+        # diff_devices=['/dev/pts/6']
         self.last_devices = all_devices
         return diff_devices
 
@@ -94,7 +96,7 @@ class HandpadServer:
         found_at = False
         with self.serial_lock:
             start = time.time()
-            while time.time() - start < .1:
+            while time.time() - start < 2:
                 if self.serial.in_waiting > 0:
                     s += self.serial.read(self.serial.in_waiting).decode()
                     start = time.time()
@@ -113,6 +115,11 @@ class HandpadServer:
         print('timed out')
         return ''
 
+    def reset(self):
+        self.serial = None
+        self.last_devices = []
+        self.buffer = ""
+
     def test(self, device):
         try:
             ser = serial.Serial(device, 115200, timeout=2)
@@ -121,15 +128,16 @@ class HandpadServer:
                 self.serial.read(serial.in_waiting)
             self.serial.write('@SSTHP!'.encode())
             s = self.__read_serial_cmd()
-            print(s)
+            print('test', s)
             if re.match('@SSTHP_\d{3}!', s):
                 return True
             else:
                 self.serial.close()
                 self.serial = None
         except:
-            self.serial.close()
-            self.serial = None
+            if self.serial:
+                self.serial.close()
+                self.serial = None
             return False
 
     def close(self):
@@ -138,8 +146,11 @@ class HandpadServer:
             self.serial = None
 
     def println(self, text, line):
-        self.serial.write('@D{line:d}{text:s}!'.format(text=text[0:20], line=line).encode())
-        self.__read_serial_cmd()
+        i = 20 - len(text[0:20])
+        text += ' '*i
+        self.serial.write('@D{line:d}{text:s}!'.format(text=text, line=line).encode())
+        s = self.__read_serial_cmd()
+        print('println', s)
 
     def clearall(self):
         for i in range(4):
@@ -147,11 +158,13 @@ class HandpadServer:
 
     def clearln(self, line):
         self.serial.write('@D{line:d}{text:s}!'.format(text=' ' * 20, line=line).encode())
-        self.__read_serial_cmd()
+        s = self.__read_serial_cmd()
+        print('clearln', s)
 
     def input(self):
         self.serial.write('@B!'.encode())
         s = self.__read_serial_cmd()
+        print('input', s)
         if len(s) > 2:
             return s[len(s) - 2]
         return None
@@ -159,6 +172,7 @@ class HandpadServer:
     def released(self):
         self.serial.write('@J!'.encode())
         s = self.__read_serial_cmd()
+        print('released', s)
         if len(s) > 2:
             return s[len(s) - 2]
         return ''
@@ -166,6 +180,7 @@ class HandpadServer:
     def pressed(self):
         self.serial.write('@K!'.encode())
         s = self.__read_serial_cmd()
+        print('pressed', s)
         if len(s) > 2:
             return s[len(s) - 2]
         return ''
@@ -200,6 +215,7 @@ def main():
     while not kill:
         try:
             while not kill:
+                handpad_server.reset()
                 handpad_server.run()
                 time.sleep(0.1)
         except KeyboardInterrupt:
