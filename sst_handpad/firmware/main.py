@@ -16,8 +16,8 @@ import board
 from digitalio import DigitalInOut, Direction, Pull
 from pulseio import PWMOut
 import adafruit_character_lcd.character_lcd as characterlcd
-SIMULATION = False
 
+SIMULATION = False
 
 version = 1
 
@@ -45,7 +45,6 @@ def setup():
     global lcd, inf, outf, availf
     # Digital input with pullup on D7, D9, and D10
     for p in {'U': board.A4, 'E': board.A3, 'D': board.A2, 'L': board.A5, 'R': board.A1, 'S': board.D2}.items():
-
         but = DigitalInOut(p[1])
         but.direction = Direction.INPUT
         but.pull = Pull.UP
@@ -102,6 +101,27 @@ def read_cmd():
     return ''
 
 
+def line_diff(from_line, to_line):
+    to_line = to_line + ' ' * (20 - len(to_line))
+    steps = []
+    for i in range(20):
+        if to_line[i] != from_line[i]:
+            steps.append([i, to_line[i]])
+    last_idx = -1
+    ret = []
+    for s in steps:
+        if len(ret) > 0 and s[0] - 1 == last_idx:
+            ret[-1][1] += s[1]
+        elif len(ret) == 0:
+            ret.append(s)
+        else:
+            ret.append(s)
+        last_idx = s[0]
+    if len(ret) > 5:
+        ret = [[0, to_line]]
+    return ret
+
+
 # ######################## MAIN LOOP ##############################
 def main_loop():
     button_sequence = []
@@ -110,7 +130,14 @@ def main_loop():
     i = 0
     j = 0
 
-    lcd.message = 'StarSync Trackers\nInitializing...\n\n'
+    lcd_state = [
+        'StarSync Trackers   ',
+        'Initializing...     ',
+        '                    ',
+        '                    '
+    ]
+
+    lcd.message = '\n'.join(lcd_state)
 
     while True:
         if availf() > 0:
@@ -124,17 +151,17 @@ def main_loop():
                 outf('@{sequence:s}!'.format(sequence=''.join(buttons_pressed)))
             elif cmd[1] == 'D':
                 line = int(cmd[2])
-                lcd.cursor_position(0, line)
-                lcd.message = cmd[3:len(cmd) - 1]
+                msg = cmd[3:len(cmd) - 1][0:20]
+                msg = msg + ' ' * (20 - len(msg))
+                diff = line_diff(lcd_state[line], msg)
+                for d in diff:
+                    lcd.cursor_position(d[0], line)
+                    lcd.message = d[1]
+                lcd_state[line] = msg
                 outf('@K!')
             elif cmd == '@SSTHP!':
                 s = '@SSTHP_{version:03d}!'.format(version=version)
                 outf(s)
-            elif cmd[1] == 'C':
-                line = int(cmd[2])
-                column = int(cmd[3])
-                lcd.cursor_position(column, line)
-                outf('@K!')
             elif cmd[1] == 'R':
                 lcd.clear()
                 outf('@K!')
@@ -165,11 +192,13 @@ def main_loop():
             characterlcd.update()
         for b in buttons.values():
             b.update()
-        time.sleep(0.005)  # make bigger to slow down
 
 
 setup()
 if SIMULATION:
     characterlcd.setup_curses(main_loop)
 else:
-    main_loop()
+    try:
+        main_loop()
+    except:
+        last_error = e

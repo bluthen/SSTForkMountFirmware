@@ -72,6 +72,8 @@ class NumInputMenu(ABC):
         self.inputstr = ''
         self.selection = 0
         self.max_length = max_length
+        self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['DEL', 'DEL'],
+                       ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9'], ['OK', 'OK']]
 
     @abc.abstractmethod
     def selected(self):
@@ -82,39 +84,38 @@ class NumInputMenu(ABC):
         self.selection = 0
 
     def print(self):
+        if self.selection >= len(self.inputs):
+            self.selection = len(self.inputs) - 1
         hserver.println(self.title, 0)
         hserver.println(' ' + self.prefix + ' ' + self.inputstr, 1)
         line = ''
-        for v in range(0, 5):
-            if v == self.selection:
-                line += ' >' + str(v)
+        for i in range(min(6, len(self.inputs))):
+            if i == self.selection:
+                line += ' >' + str(self.inputs[i][0])
             else:
-                line += '  ' + str(v)
-        if self.selection == 11:
-            d = ' >DEL'
-        else:
-            d = '  DEL'
-        hserver.println(line + d, 2)
+                line += '  ' + str(self.inputs[i][0])
+        hserver.println(line, 2)
         line = ''
-        for v in range(5, 10):
-            if v == self.selection:
-                line += ' >' + str(v)
-            else:
-                line += '  ' + str(v)
-        if self.selection == 10:
-            ok = ' >OK'
-        else:
-            ok = '  OK'
-        hserver.println(line + ok, 3)
+        if len(self.inputs) > 5:
+            for i in range(6, min(12, len(self.inputs))):
+                if i == self.selection:
+                    line += ' >' + str(self.inputs[i][0])
+                else:
+                    line += '  ' + str(self.inputs[i][0])
+        hserver.println(line, 3)
 
     def refresh(self):
         self.print()
 
     def input(self):
-        hin = hserver.input()
-        if hin:
+        refresh = False
+        for hin in hserver.input():
+            if self.selection >= len(self.inputs):
+                self.selection = len(self.inputs) - 1
+            refresh = True
             if hin == 'E':
-                if self.selection == 10:
+                s = self.inputs[self.selection][1]
+                if s == 'OK':
                     # obj_search = ObjectSearchMenu(self.prefix + self.inputstr)
                     # obj_search.run_loop()
                     ret = self.selected()
@@ -124,47 +125,30 @@ class NumInputMenu(ABC):
                         self.inputstr = ''
                         return 'base'
                     # Item selected
-                elif self.selection == 11:
+                elif s == 'DEL':
                     self.inputstr = self.inputstr[0:-1]
+                    break
                 elif len(self.inputstr) < self.max_length:
-                    self.inputstr += str(self.selection)
+                    self.inputstr += str(s)
+                    break
             if hin == 'S':
                 return 'escape'
             elif hin == 'L':
-                if self.selection == 11:
-                    self.selection = 4
-                elif self.selection == 5:
-                    self.selection = 11
-                else:
-                    self.selection -= 1
-                    if self.selection < 0:
-                        self.selection = 10
+                self.selection -= 1
+                if self.selection < 0:
+                    self.selection = len(self.inputs) - 1
             elif hin == 'U':
-                if self.selection == 11:
-                    self.selection = 10
-                elif self.selection == 10:
-                    self.selection = 11
-                else:
-                    self.selection -= 5
-                    if self.selection < 0:
-                        self.selection += 10
+                self.selection = (self.selection + 6) % len(self.inputs)
+                if self.selection < 0:
+                    self.selection += 12
             elif hin == 'R':
-                if self.selection == 4:
-                    self.selection = 11
-                elif self.selection == 11:
-                    self.selection = 5
-                else:
-                    self.selection += 1
-                    if self.selection > 10:
-                        self.selection = 0
+                self.selection += 1
+                if self.selection > len(self.inputs) - 1:
+                    self.selection = 0
             elif hin == 'D':
-                if self.selection == 11:
-                    self.selection = 10
-                elif self.selection == 10:
-                    self.selection = 11
-                else:
-                    self.selection += 5
-                    self.selection = self.selection % 10
+                self.selection += 6
+                self.selection = self.selection % len(self.inputs)
+        if refresh:
             self.refresh()
         return "stay"
 
@@ -199,64 +183,36 @@ class ManualCoord:
         self.cursor = 0
         self.inputstr = ''
         self.selection = 0
+        self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']]
 
     def reset(self):
         self.inputstr = ''
         self.selection = 0
 
     def print(self):
+        self.line_maxes()
+        if self.selection >= len(self.inputs):
+            self.selection = len(self.inputs) - 1
         hserver.println(self.title, 0)
         hserver.println(' %sh%sm%ss %s%sd%sm%ss' % (
             bl(self.inputstr[0:2]), bl(self.inputstr[2:4]), bl(self.inputstr[4:6]), bl(self.inputstr[6:7], 1),
             bl(self.inputstr[7:9]), bl(self.inputstr[9:11]), bl(self.inputstr[11:13])
         ), 1)
         line = ''
-        if len(self.inputstr) == 6:
-            if self.selection == 0:
-                line += ' >+'
+        for i in range(min(6, len(self.inputs))):
+            if i == self.selection:
+                line += ' >' + str(self.inputs[i][0])
             else:
-                line += '  +'
-            if self.selection == 1:
-                line += ' >-'
-            else:
-                line += '  -'
-            if self.selection == 2:
-                line += ' >DEL'
-            else:
-                line += '  DEL'
-            hserver.println(line, 2)
-            hserver.clearln(3)
-        elif len(self.inputstr) == 13:
-            if self.selection == 0:
-                line += ' >OK'
-            else:
-                line += '  OK'
-            if self.selection == 1:
-                line += ' >DEL'
-            else:
-                line += '  DEL'
-            hserver.println(line, 2)
-            hserver.clearln(3)
-        else:
-            r1, r2 = self.line_maxes()
-
-            for v in range(0, r1):
-                if v == self.selection:
-                    line += ' >' + str(v)
+                line += '  ' + str(self.inputs[i][0])
+        hserver.println(line, 2)
+        line = ''
+        if len(self.inputs) > 5:
+            for i in range(6, min(12, len(self.inputs))):
+                if i == self.selection:
+                    line += ' >' + str(self.inputs[i][0])
                 else:
-                    line += '  ' + str(v)
-            if self.selection == max(r1, r2):
-                d = ' >DEL'
-            else:
-                d = '  DEL'
-            hserver.println(line + d, 2)
-            line = ''
-            for v in range(5, r2):
-                if v == self.selection:
-                    line += ' >' + str(v)
-                else:
-                    line += '  ' + str(v)
-            hserver.println(line, 3)
+                    line += '  ' + str(self.inputs[i][0])
+        hserver.println(line, 3)
 
     def refresh(self):
         self.print()
@@ -272,81 +228,66 @@ class ManualCoord:
 
     def line_maxes(self):
         if len(self.inputstr) == 0:
-            r1 = 3
-            r2 = 0
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2']]
         elif len(self.inputstr) == 1 and self.inputstr[0] == '2':
-            r1 = 4
-            r2 = 0
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['DEL', 'DEL']]
         elif len(self.inputstr) in [1, 3, 5, 7, 8, 10, 12]:
-            r1 = 5
-            r2 = 10
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['DEL', 'DEL'],
+                           ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9']]
+        elif len(self.inputstr) == 6:
+            self.inputs = [['+', '+'], ['-', '-'], ['DEL', 'DEL']]
+        elif len(self.inputstr) == 13:
+            self.inputs = [['DEL', 'DEL'], ['OK', 'OK']]
         else:
-            r1 = 5
-            r2 = 6
-        return r1, r2
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['DEL', 'DEL'],
+                           ['5', '5']]
 
     def input(self):
-        hin = hserver.input()
-        if hin:
-            r1, r2 = self.line_maxes()
+        refresh = False
+        for hin in hserver.input():
+            refresh = True
+            if self.selection >= len(self.inputs):
+                self.selection = len(self.inputs) - 1
+            self.line_maxes()
             if hin == 'E':
-                if len(self.inputstr) == 6:
-                    if self.selection == 2:
-                        self.inputstr = self.inputstr[0:-1]
-                    elif self.selection == 0:
-                        self.inputstr += '+'
-                    elif self.selection == 1:
-                        self.inputstr += '-'
-                    self.selection = 0
-                elif len(self.inputstr) == 13:
-                    if self.selection == 0:
-                        ret = self.selected()
-                        if ret == 'escape':
-                            hin = 'S'
-                        elif ret == 'base':
-                            self.inputstr = ''
-                            return 'base'
-                    elif self.selection == 1:
-                        self.inputstr = self.inputstr[0:-1]
-                else:
-                    if self.selection == max(r1, r2):
-                        self.inputstr = self.inputstr[0:-1]
-                    else:
-                        self.inputstr += str(self.selection)
-                    self.selection = 0
+                s = self.inputs[self.selection][1]
+                if s == 'OK':
+                    # obj_search = ObjectSearchMenu(self.prefix + self.inputstr)
+                    # obj_search.run_loop()
+                    ret = self.selected()
+                    if ret == 'escape':
+                        hin = 'S'
+                    elif ret == 'base':
+                        self.inputstr = ''
+                        return 'base'
+                    # Item selected
+                elif s == 'DEL':
+                    self.inputstr = self.inputstr[0:-1]
+                    break
+                elif len(self.inputstr) < self.max_length:
+                    self.inputstr += str(s)
+                    if len(self.inputstr) == 8:
+                        if self.inputstr[-1] == '9':
+                            self.inputstr += '00000'
+                    break
             if hin == 'S':
                 return 'escape'
             elif hin == 'L':
-                if self.selection == max(r1, r2):
-                    self.selection = r1 - 1
-                elif self.selection == 0:
-                    self.selection = max(r1, r2)
-                elif self.selection == r1:
-                    self.selection = max(r1, r2)
-                else:
-                    self.selection -= 1
+                self.selection -= 1
+                if self.selection < 0:
+                    self.selection = len(self.inputs) - 1
             elif hin == 'U':
-                if self.selection == max(r1, r2):
-                    self.selection = max(r1, r2)
-                else:
-                    self.selection -= 5
-                    if self.selection < 0:
-                        self.selection += 10
-                        if self.selection > r2:
-                            self.selection = max(r1, r2)
+                self.selection = (self.selection + 6) % len(self.inputs)
+                if self.selection < 0:
+                    self.selection += 12
             elif hin == 'R':
-                if self.selection == r1 - 1:
-                    self.selection = max(r1, r2)
-                elif self.selection == max(r1, r2):
-                    self.selection = r1
-                else:
-                    self.selection += 1
+                self.selection += 1
+                if self.selection > len(self.inputs) - 1:
+                    self.selection = 0
             elif hin == 'D':
-                if self.selection == max(r1, r2):
-                    self.selection = max(r1, r2)
-                else:
-                    self.selection += 5
-                    self.selection = self.selection % max(r1, r2)
+                self.selection += 6
+                self.selection = self.selection % len(self.inputs)
+        if refresh:
             self.refresh()
         return "stay"
 
@@ -537,8 +478,9 @@ class Menu:
                  "escape" to leave menu
                  "base" go to base menu
         """
-        hin = hserver.input()
-        if hin:
+        refresh = False
+        for hin in hserver.input():
+            refresh = True
             print('hin', hin)
             if hin == 'E':
                 ret = self.selected()
@@ -556,6 +498,7 @@ class Menu:
                     return "escape"
                 if len(self.menu_pos) > 1:
                     self.menu_pos = self.menu_pos[0:-1]
+                    break
             elif hin == 'L' or hin == 'U':
                 self.menu_selection -= 1
                 menu = get_menu(self.menus, self.menu_pos)
@@ -576,6 +519,7 @@ class Menu:
                         self.menu_selection = 0
                     else:
                         self.menu_selection = len(menu_value.keys()) - 1
+        if refresh:
             self.refresh()
         return "stay"
 
@@ -641,12 +585,12 @@ class IPMenu:
         pass
 
     def input(self):
-        hin = hserver.input()
-        if hin:
-            if hin == 'E':
-                return "escape"
-            if hin == 'S':
-                return "escape"
+        for hin in hserver.input():
+            if hin:
+                if hin == 'E':
+                    return "escape"
+                if hin == 'S':
+                    return "escape"
         return "stay"
 
     def run_loop(self):
@@ -670,14 +614,13 @@ class ManualSlewMenu:
         self.last_pressed = ''
 
     def input(self):
-        hin = hserver.input()
-        pressed = hserver.pressed()
-        control.set_alive(client_id)
-        if hin:
+        for hin in hserver.input():
             if hin == 'S':
                 for d in ['up', 'left', 'down', 'right']:
                     control.manual_control(d, None, client_id)
                 return "escape"
+        pressed = hserver.pressed()
+        control.set_alive(client_id)
         if len(pressed) > 0:
             if 'U' in pressed:
                 # print('up pressed')
@@ -730,8 +673,7 @@ class WifiMenu:
         pass
 
     def input(self):
-        hin = hserver.input()
-        if hin:
+        for hin in hserver.input():
             if hin == 'E':
                 return "escape"
             if hin == 'S':

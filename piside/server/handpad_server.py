@@ -26,8 +26,6 @@ SST          ABOUT                             HANDPAD RESPONSE
 
 @D#{string}! Write string on line #            @K!
 
-@C#,#!       Put cursor on line,column         @K!
-
 @R!          Clear screen                      @K!
 
 @L##!        Set light level                   @K!
@@ -166,8 +164,8 @@ class HandpadServer:
         s = self.__read_serial_cmd()
         print('input', s)
         if len(s) > 2:
-            return s[len(s) - 2]
-        return None
+            return s[1:len(s) - 1]
+        return []
 
     def released(self):
         self.serial.write('@J!'.encode())
