@@ -535,6 +535,37 @@ class Menu:
             time.sleep(0.1)
 
 
+class SlewingMenu:
+    def __init__(self, target_ra, target_dec):
+        self.target_ra = target_ra
+        self.target_dec = target_dec
+
+    def run_loop(self):
+        hserver.clearall()
+        hserver.println('Slewing...', 0)
+
+        coord = SkyCoord(ra=self.target_ra * u.deg, dec=self.target_dec * u.deg, frame='icrs').to_string('hmsdms')
+        coord = re.sub(r'\.\d+s', 's', coord)
+        hserver.println(coord, 1)
+
+        last_coord = (-1, -1)
+        while not kill:
+            for hin in hserver.input():
+                if hin == 'S':
+                    control.cancel_slews()
+                    return 'canceled'
+            if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
+                coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
+                                 frame='icrs').to_string(
+                    'hmsdms')
+                coord = re.sub(r'\.\d+s', 's', coord)
+                hserver.println(coord, 3)
+                last_coord = (control.last_status['ra'], control.last_status['dec'])
+            if not control.last_status['slewing']:
+                return 'complete'
+            time.sleep(0.25)
+
+
 class SyncSlewMenu(Menu):
     def __init__(self, slew_object):
         self.object = slew_object
@@ -546,16 +577,13 @@ class SyncSlewMenu(Menu):
 
     def selected(self):
         if self.menu_selection == 0:  # Slew
-            stop = thinking('Slewing')
             control.set_slew(self.object['ra'], self.object['dec'])
             time.sleep(1)
-            # TODO: Show coordinates while slewing
-            # A way to interrupt slewing (esc key?)
-            while control.last_status['slewing']:
-                time.sleep(0.25)
-            stop['stop'] = True
-            stop['thread'].join()
-            InfoMenu('Slew Complete', 'base').run_loop()
+            ret = SlewingMenu(self.object['ra'], self.object['dec']).run_loop()
+            if ret == 'complete':
+                InfoMenu('Slew Complete', 'base').run_loop()
+            else:
+                InfoMenu('Slew Interrupted', 'base').run_loop()
             return "base"
         elif self.menu_selection == 1:  # Sync
             stop = thinking('Syncing')

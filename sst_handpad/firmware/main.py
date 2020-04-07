@@ -198,7 +198,4 @@ setup()
 if SIMULATION:
     characterlcd.setup_curses(main_loop)
 else:
-    try:
-        main_loop()
-    except:
-        last_error = e
+    main_loop()
