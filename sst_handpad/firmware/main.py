@@ -16,6 +16,10 @@ import board
 from digitalio import DigitalInOut, Direction, Pull
 from pulseio import PWMOut
 import adafruit_character_lcd.character_lcd as characterlcd
+import adafruit_dotstar
+
+dot = adafruit_dotstar.DotStar(board.APA102_SCK, board.APA102_MOSI, 1, brightness=1)
+dot[0] = (0, 0, 0)
 
 SIMULATION = False
 
@@ -27,7 +31,6 @@ gc.collect()
 PWM_LEVELS = [0, 738, 1959, 4087, 7373, 12071, 18431, 26705, 37146, 50005, 65535]
 button_pwm = PWMOut(board.D10)
 lcd_pwm = PWMOut(board.D11)
-lcd_pwm.duty_cycle = PWM_LEVELS[9]
 
 buttons = {}
 lcd = None
@@ -122,13 +125,26 @@ def line_diff(from_line, to_line):
     return ret
 
 
+def display_awake():
+    lcd_pwm.duty_cycle = PWM_LEVELS[9]
+    button_pwm.duty_cycle = PWM_LEVELS[1]
+
+
+def display_sleep():
+    lcd_pwm.duty_cycle = 0
+    button_pwm.duty_cycle = 0
+
+
 # ######################## MAIN LOOP ##############################
 def main_loop():
     button_sequence = []
     buttons_released = []
     buttons_pressed = []
-    i = 0
-    j = 0
+    display_awake()
+    is_display_sleep = False
+    wake_timer = time.monotonic()
+    no_cmd_timer = time.monotonic()
+    no_cmd_display = False
 
     lcd_state = [
         'StarSync Trackers   ',
@@ -142,52 +158,74 @@ def main_loop():
     while True:
         if availf() > 0:
             cmd = read_cmd()
-            if cmd == '@B!':
-                outf('@{sequence:s}!'.format(sequence=''.join(button_sequence)))
-                button_sequence.clear()
-            elif cmd == '@J!':
-                outf('@{sequence:s}!'.format(sequence=''.join(buttons_released)))
-            elif cmd == '@K!':
-                outf('@{sequence:s}!'.format(sequence=''.join(buttons_pressed)))
-            elif cmd[1] == 'D':
-                line = int(cmd[2])
-                msg = cmd[3:len(cmd) - 1][0:20]
-                msg = msg + ' ' * (20 - len(msg))
-                diff = line_diff(lcd_state[line], msg)
-                for d in diff:
-                    lcd.cursor_position(d[0], line)
-                    lcd.message = d[1]
-                lcd_state[line] = msg
-                outf('@K!')
-            elif cmd == '@SSTHP!':
-                s = '@SSTHP_{version:03d}!'.format(version=version)
-                outf(s)
-            elif cmd[1] == 'R':
-                lcd.clear()
-                outf('@K!')
-            elif cmd[1] == 'L':
-                level = int(cmd[2:4])
-                # TODO: Set brightness level
-                outf('@K!')
-            elif cmd == '@GPS!':
-                # TODO GPS
-                outf('@GPSTODO!')
-                pass
-            else:
-                outf('@N!')
+            if len(cmd) >= 3:
+                no_cmd_timer = time.monotonic()
+                if no_cmd_display and cmd[0] == '@' and cmd[-1] == '!':
+                    no_cmd_display = False
+                    lcd.cursor_position(0, 0)
+                    lcd.message = '\n'.join(lcd_state)
+                if cmd == '@B!':
+                    outf('@{sequence:s}!'.format(sequence=''.join(button_sequence)))
+                    button_sequence.clear()
+                elif cmd == '@J!':
+                    outf('@{sequence:s}!'.format(sequence=''.join(buttons_released)))
+                elif cmd == '@K!':
+                    outf('@{sequence:s}!'.format(sequence=''.join(buttons_pressed)))
+                elif cmd[1] == 'D':
+                    line = int(cmd[2])
+                    msg = cmd[3:len(cmd) - 1][0:20]
+                    msg = msg + ' ' * (20 - len(msg))
+                    diff = line_diff(lcd_state[line], msg)
+                    for d in diff:
+                        lcd.cursor_position(d[0], line)
+                        lcd.message = d[1]
+                    lcd_state[line] = msg
+                    outf('@K!')
+                elif cmd == '@SSTHP!':
+                    s = '@SSTHP_{version:03d}!'.format(version=version)
+                    outf(s)
+                elif cmd[1] == 'R':
+                    lcd.clear()
+                    outf('@K!')
+                elif cmd[1] == 'L':
+                    level = int(cmd[2:4])
+                    # TODO: Set brightness level
+                    outf('@K!')
+                elif cmd == '@GPS!':
+                    # TODO GPS
+                    outf('@GPSTODO!')
+                    pass
+                else:
+                    outf('@N!')
 
         buttons_released.clear()
         buttons_pressed.clear()
         for button in buttons.items():
             if button[1].fell:
                 # print(button[0])
-                button_sequence.append(button[0])
+                wake_timer = time.monotonic()
+                if is_display_sleep:
+                    display_awake()
+                    is_display_sleep = False
+                else:
+                    button_sequence.append(button[0])
             if button[1].value:  # not pressed
                 buttons_released.append(button[0])
             else:
                 buttons_pressed.append(button[0])
 
-        i = (i + 1) % 256  # run from 0 to 255
+        if time.monotonic() - wake_timer > 120 and not is_display_sleep:
+            display_sleep()
+            is_display_sleep = True
+
+        if not no_cmd_display and time.monotonic() - no_cmd_timer > 30:
+            no_cmd_display = True
+            lcd.cursor_position(0, 0)
+            lcd.message = '\n'.join(['Communication with  ',
+                                     'mount lost.         ',
+                                     '                    ',
+                                     '                    '])
+
         if SIMULATION:
             characterlcd.update()
         for b in buttons.values():
