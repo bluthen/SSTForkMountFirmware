@@ -4,6 +4,7 @@ import threading
 import time
 from abc import ABC
 import uuid
+from collections import OrderedDict
 
 import astropy.units as u
 from astropy.coordinates import SkyCoord
@@ -15,11 +16,37 @@ import zeroconfserver
 import network
 
 import settings
+import pynmea2
+from timezonefinder import TimezoneFinder
+import arrow
+from dateutil import tz
 
 # TODO This global limits us to one handpad.
 hserver = None
 kill = False
 client_id = str(uuid.uuid4())
+
+
+def parse_gps(lines):
+    # Example:
+    # $GPRMC,035007.00,A,3855.98919,N,09514.94030,W,0.029,,310520,,,A*61'
+    # $GPGGA,035006.00,3855.98917,N,09514.94031,W,1,08,1.12,255.7,M,-28.4,M,,*61
+    # TODO: Detect when we have no gps sats.
+    rmc = pynmea2.parse(lines[0])
+    gga = pynmea2.parse(lines[1])
+    print(rmc)
+    print(gga)
+    # gga.altitude
+    if gga.lat == '':
+        # We've not got a satalite yet
+        return None
+    tf = TimezoneFinder()
+    locationtz = tf.timezone_at(lng=gga.longitude, lat=gga.latitude)
+    utc = arrow.Arrow(rmc.datestamp.year, rmc.datestamp.month, rmc.datestamp.day, rmc.timestamp.hour,
+                      rmc.timestamp.minute, rmc.timestamp.second, tzinfo=tz.gettz('UTC'))
+    local = utc.to(locationtz)
+    return {'utc': utc, 'local': local,
+            'location': {'lat': gga.latitude, 'long': gga.longitude, 'elevation': gga.altitude}}
 
 
 def terminate():
@@ -63,6 +90,62 @@ class ObjectSearchMenu:
     def run_loop(self):
         # recv = hserver.send(json.dumps({'search_object': {'search': self.search_kw}}))
         pass
+
+
+class GPSMenu:
+    def __init__(self):
+        pass
+
+    def run_loop(self):
+        hserver.clearall()
+        hserver.println('Reading from GPS...', 0)
+        count = 0
+        while True:
+            lines = hserver.gps()
+            if len(lines) > 0:
+                if lines[0] == 'ERROR':
+                    m = InfoMenu('Error in GPS read.')
+                    return m.run_loop()
+                print(lines)
+                info = parse_gps(lines)
+                if info is None:
+                    count += 1
+                    time.sleep(10)
+                    continue
+                control.set_location(info['location']['lat'], info['location']['long'], info['location']['elevation'],
+                                     'GPS')
+                control.set_time(info['utc'].isoformat())
+                m = InfoMenu('Time/Location Set')
+                return m.run_loop()
+            else:
+                m = InfoMenu('Error in GPS empty.')
+                return m.run_loop()
+
+
+class GPSDisplay:
+    def __init__(self, info):
+        self.info = info
+
+    def refresh(self):
+        self.print()
+
+    def print(self):
+        pass
+
+    def run_loop(self):
+        hserver.clearall()
+        timestr = self.info['local'].isoformat().split('T')
+        hserver.println("GPS Set " + timestr[0], 0)
+        hserver.println(timestr[1], 1)
+        hserver.println('{lat:.2f}d {lon:.2f}d '.format(
+            lat=self.info['location']['lat'], lon=self.info['location']['lon']), 2)
+        hserver.print('{elevation:.1f}m'.format(elevation=self.info['location']['elevation']), 3)
+        while not kill:
+            for hin in hserver.input():
+                if hin:
+                    if hin == 'E' or hin == 'S':
+                        return 'base'
+            time.sleep(0.1)
 
 
 class NumInputMenu(ABC):
@@ -772,6 +855,20 @@ class ParkMenu:
             time.sleep(1)
 
 
+class Brightness:
+    def __init__(self, level):
+        self._level = 3
+        if level == 'medium':
+            self._level = 2
+        elif level == 'low':
+            self._level = 1
+
+    def run_loop(self):
+        hserver.set_brightness(self._level)
+        m = InfoMenu('Brightness Set')
+        return m.run_loop()
+
+
 named_stars = ['Achernar', 'Acrux', 'Adhara', 'Albireo', 'Aldebaran', 'Alhna', 'Alioth', 'Alkaid', 'Alnilan', 'Alphard',
                'Altair', 'Antares', 'Arcturus', 'Atria', 'Avior', 'Bellatrix', 'Betelgeuse', 'Canopus', 'Capella',
                'Castor', 'Deneb', 'Deneb', 'Dubhe', 'El Nath', 'Fomalhaut', 'Gacrux', 'Hadar', 'Hamal',
@@ -815,13 +912,18 @@ menu_structure = {
             "Manual Coords": ManualCoord()
         },
         "Settings": {
+            "Brightness": {
+                "High": Brightness("high"),
+                "Medium": Brightness("medium"),
+                "Low": Brightness("low")
+            },
             "Network": {
                 "IP Status": IPMenu(),
                 "Wifi": WifiMenu()
             },
-            "Location/GPS": {
+            "Time/Location": {
                 'Presets': LocationPresets(),
-                'GPS': InfoMenu('Not Implemented')
+                'GPS': GPSMenu()
             }
         },
         "Park": ParkMenu()

@@ -89,12 +89,12 @@ class HandpadServer:
         self.last_devices = all_devices
         return diff_devices
 
-    def __read_serial_cmd(self):
+    def __read_serial_cmd(self, timeout=2):
         s = self.buffer
         found_at = False
         with self.serial_lock:
             start = time.time()
-            while time.time() - start < 2:
+            while time.time() - start < timeout:
                 if self.serial.in_waiting > 0:
                     s += self.serial.read(self.serial.in_waiting).decode()
                     start = time.time()
@@ -159,6 +159,11 @@ class HandpadServer:
         s = self.__read_serial_cmd()
         print('clearln', s)
 
+    def set_brightness(self, level):
+        self.serial.write('@L{level:d}!'.format(level=level))
+        s = self.__read_serial_cmd()
+        print('brightness', s)
+
     def input(self):
         self.serial.write('@B!'.encode())
         s = self.__read_serial_cmd()
@@ -183,6 +188,12 @@ class HandpadServer:
             return s[len(s) - 2]
         return ''
 
+    def gps(self):
+        self.serial.write('@GPS!'.encode())
+        s = self.__read_serial_cmd(10)
+        s = s[1:]
+        s = s[:len(s)-1]
+        return s.split('\n')
 
     def run(self):
         try_devices = self.discover()
