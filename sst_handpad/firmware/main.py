@@ -1,34 +1,31 @@
 import gc
-import time
 import sys
+import time
+
 import adafruit_debouncer
 from adafruit_debouncer import Debouncer
 
-# Uncomment if simulation
-# from circuitpysim import board
-# from circuitpysim import DigitalInOut, Direction, Pull
-# from circuitpysim import PWMOut
-# import circuitpysim as characterlcd
-# SIMULATION = True
-
-# Uncomment if real
-import board
-from digitalio import DigitalInOut, Direction, Pull
-from pulseio import PWMOut
 import adafruit_character_lcd.character_lcd as characterlcd
 import adafruit_dotstar
-
-dot = adafruit_dotstar.DotStar(board.APA102_SCK, board.APA102_MOSI, 1, brightness=1)
-dot[0] = (0, 0, 0)
-
-SIMULATION = False
-
-version = 1
+import board
+import busio
+import supervisor
+from digitalio import DigitalInOut, Direction, Pull
+from pulseio import PWMOut
 
 gc.collect()
 
+dot = adafruit_dotstar.DotStar(board.APA102_SCK, board.APA102_MOSI, 1, brightness=1)
+dot[0] = (0, 0, 0)
+uart = None
+gc.collect()
+
+version = 1
+
 # FOR PWM Levels see https://jared.geek.nz/2013/feb/linear-led-pwm
-PWM_LEVELS = [0, 738, 1959, 4087, 7373, 12071, 18431, 26705, 37146, 50005, 65535]
+PWM_LEVELS_LCD = [738, 12071, 65535]
+PWM_LEVELS_BUTTONS = [100, 300, 738]
+brightness_pwm = 2
 button_pwm = PWMOut(board.D10)
 lcd_pwm = PWMOut(board.D11)
 
@@ -45,7 +42,7 @@ availf = None
 
 
 def setup():
-    global lcd, inf, outf, availf
+    global lcd, inf, outf, availf, uart
     # Digital input with pullup on D7, D9, and D10
     for p in {'U': board.A4, 'E': board.A3, 'D': board.A2, 'L': board.A5, 'R': board.A1, 'S': board.D2}.items():
         but = DigitalInOut(p[1])
@@ -68,17 +65,10 @@ def setup():
                                      lines=lcd_rows)
     lcd.cursor = False
     lcd.blink = False
-    if SIMULATION:
-        import serial
-        ser = serial.Serial('/dev/pts/5', 115200, timeout=2)
-        inf = lambda x: ser.read(x).decode()
-        outf = lambda x: ser.write(x.encode())
-        availf = lambda: ser.in_waiting
-    else:
-        import supervisor
-        inf = lambda x: sys.stdin.read(x)
-        outf = lambda x: sys.stdout.write(x)
-        availf = lambda: supervisor.runtime.serial_bytes_available
+    inf = lambda x: sys.stdin.read(x)
+    outf = lambda x: sys.stdout.write(x)
+    availf = lambda: supervisor.runtime.serial_bytes_available
+    uart = busio.UART(board.TX, board.RX, baudrate=9600, timeout=2)
 
 
 def read_cmd():
@@ -104,6 +94,32 @@ def read_cmd():
     return ''
 
 
+def display_awake():
+    lcd_pwm.duty_cycle = PWM_LEVELS_LCD[brightness_pwm]
+    button_pwm.duty_cycle = PWM_LEVELS_BUTTONS[brightness_pwm]
+
+
+def display_sleep():
+    lcd_pwm.duty_cycle = 0
+    button_pwm.duty_cycle = 0
+
+
+def get_gps_lines():
+    t = time.monotonic()
+    uart.reset_input_buffer()
+    uart.readline()
+    lines = []
+    while True:
+        if time.monotonic() - t >= 2.5:
+            return ['ERROR', 'ERROR']
+        line = uart.readline().decode()
+        if line is not None and line.find('$GPRMC') == 0:
+            lines = [line.rstrip()]
+        if line is not None and len(lines) == 1 and line.find('$GPGGA') == 0:
+            lines.append(line.rstrip())
+            return lines
+
+
 def line_diff(from_line, to_line):
     to_line = to_line + ' ' * (20 - len(to_line))
     steps = []
@@ -125,18 +141,9 @@ def line_diff(from_line, to_line):
     return ret
 
 
-def display_awake():
-    lcd_pwm.duty_cycle = PWM_LEVELS[9]
-    button_pwm.duty_cycle = PWM_LEVELS[1]
-
-
-def display_sleep():
-    lcd_pwm.duty_cycle = 0
-    button_pwm.duty_cycle = 0
-
-
 # ######################## MAIN LOOP ##############################
 def main_loop():
+    global brightness_pwm
     button_sequence = []
     buttons_released = []
     buttons_pressed = []
@@ -188,13 +195,12 @@ def main_loop():
                     lcd.clear()
                     outf('@K!')
                 elif cmd[1] == 'L':
-                    level = int(cmd[2:4])
-                    # TODO: Set brightness level
+                    brightness_pwm = int(cmd[2:4])
+                    display_awake()
                     outf('@K!')
                 elif cmd == '@GPS!':
-                    # TODO GPS
-                    outf('@GPSTODO!')
-                    pass
+                    gpslines = '\n'.join(get_gps_lines())
+                    outf('@' + gpslines + '!')
                 else:
                     outf('@N!')
 
@@ -225,15 +231,10 @@ def main_loop():
                                      'mount lost.         ',
                                      '                    ',
                                      '                    '])
-
-        if SIMULATION:
-            characterlcd.update()
         for b in buttons.values():
             b.update()
 
 
 setup()
-if SIMULATION:
-    characterlcd.setup_curses(main_loop)
-else:
-    main_loop()
+gc.collect()
+main_loop()
