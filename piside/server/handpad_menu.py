@@ -857,11 +857,11 @@ class ParkMenu:
 
 class Brightness:
     def __init__(self, level):
-        self._level = 3
+        self._level = 2
         if level == 'medium':
-            self._level = 2
-        elif level == 'low':
             self._level = 1
+        elif level == 'low':
+            self._level = 0
 
     def run_loop(self):
         hserver.set_brightness(self._level)

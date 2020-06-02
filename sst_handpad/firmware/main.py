@@ -23,7 +23,7 @@ gc.collect()
 version = 1
 
 # FOR PWM Levels see https://jared.geek.nz/2013/feb/linear-led-pwm
-PWM_LEVELS_LCD = [738, 12071, 65535]
+PWM_LEVELS_LCD = [5000, 12071, 65535]
 PWM_LEVELS_BUTTONS = [100, 300, 738]
 brightness_pwm = 2
 button_pwm = PWMOut(board.D10)
@@ -112,12 +112,14 @@ def get_gps_lines():
     while True:
         if time.monotonic() - t >= 2.5:
             return ['ERROR', 'ERROR']
-        line = uart.readline().decode()
-        if line is not None and line.find('$GPRMC') == 0:
-            lines = [line.rstrip()]
-        if line is not None and len(lines) == 1 and line.find('$GPGGA') == 0:
-            lines.append(line.rstrip())
-            return lines
+        line = uart.readline()
+        if line:
+            line = line.decode()
+            if line.find('$GPRMC') == 0:
+                lines = [line.rstrip()]
+            if len(lines) == 1 and line.find('$GPGGA') == 0:
+                lines.append(line.rstrip())
+                return lines
 
 
 def line_diff(from_line, to_line):
@@ -195,7 +197,7 @@ def main_loop():
                     lcd.clear()
                     outf('@K!')
                 elif cmd[1] == 'L':
-                    brightness_pwm = int(cmd[2:4])
+                    brightness_pwm = int(cmd[2])
                     display_awake()
                     outf('@K!')
                 elif cmd == '@GPS!':
@@ -237,4 +239,8 @@ def main_loop():
 
 setup()
 gc.collect()
-main_loop()
+while True:
+    try:
+        main_loop()
+    except:
+        pass

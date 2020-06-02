@@ -110,6 +110,7 @@ class HandpadServer:
                         # print(s)
                         return s
                 time.sleep(0.01)
+        print(s)
         print('timed out')
         return ''
 
@@ -160,14 +161,14 @@ class HandpadServer:
         print('clearln', s)
 
     def set_brightness(self, level):
-        self.serial.write('@L{level:d}!'.format(level=level))
+        self.serial.write('@L{level:d}!'.format(level=level).encode())
         s = self.__read_serial_cmd()
         print('brightness', s)
 
     def input(self):
         self.serial.write('@B!'.encode())
         s = self.__read_serial_cmd()
-        print('input', s)
+        # print('input', s)
         if len(s) > 2:
             return s[1:len(s) - 1]
         return []
