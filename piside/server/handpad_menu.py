@@ -4,7 +4,6 @@ import threading
 import time
 from abc import ABC
 import uuid
-from collections import OrderedDict
 
 import astropy.units as u
 from astropy.coordinates import SkyCoord
@@ -18,8 +17,7 @@ import network
 import settings
 import pynmea2
 from timezonefinder import TimezoneFinder
-import arrow
-from dateutil import tz
+import pendulum
 
 # TODO This global limits us to one handpad.
 hserver = None
@@ -29,7 +27,7 @@ client_id = str(uuid.uuid4())
 
 def parse_gps(lines):
     # Example:
-    # $GPRMC,035007.00,A,3855.98919,N,09514.94030,W,0.029,,310520,,,A*61'
+    # $GPRMC,035007.00,A,3855.98919,N,09514.94030,W,0.029,,310520,,,A*61
     # $GPGGA,035006.00,3855.98917,N,09514.94031,W,1,08,1.12,255.7,M,-28.4,M,,*61
     # TODO: Detect when we have no gps sats.
     rmc = pynmea2.parse(lines[0])
@@ -42,9 +40,9 @@ def parse_gps(lines):
         return None
     tf = TimezoneFinder()
     locationtz = tf.timezone_at(lng=gga.longitude, lat=gga.latitude)
-    utc = arrow.Arrow(rmc.datestamp.year, rmc.datestamp.month, rmc.datestamp.day, rmc.timestamp.hour,
-                      rmc.timestamp.minute, rmc.timestamp.second, tzinfo=tz.gettz('UTC'))
-    local = utc.to(locationtz)
+    utc = pendulum.datetime(rmc.datestamp.year, rmc.datestamp.month, rmc.datestamp.day, rmc.timestamp.hour,
+                            rmc.timestamp.minute, rmc.timestamp.second)
+    local = pendulum.timezone(locationtz).convert(utc)
     return {'utc': utc, 'local': local,
             'location': {'lat': gga.latitude, 'long': gga.longitude, 'elevation': gga.altitude}}
 
@@ -100,7 +98,7 @@ class GPSMenu:
         hserver.clearall()
         hserver.println('Reading from GPS...', 0)
         count = 0
-        while True:
+        while count < 10:
             lines = hserver.gps()
             if len(lines) > 0:
                 if lines[0] == 'ERROR':
@@ -120,6 +118,8 @@ class GPSMenu:
             else:
                 m = InfoMenu('Error in GPS empty.')
                 return m.run_loop()
+        m = InfoMenu('Error getting GPS')
+        return m.run_loop()
 
 
 class GPSDisplay:
