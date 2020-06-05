@@ -29,7 +29,9 @@ Bounce sel = Bounce();
 
 static char buttons_released[7];
 static char buttons_pressed[7];
-static char button_sequence[7];
+uint8_t bs_idx = 0;
+static const uint8_t MAX_BUTTON_SEQUENCE = 40;
+static char button_sequence[MAX_BUTTON_SEQUENCE];
 
 static char gps_rmc_buf[83];
 static char gps_gga_buf[83];
@@ -40,8 +42,10 @@ static unsigned long wake_timer = 0;
 static char lcd_state[4][21];
 static bool is_display_sleep = false;
 
-static const uint8_t MAX_CMD_SIZE = 20;
+static const uint8_t MAX_CMD_SIZE = 25;
 static char cmd[MAX_CMD_SIZE];
+
+static uint8_t BOUNCE_DELAY = 20;
 
 void display_sleep() {
   analogWrite(lcd_pwm, PWM_LEVELS_LCD[brightness_pwm]);
@@ -75,7 +79,7 @@ void get_gps_lines() {
       while(true && (millis() - start) < 2500) {
         len = Serial1.readBytesUntil('\n', gps_gga_buf, 82);
         if(len > 6 && gps_gga_buf[0] == '$' && gps_gga_buf[1] == 'G' && gps_gga_buf[2] == 'P' && 
-           gps_gga_buf[3] == 'R' && gps_gga_buf[4] == 'M' && gps_gga_buf[5] == 'C') {
+           gps_gga_buf[3] == 'G' && gps_gga_buf[4] == 'G' && gps_gga_buf[5] == 'A') {
           gps_gga_buf[len] = 0;
           return;   
         }
@@ -127,15 +131,18 @@ void print_lcd_state(uint8_t start_line, uint8_t end_line) {
 }
 
 
-void button_sequence_updates(Bounce& b, char bc, uint8_t& br_idx, uint8_t& bp_idx, uint8_t& bs_idx) {
+void button_sequence_updates(Bounce& b, char bc, uint8_t& br_idx, uint8_t& bp_idx) {
   if (b.fell()) {
     wake_timer = millis();
     if (is_display_sleep) {
       display_awake();
       is_display_sleep = false;
     } else {
-      button_sequence[bs_idx] = bc;
-      bs_idx++;
+      if (bs_idx < MAX_BUTTON_SEQUENCE -1) {
+        button_sequence[bs_idx] = bc;
+        bs_idx++;
+        button_sequence[bs_idx] = 0;
+      }
     }
   }
   if (b.read()) {
@@ -155,10 +162,9 @@ void setup()
   strcpy(lcd_state[1], "Initializing...     ");
   strcpy(lcd_state[2], "                    ");
   strcpy(lcd_state[3], "                    ");
+
   lcd.begin(lcd_columns, lcd_rows);
-  lcd.print("StartSync Trackers");
-  lcd.setCursor(0, 2);
-  lcd.print("Initializing ...");
+  print_lcd_state(0, 3);
   analogWriteResolution(16);
   display_awake();
   
@@ -168,18 +174,20 @@ void setup()
   left.attach(A5, INPUT_PULLUP);
   right.attach(A1, INPUT_PULLUP);
   sel.attach(2, INPUT_PULLUP);
-  up.interval(50);
-  esc.interval(50);
-  down.interval(50);
-  left.interval(50);
-  right.interval(50);
-  sel.interval(50);
-
+  up.interval(BOUNCE_DELAY);
+  esc.interval(BOUNCE_DELAY);
+  down.interval(BOUNCE_DELAY);
+  left.interval(BOUNCE_DELAY);
+  right.interval(BOUNCE_DELAY);
+  sel.interval(BOUNCE_DELAY);
 
   Serial1.begin(9600);
   Serial1.setTimeout(2500);
   no_cmd_timer = millis();
   wake_timer = millis();
+  is_display_sleep = false;
+  no_cmd_display = false;
+  bs_idx = 0;
 }
 
 
@@ -188,6 +196,7 @@ void loop()
   uint8_t len = 0;
   len = read_cmd();
   if (len >= 3) {
+    no_cmd_timer = millis();
     if (no_cmd_display && cmd[0] == '@' && cmd[len-1] == '!') {
       no_cmd_display = false;
       print_lcd_state(0, 3);
@@ -197,6 +206,9 @@ void loop()
         Serial.print("@");
         Serial.print(button_sequence);
         Serial.print("!");
+        button_sequence[0] = 0;
+        bs_idx = 0;
+
       } else if (cmd[1] == 'J') {
         Serial.print("@");
         Serial.print(buttons_released);
@@ -209,16 +221,30 @@ void loop()
         uint8_t line = cmd[2] - 48;
         if (line < 4) {
           memcpy(lcd_state[line], cmd+3, len-4);
+          print_lcd_state(line, line);
+          Serial.print("@K!");
         }
-        print_lcd_state(line, line);
       } else if (len == 7 && cmd[1] == 'S' && cmd[2] == 'S' && cmd[3] == 'T' && cmd[4] == 'H' && cmd[5] == 'P') {
         Serial.print("@");
         Serial.print("SSTHP_");
+        if (handpad_version < 100) {
+          Serial.print("0");
+        }
+        if (handpad_version < 10) {
+          Serial.print(0);
+        }
         Serial.print(handpad_version);
         Serial.print("!");
       } else if (cmd[1] == 'R') {
         lcd.clear();
         Serial.print("@K!");
+      } else if (cmd[1] == 'L') {
+        uint8_t brightness = cmd[2] - 48;
+        if (brightness < 3) {
+          brightness_pwm = brightness;
+          display_awake();
+          Serial.print("@K!");        
+        }
       } else if (cmd[1] == 'G' && cmd[2] == 'P' && cmd[3] == 'S') {
         get_gps_lines();
         Serial.print("@");
@@ -233,25 +259,23 @@ void loop()
   // Button states
   uint8_t br_idx = 0;
   uint8_t bp_idx = 0;
-  uint8_t bs_idx = 0;
 
-  button_sequence_updates(up, 'U', br_idx, bp_idx, bs_idx);
-  button_sequence_updates(esc, 'E', br_idx, bp_idx, bs_idx);
-  button_sequence_updates(down, 'D', br_idx, bp_idx, bs_idx);
-  button_sequence_updates(left, 'L', br_idx, bp_idx, bs_idx);
-  button_sequence_updates(right, 'R', br_idx, bp_idx, bs_idx);
-  button_sequence_updates(sel, 'S', br_idx, bp_idx, bs_idx);
+  button_sequence_updates(up, 'U', br_idx, bp_idx);
+  button_sequence_updates(esc, 'E', br_idx, bp_idx);
+  button_sequence_updates(down, 'D', br_idx, bp_idx);
+  button_sequence_updates(left, 'L', br_idx, bp_idx);
+  button_sequence_updates(right, 'R', br_idx, bp_idx);
+  button_sequence_updates(sel, 'S', br_idx, bp_idx);
   
   buttons_released[br_idx] = 0;
   buttons_pressed[bp_idx] = 0;
-  button_sequence[bs_idx] = 0;
 
   if (millis() - wake_timer > 120000 && !is_display_sleep) {
     display_sleep();
     is_display_sleep = true;  
   }
 
-  if (!no_cmd_display && (millis() - no_cmd_timer) > 30) {
+  if (!no_cmd_display && (millis() - no_cmd_timer) > 30000) {
     no_cmd_display = true;
     lcd.setCursor(0,0);
     lcd.print("Communication with  ");
