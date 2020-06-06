@@ -6,8 +6,8 @@ $Descr USLetter 11000 8500
 encoding utf-8
 Sheet 1 1
 Title "SST Handpad"
-Date "2020-03-13"
-Rev "v0.0.3"
+Date "2020-06-06"
+Rev "v0.1.0"
 Comp "StarSync Trackers LLC"
 Comment1 ""
 Comment2 ""
@@ -109,42 +109,27 @@ Wire Wire Line
 Wire Wire Line
 	4300 1450 4300 1350
 $Comp
-L Device:R_POT RV1
-U 1 1 5E1E8BD1
-P 5800 2150
-F 0 "RV1" H 5731 2104 50  0000 R CNN
-F 1 "10k" H 5731 2195 50  0000 R CNN
-F 2 "Connectors:1X03_LOCK_LONGPADS" H 5800 2150 50  0001 C CNN
-F 3 "~" H 5800 2150 50  0001 C CNN
-	1    5800 2150
-	-1   0    0    1   
-$EndComp
-$Comp
 L power:GND #PWR0102
 U 1 1 5E1E8C66
-P 5800 2400
-F 0 "#PWR0102" H 5800 2150 50  0001 C CNN
-F 1 "GND" H 5805 2227 50  0000 C CNN
-F 2 "" H 5800 2400 50  0001 C CNN
-F 3 "" H 5800 2400 50  0001 C CNN
-	1    5800 2400
+P 5950 2500
+F 0 "#PWR0102" H 5950 2250 50  0001 C CNN
+F 1 "GND" H 5955 2327 50  0000 C CNN
+F 2 "" H 5950 2500 50  0001 C CNN
+F 3 "" H 5950 2500 50  0001 C CNN
+	1    5950 2500
 	1    0    0    -1  
 $EndComp
 $Comp
 L power:+5V #PWR0103
 U 1 1 5E1E8CAA
-P 5850 1900
-F 0 "#PWR0103" H 5850 1750 50  0001 C CNN
-F 1 "+5V" V 5865 2028 50  0000 L CNN
-F 2 "" H 5850 1900 50  0001 C CNN
-F 3 "" H 5850 1900 50  0001 C CNN
-	1    5850 1900
+P 6150 1800
+F 0 "#PWR0103" H 6150 1650 50  0001 C CNN
+F 1 "+5V" V 6165 1928 50  0000 L CNN
+F 2 "" H 6150 1800 50  0001 C CNN
+F 3 "" H 6150 1800 50  0001 C CNN
+	1    6150 1800
 	0    1    1    0   
 $EndComp
-Wire Wire Line
-	5800 1900 5800 2000
-Wire Wire Line
-	5800 2300 5800 2400
 Wire Wire Line
 	5650 2150 5600 2150
 $Comp
@@ -173,8 +158,6 @@ F 3 "" H 5800 1400 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	5800 1350 5800 1400
-Wire Wire Line
-	5800 1900 5850 1900
 Wire Wire Line
 	5600 1350 5600 2150
 $Comp
@@ -247,7 +230,7 @@ L Device:R R8
 U 1 1 5E1EE55A
 P 9800 2950
 F 0 "R8" V 9593 2950 50  0000 C CNN
-F 1 "330" V 9684 2950 50  0000 C CNN
+F 1 "1k" V 9684 2950 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 9730 2950 50  0001 C CNN
 F 3 "~" H 9800 2950 50  0001 C CNN
 	1    9800 2950
@@ -269,7 +252,7 @@ L Device:R R5
 U 1 1 5E1EE699
 P 7900 6350
 F 0 "R5" V 7693 6350 50  0000 C CNN
-F 1 "330" V 7784 6350 50  0000 C CNN
+F 1 "1k" V 7784 6350 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 7830 6350 50  0001 C CNN
 F 3 "~" H 7900 6350 50  0001 C CNN
 	1    7900 6350
@@ -291,7 +274,7 @@ L Device:R R6
 U 1 1 5E1EE945
 P 7900 4050
 F 0 "R6" V 7693 4050 50  0000 C CNN
-F 1 "330" V 7784 4050 50  0000 C CNN
+F 1 "1k" V 7784 4050 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 7830 4050 50  0001 C CNN
 F 3 "~" H 7900 4050 50  0001 C CNN
 	1    7900 4050
@@ -302,7 +285,7 @@ L Device:R R9
 U 1 1 5E1EDB1C
 P 9750 5100
 F 0 "R9" V 9543 5100 50  0000 C CNN
-F 1 "330" V 9634 5100 50  0000 C CNN
+F 1 "1k" V 9634 5100 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 9680 5100 50  0001 C CNN
 F 3 "~" H 9750 5100 50  0001 C CNN
 	1    9750 5100
@@ -324,7 +307,7 @@ L Device:R R7
 U 1 1 5E1EF636
 P 7950 5100
 F 0 "R7" V 7743 5100 50  0000 C CNN
-F 1 "330" V 7834 5100 50  0000 C CNN
+F 1 "1k" V 7834 5100 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 7880 5100 50  0001 C CNN
 F 3 "~" H 7950 5100 50  0001 C CNN
 	1    7950 5100
@@ -346,7 +329,7 @@ L Device:R R2
 U 1 1 5E1EF783
 P 6050 5150
 F 0 "R2" V 5843 5150 50  0000 C CNN
-F 1 "330" V 5934 5150 50  0000 C CNN
+F 1 "1k" V 5934 5150 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 5980 5150 50  0001 C CNN
 F 3 "~" H 6050 5150 50  0001 C CNN
 	1    6050 5150
@@ -814,25 +797,25 @@ Text GLabel 4800 2000 3    50   Input ~ 0
 DB4LCD
 Text GLabel 5300 2000 3    50   Input ~ 0
 ENLCD
-Text GLabel 3600 6300 2    50   Output ~ 0
-DB7LCD
-Text GLabel 3600 6100 2    50   Output ~ 0
-DB6LCD
-Text GLabel 3600 6500 2    50   Output ~ 0
-DB5LCD
-Text GLabel 3600 5900 2    50   Output ~ 0
-DB4LCD
 Text GLabel 3600 5700 2    50   Output ~ 0
+DB7LCD
+Text GLabel 3600 6700 2    50   Output ~ 0
+DB6LCD
+Text GLabel 3600 5900 2    50   Output ~ 0
+DB5LCD
+Text GLabel 3600 6500 2    50   Output ~ 0
+DB4LCD
+Text GLabel 3600 6300 2    50   Output ~ 0
 ENLCD
-Text GLabel 2500 6300 0    50   Input ~ 0
-DB7MC
-Text GLabel 2500 6100 0    50   Input ~ 0
-DB6MC
-Text GLabel 2500 6500 0    50   Input ~ 0
-DB5MC
-Text GLabel 2500 5900 0    50   Input ~ 0
-DB4MC
 Text GLabel 2500 5700 0    50   Input ~ 0
+DB7MC
+Text GLabel 2500 6700 0    50   Input ~ 0
+DB6MC
+Text GLabel 2500 5900 0    50   Input ~ 0
+DB5MC
+Text GLabel 2500 6500 0    50   Input ~ 0
+DB4MC
+Text GLabel 2500 6300 0    50   Input ~ 0
 ENMC
 Wire Wire Line
 	2500 5700 2600 5700
@@ -997,9 +980,9 @@ Text GLabel 2200 4250 3    50   Output ~ 0
 RSMC
 Text GLabel 5500 2000 3    50   Input ~ 0
 RSLCD
-Text GLabel 2500 6700 0    50   Input ~ 0
+Text GLabel 2500 6100 0    50   Input ~ 0
 RSMC
-Text GLabel 3600 6700 2    50   Output ~ 0
+Text GLabel 3600 6100 2    50   Output ~ 0
 RSLCD
 Wire Wire Line
 	5300 1350 5300 2000
@@ -1063,14 +1046,73 @@ NTX
 Text Notes 9250 1050 0    50   ~ 0
 NRX
 $Comp
-L power:+3.3V #PWR?
+L power:+3.3V #PWR0130
 U 1 1 5E714FFD
 P 9300 1200
-F 0 "#PWR?" H 9300 1050 50  0001 C CNN
+F 0 "#PWR0130" H 9300 1050 50  0001 C CNN
 F 1 "+3.3V" H 9315 1373 50  0000 C CNN
 F 2 "" H 9300 1200 50  0001 C CNN
 F 3 "" H 9300 1200 50  0001 C CNN
 	1    9300 1200
 	-1   0    0    1   
+$EndComp
+$Comp
+L dk_Trimmer-Potentiometers:TC33X-2-103E RV1
+U 1 1 5EDC51BE
+P 5950 2150
+F 0 "RV1" V 6003 2062 60  0000 R CNN
+F 1 "TC33X-2-103E" V 5897 2062 60  0000 R CNN
+F 2 "digikey-footprints:Trimpot_3.8mmx3.6mm_TC33X-2-103E" H 6150 2350 60  0001 L CNN
+F 3 "https://www.bourns.com/docs/Product-Datasheets/TC33.pdf" H 6150 2450 60  0001 L CNN
+F 4 "TC33X-103ETR-ND" H 6150 2550 60  0001 L CNN "Digi-Key_PN"
+F 5 "TC33X-2-103E" H 6150 2650 60  0001 L CNN "MPN"
+F 6 "Potentiometers, Variable Resistors" H 6150 2750 60  0001 L CNN "Category"
+F 7 "Trimmer Potentiometers" H 6150 2850 60  0001 L CNN "Family"
+F 8 "https://www.bourns.com/docs/Product-Datasheets/TC33.pdf" H 6150 2950 60  0001 L CNN "DK_Datasheet_Link"
+F 9 "/product-detail/en/bourns-inc/TC33X-2-103E/TC33X-103ETR-ND/612858" H 6150 3050 60  0001 L CNN "DK_Detail_Page"
+F 10 "TRIMMER 10K OHM 0.1W J LEAD TOP" H 6150 3150 60  0001 L CNN "Description"
+F 11 "Bourns Inc." H 6150 3250 60  0001 L CNN "Manufacturer"
+F 12 "Active" H 6150 3350 60  0001 L CNN "Status"
+	1    5950 2150
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	5950 2350 5950 2500
+Wire Wire Line
+	5950 1950 5950 1800
+Wire Wire Line
+	5950 1800 6150 1800
+$Comp
+L Mechanical:MountingHole H2
+U 1 1 5EDE4044
+P 850 7300
+F 0 "H2" H 950 7346 50  0000 L CNN
+F 1 "MountingHole" H 950 7255 50  0000 L CNN
+F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 850 7300 50  0001 C CNN
+F 3 "~" H 850 7300 50  0001 C CNN
+	1    850  7300
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H3
+U 1 1 5EDE40C7
+P 850 7550
+F 0 "H3" H 950 7596 50  0000 L CNN
+F 1 "MountingHole" H 950 7505 50  0000 L CNN
+F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 850 7550 50  0001 C CNN
+F 3 "~" H 850 7550 50  0001 C CNN
+	1    850  7550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H1
+U 1 1 5EDE414B
+P 850 7050
+F 0 "H1" H 950 7096 50  0000 L CNN
+F 1 "MountingHole" H 950 7005 50  0000 L CNN
+F 2 "Mounting_Holes:MountingHole_3.2mm_M3" H 850 7050 50  0001 C CNN
+F 3 "~" H 850 7050 50  0001 C CNN
+	1    850  7050
+	1    0    0    -1  
 $EndComp
 $EndSCHEMATC

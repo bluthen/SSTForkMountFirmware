@@ -150,23 +150,18 @@ X ~ 2 0 -150 50 U 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Device_R_POT
+# Mechanical_MountingHole
 #
-DEF Device_R_POT RV 0 40 Y N 1 F N
-F0 "RV" -175 0 50 V V C CNN
-F1 "Device_R_POT" -100 0 50 V V C CNN
+DEF Mechanical_MountingHole H 0 40 Y Y 1 F N
+F0 "H" 0 200 50 H V C CNN
+F1 "Mechanical_MountingHole" 0 125 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
- Potentiometer*
+ MountingHole*
 $ENDFPLIST
 DRAW
-S 40 100 -40 -100 0 1 10 N
-P 2 0 1 0 100 0 60 0 N
-P 4 0 1 0 45 0 90 20 90 -20 45 0 F
-X 1 1 0 150 50 D 50 50 1 1 P
-X 2 2 150 0 50 L 50 50 1 1 P
-X 3 3 0 -150 50 U 50 50 1 1 P
+C 0 0 50 0 1 50 N
 ENDDRAW
 ENDDEF
 #
@@ -268,6 +263,32 @@ X 1 1 -200 100 100 R 50 50 0 1 P
 X 2 2 200 100 100 L 50 50 0 1 P
 X K 3 -200 0 100 R 50 50 0 1 P
 X A 4 200 0 100 L 50 50 0 1 P
+ENDDRAW
+ENDDEF
+#
+# dk_Trimmer-Potentiometers_TC33X-2-103E
+#
+DEF dk_Trimmer-Potentiometers_TC33X-2-103E POT 0 0 Y Y 1 F N
+F0 "POT" -210 170 60 H V C CNN
+F1 "dk_Trimmer-Potentiometers_TC33X-2-103E" 10 -110 60 H V C CNN
+F2 "digikey-footprints:Trimpot_3.8mmx3.6mm_TC33X-2-103E" 200 200 60 H I L CNN
+F3 "https://www.bourns.com/docs/Product-Datasheets/TC33.pdf" 200 300 60 H I L CNN
+F4 "TC33X-103ETR-ND" 200 400 60 H I L CNN "Digi-Key_PN"
+F5 "TC33X-2-103E" 200 500 60 H I L CNN "MPN"
+F6 "Potentiometers, Variable Resistors" 200 600 60 H I L CNN "Category"
+F7 "Trimmer Potentiometers" 200 700 60 H I L CNN "Family"
+F8 "https://www.bourns.com/docs/Product-Datasheets/TC33.pdf" 200 800 60 H I L CNN "DK_Datasheet_Link"
+F9 "/product-detail/en/bourns-inc/TC33X-2-103E/TC33X-103ETR-ND/612858" 200 900 60 H I L CNN "DK_Detail_Page"
+F10 "TRIMMER 10K OHM 0.1W J LEAD TOP" 200 1000 60 H I L CNN "Description"
+F11 "Bourns Inc." 200 1100 60 H I L CNN "Manufacturer"
+F12 "Active" 200 1200 60 H I L CNN "Status"
+DRAW
+P 2 0 1 0 0 200 0 125 N
+P 4 0 1 0 -25 125 25 125 0 75 -25 125 F
+P 9 0 1 0 -100 0 -75 50 -50 -50 -25 50 0 -50 25 50 50 -50 75 50 100 0 N
+X CCW 1 -200 0 100 R 50 40 1 1 P
+X Wiper 2 0 300 100 D 50 40 1 1 P
+X CW 3 200 0 100 L 50 40 1 1 P
 ENDDRAW
 ENDDEF
 #
