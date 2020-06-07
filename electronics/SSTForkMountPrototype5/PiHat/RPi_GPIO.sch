@@ -176,15 +176,9 @@ NoConn ~ 7300 3000
 NoConn ~ 7300 2900
 NoConn ~ 7300 2800
 NoConn ~ 7300 2700
-Text GLabel 7200 4100 0    60   Input ~ 0
-PWR_SW_PI
-Wire Wire Line
-	7200 4100 7300 4100
-Text GLabel 9350 4200 2    60   Output ~ 0
-PWR_RELAY_PI
 Wire Wire Line
 	9250 2700 9300 2700
-Wire Wire Line
-	9200 4200 9350 4200
 NoConn ~ 7300 4200
+NoConn ~ 9200 4200
+NoConn ~ 7300 4100
 $EndSCHEMATC
