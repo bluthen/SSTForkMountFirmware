@@ -766,8 +766,7 @@ class ManualSlewMenu:
         while not kill:
             if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
                 coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
-                                 frame='icrs').to_string(
-                    'hmsdms')
+                                 frame='icrs').to_string('hmsdms')
                 coord = re.sub(r'\.\d+s', 's', coord)
                 hserver.println(coord, 3)
                 last_coord = (control.last_status['ra'], control.last_status['dec'])

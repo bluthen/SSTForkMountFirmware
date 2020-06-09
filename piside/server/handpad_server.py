@@ -61,20 +61,22 @@ class HandpadServer:
         self.buffer = ""
 
     def write_line(self, line_num, line_str):
-        self.serial.write(('@D{line_num:d}{line_str:s}!' % line_num, line_str).encode())
-        s=self.__read_serial_cmd()
-        print('write_line', s)
+        with self.serial_lock:
+            self.serial.write(('@D{line_num:d}{line_str:s}!' % line_num, line_str).encode())
+            s=self.__read_serial_cmd()
+            print('write_line', s)
 
     def get_buttons(self):
-        self.serial.write('@B!'.encode())
-        s = self.__read_serial_cmd()
-        print('get_buttons', s)
-        ret = []
-        for i in range(1, len(s), 2):
-            d = s[i]
-            c = int(s[i + 1])
-            ret.extend([d] * c)
-        return ret
+        with self.serial_lock:
+            self.serial.write('@B!'.encode())
+            s = self.__read_serial_cmd()
+            print('get_buttons', s)
+            ret = []
+            for i in range(1, len(s), 2):
+                d = s[i]
+                c = int(s[i + 1])
+                ret.extend([d] * c)
+            return ret
 
     def discover(self):
         all_devices = []
@@ -115,9 +117,10 @@ class HandpadServer:
         return ''
 
     def reset(self):
-        self.serial = None
-        self.last_devices = []
-        self.buffer = ""
+        with self.serial_lock:
+            self.serial = None
+            self.last_devices = []
+            self.buffer = ""
 
     def test(self, device):
         try:
@@ -140,61 +143,69 @@ class HandpadServer:
             return False
 
     def close(self):
-        if self.serial:
-            self.serial.close()
-            self.serial = None
+        with self.serial_lock:
+            if self.serial:
+                self.serial.close()
+                self.serial = None
 
     def println(self, text, line):
-        i = 20 - len(text[0:20])
-        text += ' '*i
-        self.serial.write('@D{line:d}{text:s}!'.format(text=text, line=line).encode())
-        s = self.__read_serial_cmd()
-        print('println', s)
+        with self.serial_lock:
+            i = 20 - len(text[0:20])
+            text += ' '*i
+            self.serial.write('@D{line:d}{text:s}!'.format(text=text, line=line).encode())
+            s = self.__read_serial_cmd()
+            print('println', s)
 
     def clearall(self):
         for i in range(4):
             self.clearln(i)
 
     def clearln(self, line):
-        self.serial.write('@D{line:d}{text:s}!'.format(text=' ' * 20, line=line).encode())
-        s = self.__read_serial_cmd()
-        print('clearln', s)
+        with self.serial_lock:
+            self.serial.write('@D{line:d}{text:s}!'.format(text=' ' * 20, line=line).encode())
+            s = self.__read_serial_cmd()
+            print('clearln', s)
 
     def set_brightness(self, level):
-        self.serial.write('@L{level:d}!'.format(level=level).encode())
-        s = self.__read_serial_cmd()
-        print('brightness', s)
+        with self.serial_lock:
+            self.serial.write('@L{level:d}!'.format(level=level).encode())
+            s = self.__read_serial_cmd()
+            print('brightness', s)
 
     def input(self):
-        self.serial.write('@B!'.encode())
-        s = self.__read_serial_cmd()
-        # print('input', s)
-        if len(s) > 2:
-            return s[1:len(s) - 1]
-        return []
+        with self.serial_lock:
+            self.serial.write('@B!'.encode())
+            s = self.__read_serial_cmd()
+            # print('input', s)
+            if len(s) > 2:
+                return s[1:len(s) - 1]
+            return []
 
     def released(self):
-        self.serial.write('@J!'.encode())
-        s = self.__read_serial_cmd()
-        print('released', s)
-        if len(s) > 2:
-            return s[len(s) - 2]
-        return ''
+        with self.serial_lock:
+            self.serial.write('@J!'.encode())
+            s = self.__read_serial_cmd()
+            print('released', s)
+            if len(s) > 2:
+                return s[len(s) - 2]
+            return ''
 
     def pressed(self):
-        self.serial.write('@K!'.encode())
-        s = self.__read_serial_cmd()
-        print('pressed', s)
-        if len(s) > 2:
-            return s[len(s) - 2]
-        return ''
+        with self.serial_lock:
+            self.serial.write('@K!'.encode())
+            s = self.__read_serial_cmd()
+            print('pressed', s)
+            if len(s) > 2:
+                return s[len(s) - 2]
+            return ''
 
     def gps(self):
-        self.serial.write('@GPS!'.encode())
-        s = self.__read_serial_cmd(10)
-        s = s[1:]
-        s = s[:len(s)-1]
-        return s.split('\n')
+        with self.serial_lock:
+            self.serial.write('@GPS!'.encode())
+            s = self.__read_serial_cmd(10)
+            s = s[1:]
+            s = s[:len(s)-1]
+            return s.split('\n')
 
     def run(self):
         try_devices = self.discover()

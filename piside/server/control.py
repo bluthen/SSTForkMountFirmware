@@ -784,6 +784,9 @@ def manual_control(direction, speed, client_id):
                 timers[direction].start()
         finally:
             set_last_slew_none()
+            # TODO: none it after 5 seconds if slow acceleration, really should we wait for speed to settle?
+            threading.Timer(5, set_last_slew_none)
+            threading.Timer(10, set_last_slew_none)
             slew_lock.release()
 
 
