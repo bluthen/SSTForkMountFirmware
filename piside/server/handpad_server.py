@@ -52,6 +52,8 @@ import db
 MAX_BUFFER = 255
 kill = False
 
+handpad_server = None
+
 
 class HandpadServer:
     def __init__(self):
@@ -231,7 +233,7 @@ def run():
 
 
 def main():
-    global kill
+    global kill, handpad_server
     handpad_server = HandpadServer()
     while not kill:
         try:

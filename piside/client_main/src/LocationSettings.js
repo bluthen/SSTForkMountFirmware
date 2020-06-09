@@ -270,6 +270,12 @@ class LocationSettings extends React.Component {
         }
     }
 
+    useGPSClicked() {
+        APIHelp.useGPSLocation().then(() => {
+           return APIHelp.fetchSettings();
+        });
+    }
+
     handleDialogClose() {
         state.location.new_step = 0;
     }
@@ -343,6 +349,11 @@ class LocationSettings extends React.Component {
                     <Fab color="primary" aria-label="add" onClick={this.addClicked}>
                         <AddIcon/>
                     </Fab>
+                </Grid>
+                <Grid item xs={12}>
+                    {state.status.handpad &&
+                    <Button color="primary" variant="contained" aria-label="Use GPS" onClick={this.useGPSClicked}>Use GPS</Button>
+                    }
                 </Grid>
             </Grid>
 

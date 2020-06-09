@@ -26,6 +26,7 @@ import network
 import settings
 import skyconv
 import handpad_server
+import handpad_menu
 
 iers.conf.auto_download = False
 iers.auto_max_age = None
@@ -675,6 +676,23 @@ def location_preset_add():
     settings.settings['location_presets'].append({'name': name, 'lat': lat, 'long': long, 'elevation': elevation})
     settings.write_settings(settings.settings)
     return "Saved Location Preset", 200
+
+
+@app.route('/api/location_gps', methods=['POST'])
+@nocache
+def location_use_gps():
+    if handpad_server.serial:
+        lines = handpad_server.handpad_server.gps()
+        if lines[0] == 'ERROR':
+            return 'Error reading GPS', 500
+        info = handpad_menu.parse_gps(lines)
+        if info is None:
+            return 'No satellites yet, try again later', 500
+        control.set_location(info['location']['lat'], info['location']['long'], info['location']['elevation'],
+                             'GPS')
+        return 'Location set with GPS', 200
+    else:
+        return 'Handpad not connected', 500
 
 
 @app.route('/api/location_preset', methods=['DELETE'])

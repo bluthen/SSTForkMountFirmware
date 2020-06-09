@@ -49,6 +49,8 @@ import skyconv
 import settings
 import motion
 
+import handpad_server
+
 version = "0.0.20"
 version_short = "0.0"
 version_date_str = "Mar 17 2020"
@@ -555,6 +557,7 @@ def send_status():
     status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     status['time_been_set'] = settings.runtime_settings['time_been_set']
     status['synced'] = settings.runtime_settings['sync_info'] is not None
+    status['handpad'] = handpad_server.handpad_server.serial is not None
     if status['synced']:
         obstime = AstroTime.now()
         with set_last_slew_lock:

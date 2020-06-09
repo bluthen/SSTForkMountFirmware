@@ -39,7 +39,8 @@ const state = observable({
         synced: false,
         time: null,
         time_been_set: false,
-        tracking: true
+        tracking: true,
+        handpad: false
     },
     goto: {
         slewing: false,

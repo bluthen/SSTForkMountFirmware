@@ -106,6 +106,7 @@ render(
 );
 APIHelp.setTime();
 APIHelp.startStatusUpdateInterval();
+APIHelp.startSettingsUpdateInterval();
 APIHelp.startNetworkStateListeners();
 APIHelp.fetchSettings();
 

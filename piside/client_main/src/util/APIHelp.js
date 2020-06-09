@@ -82,7 +82,9 @@ const doLocationSearch = _.debounce(function () {
 }, 500);
 
 let statusUpdateIntervalStarted = false;
+let settingsUpdateIntervalStarted = false;
 const STATUS_DELAY = 1000;
+const SETTINGS_UPDATE_DELAY=15000;
 
 const dirMap = {north: 'up', south: 'down', east: 'right', west: 'left'};
 const oppositeMap = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'};
@@ -171,6 +173,20 @@ const APIHelp = {
                     setTimeout(() => {
                         f();
                     }, STATUS_DELAY)
+                })
+            };
+            f();
+        }
+    },
+
+    startSettingsUpdateInterval: function () {
+        if (!settingsUpdateIntervalStarted) {
+            settingsUpdateIntervalStarted = true;
+            const f = () => {
+                this.fetchSettings().finally(() => {
+                    setTimeout(() => {
+                        f();
+                    }, SETTINGS_UPDATE_DELAY)
                 })
             };
             f();
@@ -458,6 +474,16 @@ const APIHelp = {
             headers: {
                 'Content-Type': 'application/json'
             }
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+                state.snack_bar_error = false;
+            });
+        });
+    },
+    useGPSLocation() {
+        return fetch('/api/location_gps', {
+            method: 'post'
         }).then(handleFetchError).then((response) => {
             return response.text().then((t) => {
                 state.snack_bar = t;
