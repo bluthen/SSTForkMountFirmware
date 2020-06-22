@@ -43,6 +43,10 @@ class SlewLimitsSettings extends React.Component {
         state.slewlimit.greater_than = v;
     }
 
+    handleClearPointsClicked() {
+        APIHelp.clearSyncPoints();
+    }
+
     handleLessThanChange(e) {
         let v = parseFloat(e.currentTarget.value);
         if (isNaN(v)) {
@@ -116,6 +120,9 @@ class SlewLimitsSettings extends React.Component {
                     <MenuItem value="1">Buie</MenuItem>
                     <MenuItem value="2">Affine</MenuItem>
                 </Select>
+            </Grid>
+            <Grid item xs={12}>
+                <Button color="primary" variant="contained" onClick={this.handleClearPointsClicked}>Clear Pointing Model</Button>
             </Grid>
             <Grid item xs={12}>
                 <h3>Allowed Declination</h3>

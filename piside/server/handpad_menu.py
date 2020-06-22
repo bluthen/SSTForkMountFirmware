@@ -256,31 +256,32 @@ def bl(s, d=2):
     return ret
 
 
-class ManualCoord:
+class ManualCoordRADec:
     def __init__(self):
-        self.title = 'Goto: Manual Coord'
-        self.prefix = '%02dh%02m%02s %s02dd%02dm%02s'
-        self.ra = ['00', '00', '00']
-        self.dec = ['+', '00', '00', '00']
+        self.title = 'Goto: RA/Dec'
+        self.prefix = ''
         self.max_length = 13
         self.cursor = 0
         self.inputstr = ''
         self.selection = 0
-        self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']]
+        self.inputs = []
 
     def reset(self):
         self.inputstr = ''
         self.selection = 0
+
+    def coord_print(self):
+        hserver.println('%sh%sm%ss %s%sd%sm%ss' % (
+            bl(self.inputstr[0:2]), bl(self.inputstr[2:4]), bl(self.inputstr[4:6]), bl(self.inputstr[6:7], 1),
+            bl(self.inputstr[7:9]), bl(self.inputstr[9:11]), bl(self.inputstr[11:13])
+        ), 1)
 
     def print(self):
         self.line_maxes()
         if self.selection >= len(self.inputs):
             self.selection = len(self.inputs) - 1
         hserver.println(self.title, 0)
-        hserver.println(' %sh%sm%ss %s%sd%sm%ss' % (
-            bl(self.inputstr[0:2]), bl(self.inputstr[2:4]), bl(self.inputstr[4:6]), bl(self.inputstr[6:7], 1),
-            bl(self.inputstr[7:9]), bl(self.inputstr[9:11]), bl(self.inputstr[11:13])
-        ), 1)
+        self.coord_print()
         line = ''
         for i in range(min(6, len(self.inputs))):
             if i == self.selection:
@@ -360,7 +361,7 @@ class ManualCoord:
                 if self.selection < 0:
                     self.selection = len(self.inputs) - 1
             elif hin == 'U':
-                self.selection = (self.selection + 6) % len(self.inputs)
+                self.selection = (self.selection + 5) % len(self.inputs)
                 if self.selection < 0:
                     self.selection += 12
             elif hin == 'R':
@@ -383,6 +384,46 @@ class ManualCoord:
             elif leave == 'escape':
                 return 'stay'
             time.sleep(0.1)
+
+
+class ManualCoordAltAz(ManualCoordRADec):
+    def __init__(self):
+        super().__init__()
+        self.title = 'Goto: Alt/Az'
+        self.inputstr = ''
+        self.inputs = []
+
+    def coord_print(self):
+        hserver.println('%sd%sm%ss %sd%sm%ss' % (
+            bl(self.inputstr[0:2]), bl(self.inputstr[2:4]), bl(self.inputstr[4:6]),
+            bl(self.inputstr[6:9], 3), bl(self.inputstr[9:11]), bl(self.inputstr[11:13])
+        ), 1)
+
+    def selected(self):
+        alt = float(self.inputstr[0:2]) + float(self.inputstr[2:4]) / 60. + float(self.inputstr[4:6]) / (60. * 60.)
+        az = float(self.inputstr[6:9]) + float(self.inputstr[9:11]) / 60. + float(self.inputstr[11:13]) / (60. * 60.)
+        m = SyncSlewMenu({'alt': alt, 'az': az, 'search': 'Slew To Coord'})
+        return m.run_loop()
+
+    def line_maxes(self):
+        if len(self.inputstr) == 0:
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'],
+                           ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9']]
+        elif len(self.inputstr) == 1 and self.inputstr[0] == '9':
+            self.inputs = [['0', '0'], ['DEL', 'DEL']]
+        elif len(self.inputstr) == 7 and self.inputstr[6] == '3':
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['DEL', 'DEL'],
+                           ['5', '5']]
+        elif len(self.inputstr) in [1, 3, 5, 7, 8, 10, 12]:
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['DEL', 'DEL'],
+                           ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9']]
+        elif len(self.inputstr) == 6:
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['DEL', 'DEL']]
+        elif len(self.inputstr) == 13:
+            self.inputs = [['DEL', 'DEL'], ['OK', 'OK']]
+        else:
+            self.inputs = [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['DEL', 'DEL'],
+                           ['5', '5']]
 
 
 class MessierMenu(NumInputMenu):
@@ -619,15 +660,18 @@ class Menu:
 
 
 class SlewingMenu:
-    def __init__(self, target_ra, target_dec):
-        self.target_ra = target_ra
-        self.target_dec = target_dec
+    def __init__(self, target):
+        self.target = target
 
     def run_loop(self):
         hserver.clearall()
         hserver.println('Slewing...', 0)
 
-        coord = SkyCoord(ra=self.target_ra * u.deg, dec=self.target_dec * u.deg, frame='icrs').to_string('hmsdms')
+        if 'ra' in self.target:
+            coord = SkyCoord(ra=self.target['ra'] * u.deg, dec=self.target['dec'] * u.deg, frame='icrs').to_string('hmsdms')
+        else:
+            coord = SkyCoord(alt=self.target['alt'] * u.deg, az=self.target['az'] * u.deg, frame='altaz').to_string('dms')
+            coord = ' '.join(reversed(coord.split(' ')))
         coord = re.sub(r'\.\d+s', 's', coord)
         hserver.println(coord, 1)
 
@@ -637,13 +681,21 @@ class SlewingMenu:
                 if hin == 'S':
                     control.cancel_slews()
                     return 'canceled'
-            if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
-                coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
-                                 frame='icrs').to_string(
-                    'hmsdms')
-                coord = re.sub(r'\.\d+s', 's', coord)
-                hserver.println(coord, 3)
-                last_coord = (control.last_status['ra'], control.last_status['dec'])
+            if 'ra' in self.target:
+                if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
+                    coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
+                                     frame='icrs').to_string('hmsdms')
+                    coord = re.sub(r'\.\d+s', 's', coord)
+                    hserver.println(coord, 3)
+                    last_coord = (control.last_status['ra'], control.last_status['dec'])
+            else:
+                if control.last_status['alt'] != last_coord[0] and control.last_status['az'] != last_coord[1]:
+                    coord = SkyCoord(alt=control.last_status['alt'] * u.deg, az=control.last_status['az'] * u.deg,
+                                     frame='altaz').to_string('dms')
+                    coord = ' '.join(reversed(coord.split(' ')))
+                    coord = re.sub(r'\.\d+s', 's', coord)
+                    hserver.println(coord, 3)
+                    last_coord = (control.last_status['alt'], control.last_status['az'])
             if not control.last_status['slewing']:
                 return 'complete'
             time.sleep(0.25)
@@ -652,7 +704,12 @@ class SlewingMenu:
 class SyncSlewMenu(Menu):
     def __init__(self, slew_object):
         self.object = slew_object
-        coord = SkyCoord(ra=slew_object['ra'] * u.deg, dec=slew_object['dec'] * u.deg, frame='icrs').to_string('hmsdms')
+        if 'ra' in slew_object:
+            coord = SkyCoord(ra=slew_object['ra'] * u.deg, dec=slew_object['dec'] * u.deg, frame='icrs').to_string('hmsdms')
+        else:
+            coord = SkyCoord(alt=slew_object['alt'] * u.deg, az=slew_object['az'] * u.deg, frame='altaz').to_string(
+                'dms')
+            coord = ' '.join(reversed(coord.split(' ')))
         coord = re.sub(r'\.\d+s', 's', coord)
         m = {slew_object['search'] + '\n' + coord: {'Slew': {}, 'Sync': {}}}
         super().__init__(m)
@@ -660,9 +717,12 @@ class SyncSlewMenu(Menu):
 
     def selected(self):
         if self.menu_selection == 0:  # Slew
-            control.set_slew(self.object['ra'], self.object['dec'])
+            if 'ra' in self.object:
+                control.set_slew(self.object['ra'], self.object['dec'])
+            else:
+                control.set_slew(alt=self.object['alt'], az=self.object['az'])
             time.sleep(1)
-            ret = SlewingMenu(self.object['ra'], self.object['dec']).run_loop()
+            ret = SlewingMenu(self.object).run_loop()
             if ret == 'complete':
                 InfoMenu('Slew Complete', 'base').run_loop()
             else:
@@ -670,7 +730,10 @@ class SyncSlewMenu(Menu):
             return "base"
         elif self.menu_selection == 1:  # Sync
             stop = thinking('Syncing')
-            control.set_sync(self.object['ra'], self.object['dec'])
+            if 'ra' in self.object:
+                control.set_sync(self.object['ra'], self.object['dec'])
+            else:
+                control.set_sync(alt=self.object['alt'], az=self.object['az'])
             stop['stop'] = True
             stop['thread'].join()
             InfoMenu('Synced', 'base').run_loop()
@@ -908,7 +971,10 @@ menu_structure = {
             "NGC": NGCMenu(),
             "IC": ICMenu(),
             "Star Name": make_star_menus(named_stars),
-            "Manual Coords": ManualCoord()
+            "Manual Coords": {
+                "RA/DEC": ManualCoordRADec(),
+                "Alt/Az": ManualCoordAltAz()
+            }
         },
         "Settings": {
             "Brightness": {

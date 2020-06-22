@@ -209,7 +209,11 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
     else:
         need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
     count = 0
+    close_timer = None
     while not cancel_slew:
+        if close_timer is not None and (time.time() - close_timer) > 10.0:
+            # For some reason we are never getting there
+            break
         count += 1
         if not steps and count != 1 and not parking:
             need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
@@ -221,6 +225,9 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
         else:
             delta = need_step_position['dec'] - status['dep']
             status_pos_key = 'dep'
+
+        if abs(round(delta)) <= 10.0*close_enough and close_timer is None:
+            close_timer = time.time()
 
         if abs(round(delta)) <= close_enough:
             break
@@ -303,7 +310,7 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
     global cancel_slew, slewing
 
     ha_close_enough = 3.0
-    ha_close_enough = 2 * settings.settings['ra_track_rate']
+    ha_close_enough = 2.5 * settings.settings['ra_track_rate']
     dec_close_enough = 3.0
 
     try:

@@ -183,11 +183,17 @@ const APIHelp = {
         if (!settingsUpdateIntervalStarted) {
             settingsUpdateIntervalStarted = true;
             const f = () => {
-                this.fetchSettings().finally(() => {
+                if (state.page !== 'advancedSettings') {
+                    this.fetchSettings().finally(() => {
+                        setTimeout(() => {
+                            f();
+                        }, SETTINGS_UPDATE_DELAY)
+                    });
+                } else {
                     setTimeout(() => {
                         f();
                     }, SETTINGS_UPDATE_DELAY)
-                })
+                }
             };
             f();
         }
@@ -332,6 +338,20 @@ const APIHelp = {
             state.goto.syncing = false;
         });
     },
+
+    clearSyncPoints(index) {
+        return fetch('/api/sync', {
+            method: 'delete'
+        }).then(handleFetchError).then((response) => {
+            return response.text().then((t) => {
+                state.snack_bar = t;
+                state.snack_bar_error = false;
+            });
+        });
+    },
+
+
+
     park() {
         state.goto.slewing = true;
         state.goto.slewingtype = 'park';

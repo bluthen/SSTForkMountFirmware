@@ -454,7 +454,7 @@ def get_sync_points():
 @nocache
 def clear_sync():
     control.clear_sync()
-    return 'Cleared Sync Points', 200
+    return 'Cleared Model', 200
 
 
 @app.route('/api/sync', methods=['PUT'])
