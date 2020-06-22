@@ -32,8 +32,8 @@ def parse_gps(lines):
     # TODO: Detect when we have no gps sats.
     rmc = pynmea2.parse(lines[0])
     gga = pynmea2.parse(lines[1])
-    print(rmc)
-    print(gga)
+    # print(rmc)
+    # print(gga)
     # gga.altitude
     if gga.lat == '':
         # We've not got a satalite yet
@@ -104,7 +104,7 @@ class GPSMenu:
                 if lines[0] == 'ERROR':
                     m = InfoMenu('Error in GPS read.')
                     return m.run_loop()
-                print(lines)
+                # print(lines)
                 info = parse_gps(lines)
                 if info is None:
                     count += 1
@@ -437,7 +437,7 @@ class MessierMenu(NumInputMenu):
         objects = {'Object Selection': {}}
         if len(dsos) > 1:
             for dso in dsos:
-                print(dso)
+                # print(dso)
                 dso['search'] = re.sub(r'(^\|)|(\|$)', '', dso['search'].strip())
                 dso['search'] = dso['search'].replace('|', ',')
                 objects['Object Selection'][dso['search']] = SyncSlewMenu(dso)
@@ -508,7 +508,7 @@ class Star(MessierMenu):
         objects = {'Object Selection': {}}
         if len(stars) > 1:
             for star in stars:
-                print(star)
+                # print(star)
                 star['search'] = star['bf'] + ',' + star['proper']
                 objects['Object Selection'][star['search']] = SyncSlewMenu(star)
             stop['stop'] = True
@@ -605,10 +605,10 @@ class Menu:
         refresh = False
         for hin in hserver.input():
             refresh = True
-            print('hin', hin)
+            # print('hin', hin)
             if hin == 'E':
                 ret = self.selected()
-                print('Menu', self.base_menu, ret)
+                # print('Menu', self.base_menu, ret)
                 if ret == 'base':
                     self.menu_selection = 0
                     self.menu_pos = [self.menu_pos[0]]
@@ -964,6 +964,7 @@ menu_structure = {
                 'Neptune': Planet('neptune'),
                 'Pluto': Planet('pluto'),
                 'Saturn': Planet('saturn'),
+                'Sun': Planet('sun'),
                 'Uranus': Planet('uranus'),
                 'Venus': Planet('venus')
             },

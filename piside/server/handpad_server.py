@@ -66,13 +66,13 @@ class HandpadServer:
         with self.serial_lock:
             self.serial.write(('@D{line_num:d}{line_str:s}!' % line_num, line_str).encode())
             s=self.__read_serial_cmd()
-            print('write_line', s)
+            # print('write_line', s)
 
     def get_buttons(self):
         with self.serial_lock:
             self.serial.write('@B!'.encode())
             s = self.__read_serial_cmd()
-            print('get_buttons', s)
+            # print('get_buttons', s)
             ret = []
             for i in range(1, len(s), 2):
                 d = s[i]
@@ -114,8 +114,8 @@ class HandpadServer:
                         # print(s)
                         return s
                 time.sleep(0.01)
-        print(s)
-        print('timed out')
+        # print(s)
+        # print('timed out')
         return ''
 
     def reset(self):
@@ -132,7 +132,7 @@ class HandpadServer:
                 self.serial.read(serial.in_waiting)
             self.serial.write('@SSTHP!'.encode())
             s = self.__read_serial_cmd()
-            print('test', s)
+            # print('test', s)
             if re.match('@SSTHP_\d{3}!', s):
                 return True
             else:
@@ -156,7 +156,7 @@ class HandpadServer:
             text += ' '*i
             self.serial.write('@D{line:d}{text:s}!'.format(text=text, line=line).encode())
             s = self.__read_serial_cmd()
-            print('println', s)
+            # print('println', s)
 
     def clearall(self):
         for i in range(4):
@@ -166,13 +166,13 @@ class HandpadServer:
         with self.serial_lock:
             self.serial.write('@D{line:d}{text:s}!'.format(text=' ' * 20, line=line).encode())
             s = self.__read_serial_cmd()
-            print('clearln', s)
+            # print('clearln', s)
 
     def set_brightness(self, level):
         with self.serial_lock:
             self.serial.write('@L{level:d}!'.format(level=level).encode())
             s = self.__read_serial_cmd()
-            print('brightness', s)
+            # print('brightness', s)
 
     def input(self):
         with self.serial_lock:
@@ -187,7 +187,7 @@ class HandpadServer:
         with self.serial_lock:
             self.serial.write('@J!'.encode())
             s = self.__read_serial_cmd()
-            print('released', s)
+            # print('released', s)
             if len(s) > 2:
                 return s[len(s) - 2]
             return ''
@@ -196,7 +196,7 @@ class HandpadServer:
         with self.serial_lock:
             self.serial.write('@K!'.encode())
             s = self.__read_serial_cmd()
-            print('pressed', s)
+            # print('pressed', s)
             if len(s) > 2:
                 return s[len(s) - 2]
             return ''
@@ -213,12 +213,12 @@ class HandpadServer:
         try_devices = self.discover()
         good = False
         for device in try_devices:
-            print(device)
+            # print(device)
             if self.test(device):
                 good = True
                 break
         if good:
-            print('Found handpad')
+            # print('Found handpad')
             main_menu = Menu(menu_structure, self)
             main_menu.run_loop()
 
