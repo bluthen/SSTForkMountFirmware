@@ -1,7 +1,9 @@
 import copy
 import datetime
+import json
 import logging
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -127,6 +129,29 @@ def settings_get():
     s['calibration_logging'] = settings.runtime_settings['calibration_logging']
     # print(s)
     return jsonify(s)
+
+
+@app.route('/api/settings_dl')
+@nocache
+def settings_dl_get():
+    return send_from_directory(directory='./', filename='settings.json', as_attachment=True, attachment_filename='ssteq25_settings.json')
+
+
+@app.route('/api/settings_dl', methods=['POST'])
+@nocache
+def settings_dl_post():
+    file = request.files['file']
+    with tempfile.TemporaryFile(suffix='.json') as tfile:
+        file.save(tfile)
+        tfile.seek(0)
+        json.load(tfile) # just to check it is at least a json
+        tfile.seek(0)
+        with open('./settings.json', 'wb') as sfile:
+            shutil.copyfileobj(tfile, sfile)
+    if not settings.is_simulation():
+        t = threading.Timer(5, reboot)
+        t.start()
+    return 'Updated Settings'
 
 
 @app.route('/api/hostname')

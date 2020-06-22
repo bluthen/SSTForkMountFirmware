@@ -475,6 +475,31 @@ const APIHelp = {
             return e;
         });
     },
+    uploadSettings(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return fetch('/api/settings_dl', {
+            method: 'post',
+            body: formData
+        }).then(handleFetchError).then(() => {
+            state.updateDialog.timer = 50;
+            const to = function () {
+                setTimeout(function () {
+                    state.updateDialog.timer = state.updateDialog.timer - 1;
+                    if (state.updateDialog.timer <= 0) {
+                        location.reload(true);
+                    } else {
+                        to();
+                    }
+                }, 1000);
+            };
+            to();
+        }).catch((e) => {
+            state.snack_bar = 'Error: Failed to import settings';
+            state.snack_bar_error = true;
+            return e;
+        });
+    },
     toggleTracking(track) {
         let url = '/api/start_tracking';
         if (!track) {
@@ -725,6 +750,9 @@ const APIHelp = {
                 });
             });
         }
+    },
+    exportSettings() {
+        location.href='/api/settings_dl';
     }
 
 };

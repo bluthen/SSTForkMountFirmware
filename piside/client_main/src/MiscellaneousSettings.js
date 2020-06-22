@@ -18,7 +18,9 @@ class MiscellaneousSettings extends React.Component {
         super(props);
         this.uuid = uuidv4();
         this.firmwareRef = React.createRef();
+        this.settingsRef = React.createRef();
         this.handleFirmwareUpdate = this.handleFirmwareUpdate.bind(this);
+        this.handleSettingImportClicked = this.handleSettingImportClicked.bind(this);
         this.plotEncoderLogs = this.plotEncoderLogs.bind(this);
         this.state = {encoderData: null};
     }
@@ -37,6 +39,17 @@ class MiscellaneousSettings extends React.Component {
         APIHelp.uploadFirmware(file);
         state.updateDialog.timer = null;
         state.updateDialog.show = true;
+    }
+
+    handleSettingImportClicked() {
+        const file = this.settingsRef.current.files[0];
+        APIHelp.uploadSettings(file);
+        state.updateDialog.timer = null;
+        state.updateDialog.show = true;
+    }
+
+    handlExportSettingsClicked() {
+        APIHelp.exportSettings();
     }
 
     onTrackingChange(e, tracking) {
@@ -101,6 +114,24 @@ class MiscellaneousSettings extends React.Component {
                     />
                 </Button>
                 <Button color="secondary" variant="contained" onClick={this.handleFirmwareUpdate}>Upload</Button>
+            </Grid>
+            <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
+                <h3>Import/Export Settings</h3>
+                <Button color="primary"
+                        variant="contained"
+                        component="label"
+                >
+                    Select Settings File
+                    <input
+                        type="file"
+                        style={{display: "none"}}
+                        accept="application/json"
+                        ref={this.settingsRef}
+                    />
+                </Button>
+                <Button color="secondary" variant="contained" onClick={this.handleSettingImportClicked}>Import Settings</Button>
+                <br/><br/>
+                <Button color="primary" variant="contained" onClick={this.handlExportSettingsClicked}>Export Settings</Button>
             </Grid>
             <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
                 <h3>Calibration Tools</h3>
