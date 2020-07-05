@@ -49,8 +49,6 @@ import skyconv
 import settings
 import motion
 
-import handpad_server
-
 version = "0.0.20"
 version_short = "0.0"
 version_date_str = "Mar 17 2020"
@@ -553,6 +551,7 @@ def send_status():
     Sets last_status global and sends last_status to socket.
     :return:
     """
+    import handpad_server
     global slewing, last_status, last_slew, cancel_slew, encoder_error
     status = calc_status(stepper.get_status())
     status['ra'] = None
