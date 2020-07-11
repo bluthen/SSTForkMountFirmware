@@ -5,8 +5,6 @@ sync
 # Logged onto Pi
 
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y ntp ntpdate ntpstat
-sudo apt install -y hostapd dnsmasq
 
 sudo raspi-config
 	update
@@ -21,10 +19,7 @@ sudo raspi-config
 
 sudo reboot
 
-sudo apt install -y python3-pip git 
-sudo apt install -y libblas-common libblas3 libgfortran3 liblapack3
-apt install -y libatlas3-base
-
+sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq llvm
 
 
 # Copy piside code
@@ -69,11 +64,6 @@ log-facility=/var/log/dnsmasq.log
 log-async
 log-dhcp
 
-
-#Add to rc.local
-
-/usr/local/bin/supervisord -c /etc/supervisord.conf
-/root/networkstartup.sh
 
 cp autohotspot /usr/bin/autohotspot
 

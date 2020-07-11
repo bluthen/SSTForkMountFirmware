@@ -49,7 +49,7 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.20"
+version = "0.0.21"
 version_short = "0.0"
 version_date_str = "Mar 17 2020"
 
