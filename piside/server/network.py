@@ -136,19 +136,16 @@ def set_ethernet_dhcp_server(enabled):
 def hostapd_write(ssid, channel, password=None):
     stemp = root_file_open('/etc/hostapd/hostapd.conf')
     stemp[0].truncate(0)
-    hostapd_conf = """interface=%s
-driver=nl80211
+    hostapd_conf = """country_code=US
+interface=%s
 ssid=%s
 hw_mode=g
 channel=%d
 macaddr_acl=0
 auth_algs=1
 ignore_broadcast_ssid=0
-rsn_pairwise=CCMP
-ieee80211n=1          # 802.11n support
-ht_capab=[HT40][SHORT-GI-20][DSSS_CCK-40]
-wmm_enabled=1         # QoS support
-"""
+rsn_pairwise=CCMP    
+    """
     hostapd_security = """wpa=2
 wpa_passphrase=%s
 wpa_key_mgmt=WPA-PSK
@@ -208,6 +205,7 @@ ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
         wpa_file.write('network={\n')
         for key, value in network.items():
             wpa_file.write("%s=%s\n" % (key, value))
+        wpa_file.write('key_mgmt=WPA-PSK\n')
         wpa_file.write('}\n')
 
 

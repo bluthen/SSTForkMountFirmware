@@ -4,6 +4,7 @@ import threading
 import os
 import logging
 import copy
+import subprocess
 
 _lock = threading.RLock()
 _plock = threading.RLock()
@@ -23,9 +24,14 @@ def deepupdate(to_update, odict):
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
 def write_settings(settings):
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
     with _lock:
         with open('settings.json', mode='w') as f:
             json.dump(settings, f)
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
+
 
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
@@ -77,7 +83,7 @@ def get_logger(name):
     logger = logging.getLogger(name)
     abspath = os.path.abspath(__file__)
     dname = os.path.dirname(abspath)
-    p = os.path.join(dname, 'logs')
+    p = os.path.join('/home/pi/', 'logs')
     if not os.path.exists(p):
         os.makedirs(p)
     p = os.path.join(p, name + '.log')

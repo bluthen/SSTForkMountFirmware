@@ -6,6 +6,7 @@ netifaces
 pendulum
 pyserial
 scipy
-timezonefinder[numba]
+timezonefinder
 zeroconf
 numpy
+pynmea2

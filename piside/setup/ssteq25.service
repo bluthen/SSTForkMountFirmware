@@ -1,0 +1,14 @@
+[Unit]
+Description=SSTEQ25 service
+#After=clearhomepyc.service network.target
+
+[Service]
+Environment=WORKON_DIR=/ssteq/piside/python_venvs
+Type=simple
+User=pi
+WorkingDirectory=/ssteq/piside/server/
+ExecStart=/usr/local/bin/pipenv run python main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

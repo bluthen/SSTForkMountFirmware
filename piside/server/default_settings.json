@@ -6,10 +6,10 @@
   "limit_encoder_step_fillin": true,
   "ra_encoder_pulse_per_degree": 0.0,
   "dec_encoder_pulse_per_degree": 0.0,
-  "pointing_model": "3point",
+  "pointing_model": "single",
   "microserial": {
     "baud": 115200,
-    "port": "/dev/serial1"
+    "port": "/dev/serial0"
   },
   "location": null,
   "ra_slew_fastest": 10800,
@@ -38,7 +38,7 @@
   },
   "simulation": false,
   "network": {
-    "wifi_device": "wlp2s0",
+    "wifi_device": "wlan0",
     "ssid": "ssteq25",
     "wpa2key": null,
     "channel": "6",
@@ -61,6 +61,6 @@
   },
   "color_scheme": "default",
   "atmos_refract": true,
-  "power_switch": true,
+  "power_switch": false,
   "location_presets": []
 }

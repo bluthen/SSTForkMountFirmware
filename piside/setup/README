@@ -1,28 +1,30 @@
 unzip 2018-11-13-raspbian-stretch-lite.zip
-sudo dd if=2018-11-13-raspbian-stretch-lite.img of=/dev/sde bs=4M
+sudo dd if=2018-11-13-raspbian-stretch-lite.img of=/dev/sdd bs=4M
 sync
+mount /dev/sdd1 /someplace
+touch /someplace/ssh; sync
+umount /dev/sdd1
 
 # Logged onto Pi
 
-sudo apt update && sudo apt upgrade -y
+sudo apt update --fix-missing && sudo apt upgrade -y
 
 sudo raspi-config
 	update
     boot options -> desktop/cli -> console
 	localization -> change locale -> only enable (C&en_US ones, default en_US.UTF-8)
 	localization -> change timezone -> US -> Central
-	localization -> keyboard layout -> generic 104-key pc -> other -> English (US) -> English (US) -> The default -> no compose, No
 	localization -> change wifi country -> US
-	interfacing options -> camera -> yes
 	interfacing options -> ssh -> yes 
 	interfacing options -> serial -> no -> yes
 
 sudo reboot
 
-sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq llvm
+sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim
 
 
 # Copy piside code
+# Copy pi to ~/configs
 
 # in server folder
 sudo pip3 install --upgrade -r requirements.txt 
@@ -32,15 +34,6 @@ sudo cp 49-teensy.rules /etc/udev/rules.d
 
 # Change password
 passwd
-
-
-
-# Setup ramtmp
-sudo mkdir /ramtmp
-#Edit /etc/fstab
-tmpfs /ramtmp tmpfs defaults,noatime,nosuid,nodev,noexec,mode=1777,size=5M 0 0
-
-sudo mount /ramtmp
 
 
 
@@ -66,33 +59,17 @@ log-dhcp
 
 
 cp autohotspot /usr/bin/autohotspot
-
-#Put in /root/networkstartup.sh
-#!/bin/sh
-/root/ctrl_dnsmasq.py wlan0 disable
-/root/ctrl_dnsmasq.py check_and_restart
-sleep 5
-/root/autohotspotcron
+cp networkstartup.sh /root/
+ln -s /ssteq/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
 
 
-
-
-#Add to dhcpcd.conf
+#Append to dhcpcd.conf
 interface wlan0
 static ip_address=192.168.45.1/24
 denyinterfaces eth0
 denyinterfaces wlan0
 
 
-mkdir /ramtmp
-mkdir /caltmp
-chown pi /caltmp
-in /etc/fstab
-tmpfs /ramtmp tmpfs defaults,size=20m,mode=1777 0 0
-
-
-
-ln -s /home/pi/SSTForkMountFirmware/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
 
 /etc/dhcp/dhclient.conf
   timeout 15
@@ -111,6 +88,11 @@ cp dnsmasq-eth0.service /etc/systemd/system/
 
 cp dnsmasq.eth0.conf /etc
 cp dnsmasq.eth0.sh /root
+cp interfaces.default /etc/network/interfaces.d/default
+cp wpa_supplicant.conf /etc/wpa_supplicant/
+cp hostapd.conf /etc/hostapd/
+cp hostname /etc/
+cp hosts /etc
 
 systemctl enable dnsmasq-eth0.service
 systemctl enable clearhomepyc.service 

@@ -63,24 +63,25 @@ compress = Compress()
 # Sets up power switch
 # TODO: disable power switch for simulation
 def run_power_switch():
-    try:
-        import RPi.GPIO as GPIO
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(RELAY_PIN, GPIO.OUT)
-        GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.output(RELAY_PIN, True)
-
-        while not power_thread_quit:
-            time.sleep(0.1)
-            if GPIO.input(SWITCH_PIN) == 0:
-                continue
-            time.sleep(0.1)
-            if GPIO.input(SWITCH_PIN) == 1:
-                subprocess.run(['sudo', 'shutdown', '-h', 'now'])
-
-    except ImportError:
-        # We are probably in simulation
-        print("Warning: Can't use power switch.")
+    pass
+    # try:
+    #     import RPi.GPIO as GPIO
+    #     GPIO.setmode(GPIO.BCM)
+    #     GPIO.setup(RELAY_PIN, GPIO.OUT)
+    #     GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    #     GPIO.output(RELAY_PIN, True)
+    #
+    #     while not power_thread_quit:
+    #         time.sleep(0.1)
+    #         if GPIO.input(SWITCH_PIN) == 0:
+    #             continue
+    #         time.sleep(0.1)
+    #         if GPIO.input(SWITCH_PIN) == 1:
+    #             subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+    #
+    # except ImportError:
+    #     # We are probably in simulation
+    #     print("Warning: Can't use power switch.")
 
 
 @app.context_processor
@@ -173,7 +174,7 @@ def logger_get():
     logger_name = request.args.get('name')
     if logger_name == 'pointing':
         pointing_logger.handlers[0].flush()
-        return send_from_directory('./logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
+        return send_from_directory('/home/pi/logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
     elif logger_name == 'calibration':
         ret = []
         for row in control.calibration_log:
@@ -188,7 +189,7 @@ def logger_get():
     elif logger_name == 'encoder':
         if control.encoder_logging_enabled:
             control.encoder_logging_file.flush()
-        return send_from_directory('./logs', 'stepper_encoder.csv', as_attachment=True,
+        return send_from_directory('/home/pi/logs', 'stepper_encoder.csv', as_attachment=True,
                                    attachment_filename='stepper_encoder.csv')
 
 
@@ -671,7 +672,9 @@ def firmware_update():
         if settings.is_simulation():
             zip_ref.extractall('/home/russ/projects/starsynctrackers/SSTForkMountFirmware/piside/upload_test')
         else:
-            zip_ref.extractall('/home/pi/SSTForkMountFirmware/piside')
+            subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
+            zip_ref.extractall('/ssteq/piside')
+            subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
     try:
         subprocess.run(['/usr/bin/python3', 'post_update.py'])
     except Exception as e:
