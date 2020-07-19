@@ -20,11 +20,15 @@ sudo raspi-config
 
 sudo reboot
 
-sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim
+sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim avahi-utils astrometry.net imagemagick
+
+# append fstab
+/dev/mmcblk0p3 /ssteq ext4 defaults,ro,noatime 0 2
 
 
 # Copy piside code
-# Copy pi to ~/configs
+ln -s /ssteq/piside/client_main/dist /ssteq/piside/client_main/dist/static
+
 
 # in server folder
 sudo pip3 install --upgrade -r requirements.txt 
@@ -37,28 +41,19 @@ passwd
 
 
 
-#Copy autohotspot to /usr/bin
-
-#ROOT CRON
-*/2 * * * * /root/autohotspotcron
-
-
-#Put in /root/autohotspotcron
-#!/bin/sh
-/usr/bin/autohotspot
-
-
 #Edit dnsmasq
 bogus-priv
 interface=wlan0
 dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
 
-log-facility=/var/log/dnsmasq.log
-log-async
-log-dhcp
+#log-facility=/var/log/dnsmasq.log
+#log-async
+#log-dhcp
 
 
 cp autohotspot /usr/bin/autohotspot
+chown root:root /usr/bin/autohotspot
+chmod 755 /usr/bin/autohotspot
 cp networkstartup.sh /root/
 ln -s /ssteq/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
 
@@ -99,12 +94,17 @@ systemctl enable clearhomepyc.service
 systemctl enable ssteq25
 systemctl enable autohotspot
 
+
+sudo bash /ssteq/setup/etc_symlinks_make.sh
+
 # Edit cron
 crontab -e
-*/1 * * * * /usr/bin/autohotspot
+*/2 * * * * /usr/bin/autohotspot
 */1 * * * * /root/dnsmasq.eth0.sh
 
 
-apt-get install astrometry.net imagemagick avahi-utils
-# copy index-41* data to /usr/share/astrometry
+copy index data to /usr/share/astrometry
+
+raspi-config
+   Advanced->Overlay FS -> Yes -> Yes write protect
 

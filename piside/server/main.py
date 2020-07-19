@@ -128,6 +128,12 @@ def settings_get():
     s = copy.deepcopy(settings.settings)
     s['encoder_logging'] = control.encoder_logging_enabled
     s['calibration_logging'] = settings.runtime_settings['calibration_logging']
+    if not s['location']:
+        s['location'] = {
+            'lat': control.DEFAULT_LAT_DEG,
+            'long': control.DEFAULT_LON_DEG,
+            'name': 'Unset Location'
+        }
     # print(s)
     return jsonify(s)
 
@@ -369,7 +375,7 @@ def wifi_connect_delete():
     mac = reqj.get('mac', None)
     if None in [ssid, mac]:
         return 'Missing ssid or mac', 400
-    stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
+    stemp = network.root_file_open('/ssteq/etc/wpa_supplicant.conf')
     wpasup = network.wpa_supplicant_read(stemp[0])
     network.wpa_supplicant_remove(wpasup['networks'], ssid, mac)
     network.wpa_supplicant_write(stemp[0], wpasup['other'], wpasup['networks'])
@@ -385,7 +391,7 @@ def wifi_connect_delete():
 @app.route('/api/wifi_known', methods=['GET'])
 @nocache
 def wifi_known():
-    stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
+    stemp = network.root_file_open('/ssteq/etc/wpa_supplicant.conf')
     wpasup = network.wpa_supplicant_read(stemp[0])
     network.root_file_close(stemp)
     return jsonify(wpasup['networks'])
@@ -406,7 +412,7 @@ def wifi_connect():
     if not known and not open_wifi and psk is None:
         return 'You must give a passphrase', 400
 
-    stemp = network.root_file_open('/etc/wpa_supplicant/wpa_supplicant.conf')
+    stemp = network.root_file_open('/ssteq/etc/wpa_supplicant.conf')
     wpasup = network.wpa_supplicant_read(stemp[0])
 
     found = False
@@ -585,7 +591,7 @@ def set_park_position():
 @nocache
 def unset_park_position():
     # Will just be default if none
-    settings.settings['park_position'] = None
+    settings.settings['park_position'] = control.DEFAULT_PARK
     settings.write_settings(settings.settings)
     return 'Park Position Unset', 200
 

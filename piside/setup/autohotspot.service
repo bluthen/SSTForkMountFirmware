@@ -6,7 +6,7 @@ After=network.target
 Type=oneshot
 User=root
 WorkingDirectory=/root
-ExecStart=/root/networkstartup.sh
+ExecStart=/bin/bash /root/networkstartup.sh
 Restart=no
 
 [Install]

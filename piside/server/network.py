@@ -36,9 +36,11 @@ def root_file_close(stemp, mode=755):
     if settings.is_simulation():
         subprocess.run(['/bin/cp', stemp[1], stemp[2]])
     else:
+        subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
         subprocess.run(['/usr/bin/sudo', '/bin/cp', stemp[1], stemp[2]])
         subprocess.run(['/usr/bin/sudo', '/bin/chown', 'root', stemp[2]])
         subprocess.run(['/usr/bin/sudo', '/bin/chmod', str(mode), stemp[2]])
+        subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
     os.remove(stemp[1])
 
 
@@ -46,7 +48,7 @@ def hostapd_read():
     ret = {'ssid': '', 'wpa2key': '', 'channel': ''}
     stemp = None
     try:
-        stemp = root_file_open('/etc/hostapd/hostapd.conf')
+        stemp = root_file_open('/ssteq/etc/hostapd.conf')
         for line in stemp[0]:
             line = line.strip()
             if line.find('ssid=') == 0:
@@ -63,7 +65,7 @@ def hostapd_read():
 
 
 def set_ethernet_static(ip, netmask):
-    stemp = root_file_open('/etc/network/interfaces.d/defaults')
+    stemp = root_file_open('/ssteq/etc/defaults')
     stemp[0].truncate(0)
     defaults = """auto lo
 iface lo inet loopback
@@ -94,7 +96,7 @@ def read_ethernet_settings():
     found = False
     ret = {'ip': '', 'netmask': '', 'dhcp_server': False}
     try:
-        stemp = root_file_open('/etc/network/interfaces.d/defaults')
+        stemp = root_file_open('/ssteq/etc/defaults')
         for line in stemp[0]:
             line = line.strip()
             if line.find('iface eth0:0 inet static') == 0:
@@ -123,9 +125,9 @@ def read_ethernet_settings():
 def set_ethernet_dhcp_server(enabled):
     if not settings.is_simulation():
         if enabled:
-            subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
+            subprocess.run(['sudo', '/usr/bin/python3', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
         else:
-            subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
+            subprocess.run(['sudo', '/usr/bin/python3', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
         subprocess.run(['sudo', '/usr/bin/killall', 'wpa_supplicant'])
         subprocess.run(['sudo', '/bin/systemctl', 'daemon-reload'])
         subprocess.run(['sudo', '/bin/systemctl', 'restart', 'networking'])
@@ -134,7 +136,7 @@ def set_ethernet_dhcp_server(enabled):
 
 
 def hostapd_write(ssid, channel, password=None):
-    stemp = root_file_open('/etc/hostapd/hostapd.conf')
+    stemp = root_file_open('/ssteq/etc/hostapd.conf')
     stemp[0].truncate(0)
     hostapd_conf = """country_code=US
 interface=%s
@@ -155,7 +157,8 @@ wpa_key_mgmt=WPA-PSK
         stemp[0].write('\n' + hostapd_security % (password,))
     root_file_close(stemp)
     # Make hostname the ssid also
-    stemp = root_file_open('/etc/hostname')
+    # TODO: Change /ssteq/etc/hosts
+    stemp = root_file_open('/ssteq/etc/hostname')
     stemp[0].truncate(0)
     stemp[0].write(ssid + '\n')
     root_file_close(stemp)

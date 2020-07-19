@@ -23,7 +23,7 @@
   "dec_slew_medium": 177.77,
   "dec_slew_slower": 48.77,
   "dec_slew_slowest": 15,
-  "park_position": null,
+  "park_position": {"alt": 0.0, "az": 180.0},
   "micro": {
     "ra_guide_rate": 72.19712,
     "ra_direction": 1,

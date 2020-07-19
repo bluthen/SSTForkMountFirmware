@@ -49,7 +49,7 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.21"
+version = "0.0.22"
 version_short = "0.0"
 version_date_str = "Mar 17 2020"
 
@@ -59,7 +59,7 @@ AXIS_DEC = 2
 
 timers = {}
 OPPOSITE_MANUAL = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
-DEFAULT_PARK = {'az': 180, 'alt': 10}
+DEFAULT_PARK = {'az': 180, 'alt': 0}
 slew_lock = threading.RLock()
 set_last_slew_lock = threading.RLock()
 manual_lock = threading.RLock()
@@ -519,7 +519,7 @@ def start_stop_encoder_logger(enabled):
     global encoder_logging_file, encoder_logging_interval, encoder_logging_enabled
     if enabled and not encoder_logging_enabled:
         encoder_logging_enabled = True
-        encoder_logging_file = open('./logs/stepper_encoder.csv', 'w')
+        encoder_logging_file = open('/home/pi/logs/stepper_encoder.csv', 'w')
         encoder_logging_file.write('Time,step_ra,step_dec,enc_ra,enc_dec,ra_over_raenc,dec_over_decenc\n')
         encoder_logging_interval = SimpleInterval(encoder_log, 0.25)
     elif not enabled and encoder_logging_enabled:

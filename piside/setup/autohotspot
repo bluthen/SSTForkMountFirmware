@@ -11,7 +11,7 @@
 #Works at startup or with a seperate timer or manually without a reboot
 #Other setup required find out more at
 #http://www.raspberryconnect.com
-
+sleep 15
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 wifidev="wlan0" #device name to use. Default is wlan0.
