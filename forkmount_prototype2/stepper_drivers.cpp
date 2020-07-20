@@ -280,6 +280,14 @@ void directionUpdated() {
   // TODO: Should we stop moving?
   ra_mode_direction = 9999;
   dec_mode_direction = 9999;
+  ra_stepper_backwardstep();
+  delay(100);
+  dec_stepper_backwardstep();
+  delay(100);
+  ra_stepper_forwardstep();
+  delay(100);
+  dec_stepper_forwardstep();
+  delay(100);
 }
 
 

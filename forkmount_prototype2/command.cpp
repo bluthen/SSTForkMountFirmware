@@ -49,9 +49,9 @@ void command_set_var() {
   } else if(strcmp(argName, "dec_guide_rate") == 0) {
     configvars_dec_guide_rate = value;
   } else if(strcmp(argName, "dec_direction") == 0) {
-    oldv = configvars_ra_direction;
+    oldv = configvars_dec_direction;
     configvars_dec_direction = (int)value;
-    if (oldv != configvars_ra_direction) {
+    if (oldv != configvars_dec_direction) {
       directionUpdated();
     }
   } else if(strcmp(argName, "dec_disable") == 0) {
