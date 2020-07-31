@@ -1,10 +1,32 @@
-unzip 2018-11-13-raspbian-stretch-lite.zip
-sudo dd if=2018-11-13-raspbian-stretch-lite.img of=/dev/sdd bs=4M
+unzip 2020-05-27-raspios-buster-lite-armhf.zip
+sudo dd if=2020-05-27-raspios-buster-lite-armhf.img of=/dev/sdd bs=4M
 sync
+fdisk /dev/sdd
+  p
+  d
+  2
+  n
+  p
+  2
+  <original start>
+  +13G
+  N
+  p
+  n
+  p
+  3
+  <partition 2's end>+1
+  <enter>
+  w
 mount /dev/sdd1 /someplace
 touch /someplace/ssh; sync
 umount /dev/sdd1
+resize2fs /dev/sdd2
+mkfs.ext4 /dev/sdd3
+sync
 
+
+# May need to power down and up the pi twice
 # Logged onto Pi
 
 sudo apt update --fix-missing && sudo apt upgrade -y
@@ -24,20 +46,31 @@ sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-b
 
 # append fstab
 /dev/mmcblk0p3 /ssteq ext4 defaults,ro,noatime 0 2
+mkdir /ssteq
+mount /ssteq
+mount -o remount,rw /ssteq
+mkdir -p /ssteq/piside
+mkdir -p /ssteq/setup
+chown -R pi /ssteq
+
+pip3 install pipenv
 
 
 # Copy piside code
 ln -s /ssteq/piside/client_main/dist /ssteq/piside/client_main/dist/static
+# Copy object database
 
-
-# in server folder
-sudo pip3 install --upgrade -r requirements.txt 
-
-# udev teensy files for controller
-sudo cp 49-teensy.rules /etc/udev/rules.d
+# in server folder as pi user
+export WORKON_HOME=/ssteq/piside/python_venvs
+pipenv install
 
 # Change password
 passwd
+
+#Copy setup
+# udev teensy files for controller
+sudo cp 49-teensy.rules /etc/udev/rules.d
+
 
 
 
@@ -67,7 +100,11 @@ denyinterfaces wlan0
 
 
 /etc/dhcp/dhclient.conf
-  timeout 15
+  timeout 15;
+
+
+/etc/rc.local
+/bin/hostname `cat /etc/hostname`
 
 
 systemctl disable ntp-client.service
@@ -80,10 +117,11 @@ systemctl disable bluetooth.service
 cp ssteq25.service /etc/systemd/system/
 cp clearhomepyc.service /etc/systemd/system/
 cp dnsmasq-eth0.service /etc/systemd/system/
+cp autohotspot.service /etc/systemd/system/
 
 cp dnsmasq.eth0.conf /etc
 cp dnsmasq.eth0.sh /root
-cp interfaces.default /etc/network/interfaces.d/default
+cp interfaces.default /etc/network/interfaces.d/defaults
 cp wpa_supplicant.conf /etc/wpa_supplicant/
 cp hostapd.conf /etc/hostapd/
 cp hostname /etc/

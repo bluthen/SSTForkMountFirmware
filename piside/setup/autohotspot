@@ -44,13 +44,13 @@ createAdHocNetwork()
     ip a add 192.168.45.1/24 brd + dev "$wifidev"
     ip link set dev "$wifidev" up
     ifconfig wlan0
-    /usr/sbin/hostapd -B /etc/hostapd/hostapd.conf
     /sbin/ifconfig wlan0
     /sbin/ifconfig wlan0 up
     /sbin/ifconfig wlan0 192.168.45.1 netmask 255.255.255.0
     /usr/bin/python3 /root/ctrl_dnsmasq.py wlan0 enable
     /sbin/ifconfig wlan0 192.168.45.1 netmask 255.255.255.0
     /usr/bin/python3 /root/ctrl_dnsmasq.py wlan0 enable
+    /usr/sbin/hostapd -B /etc/hostapd/hostapd.conf
 }
 
 KillHotspot()
