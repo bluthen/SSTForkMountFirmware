@@ -578,7 +578,10 @@ def send_status():
     status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     status['time_been_set'] = settings.runtime_settings['time_been_set']
     status['synced'] = settings.runtime_settings['sync_info'] is not None
-    status['handpad'] = handpad_server.handpad_server.serial is not None
+    if not handpad_server.handpad_server:  #If server has not started yet
+        status['handpad'] = False
+    else:
+        status['handpad'] = handpad_server.handpad_server.serial is not None
     if status['synced']:
         obstime = AstroTime.now()
         with set_last_slew_lock:
@@ -666,6 +669,8 @@ def init():
     if inited:
         return
     inited = True
+    # NTP can screw up unparking
+    subprocess.run(['/usr/bin/sudo', '/bin/systemctl', 'stop', 'ntp'])
     # print('Inited')
     # Load settings file
     # Open serial port
@@ -696,8 +701,11 @@ def init():
     settings.not_parked()
     sync(coord)
     park_sync = True
+    send_status()
     status_interval = SimpleInterval(send_status, 1)
     SimpleInterval(alive_check, 3)
+    ntpthread = threading.Thread(target=ntp_syncer)
+    ntpthread.start()
     time.sleep(0.5)
 
 
@@ -882,6 +890,25 @@ def park_scope():
         coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
                          az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
     slew(coord, parking=True)
+
+
+def ntp_syncer():
+    # If ntp changes the time after init, we'll sync to last alt,az position
+    # Detect this by having a jump in time
+    alt = last_status['alt']
+    az = last_status['az']
+    ntpstat = subprocess.run(['/usr/bin/ntpstat'])
+    if ntpstat.returncode == 0:
+        return
+    now = datetime.datetime.now()
+    lastnow = datetime.datetime.now()
+    while (now-lastnow).total_seconds() < 3600:
+        alt = last_status['alt']
+        az = last_status['az']
+        lastnow = now
+        time.sleep(1)
+        now = datetime.datetime.now()
+    set_sync(alt=alt, az=az)
 
 
 def set_time(iso_timestr):

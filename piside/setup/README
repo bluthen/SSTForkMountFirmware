@@ -39,6 +39,7 @@ sudo raspi-config
 	localization -> change wifi country -> US
 	interfacing options -> ssh -> yes 
 	interfacing options -> serial -> no -> yes
+	network -> interfaces names -> no 
 
 sudo reboot
 
@@ -146,3 +147,7 @@ copy index data to /usr/share/astrometry
 raspi-config
    Advanced->Overlay FS -> Yes -> Yes write protect
 
+After reboot:
+mount -o remount,rw /boot
+Add to cmdline.txt
+net.ifnames=0
