@@ -5,6 +5,9 @@ import Grid from '@material-ui/core/Grid';
 import Button from '@material-ui/core/Button';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 import uuidv4 from 'uuid/v4';
 import APIHelp from './util/APIHelp';
 import TToggle from './TToggle';
@@ -83,6 +86,11 @@ class MiscellaneousSettings extends React.Component {
         });
     }
 
+    handleThemeChange(e) {
+        state.color_scheme = e.target.value;
+        APIHelp.saveSettings({'color_scheme': e.target.value});
+    }
+
     render() {
         let dialog = null;
         if(state.updateDialog.show) {
@@ -98,6 +106,14 @@ class MiscellaneousSettings extends React.Component {
             <Grid item xs={4}/>
             <Grid item xs={12} style={{textAlign: "center", paddingTop: '3ex'}}>
                 <Button color="primary" variant="contained" onClick={this.handleParkClicked}>Set Park Position</Button>
+            </Grid>
+            <Grid item xs={12} style={{textAlign: "center", paddingTop: '3ex'}}>
+                <InputLabel htmlFor={this.uuid + "theme-select"}>Theme</InputLabel>
+                <Select id={this.uuid + "theme-select"} value={state.color_scheme}
+                        onChange={this.handleThemeChange} name="theme">
+                    <MenuItem value="default">Default</MenuItem>
+                    <MenuItem value="dark">Dark</MenuItem>
+                </Select>
             </Grid>
             <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
                 <h3>Update mount Firmware (Installed: {state.version.version}/{state.version.version_date})</h3>

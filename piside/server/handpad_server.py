@@ -46,13 +46,15 @@ import threading
 import time
 import re
 import traceback
-from handpad_menu import Menu, menu_structure
+import handpad_menu
+from handpad_menu import Menu, menu_structure, GPSMenu
 import db
 
 MAX_BUFFER = 255
 kill = False
 
 handpad_server = None
+tried_gps_once = False
 
 
 class HandpadServer:
@@ -210,6 +212,7 @@ class HandpadServer:
             return s.split('\n')
 
     def run(self):
+        global tried_gps_once
         try_devices = self.discover()
         good = False
         for device in try_devices:
@@ -219,6 +222,11 @@ class HandpadServer:
                 break
         if good:
             # print('Found handpad')
+            handpad_menu.hserver = self
+            if not tried_gps_once:
+                gps_menu = GPSMenu()
+                gps_menu.run_loop()
+                tried_gps_once = True
             main_menu = Menu(menu_structure, self)
             main_menu.run_loop()
 

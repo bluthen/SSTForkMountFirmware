@@ -69,10 +69,12 @@ class WifiClient extends React.Component {
                 if (open) {
                     password = null;
                 }
+                state.snack_bar = 'Connecting...';
+                state.snack_bar_error = false;
+                this.handleDialogClose();
                 APIHelp.setWifiConnect(ssid, mac, known, open, password).then(() => {
                     APIHelp.fetchWifiScan();
                     APIHelp.fetchKnownWifi();
-                    this.handleDialogClose();
                 });
             }
         }
@@ -175,6 +177,8 @@ class KnownWifi extends React.Component {
 
     genHandleDeleteKnown(ssid, mac) {
         return () => {
+            state.snack_bar = 'Deleting...';
+            state.snack_bar_error = false;
             APIHelp.deleteKnown(ssid, mac).then(() => {
                 APIHelp.fetchKnownWifi();
             });

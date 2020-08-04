@@ -675,27 +675,27 @@ class SlewingMenu:
         coord = re.sub(r'\.\d+s', 's', coord)
         hserver.println(coord, 1)
 
-        last_coord = (-1, -1)
+        ts = -1.0
         while not kill:
             for hin in hserver.input():
                 if hin == 'S':
                     control.cancel_slews()
                     return 'canceled'
             if 'ra' in self.target:
-                if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
+                if time.monotonic() - ts >= 0.5:
+                    ts = time.monotonic()
                     coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
                                      frame='icrs').to_string('hmsdms')
                     coord = re.sub(r'\.\d+s', 's', coord)
                     hserver.println(coord, 3)
-                    last_coord = (control.last_status['ra'], control.last_status['dec'])
             else:
-                if control.last_status['alt'] != last_coord[0] and control.last_status['az'] != last_coord[1]:
+                if time.monotonic() - ts >= 0.5:
+                    ts = time.monotonic()
                     coord = SkyCoord(alt=control.last_status['alt'] * u.deg, az=control.last_status['az'] * u.deg,
                                      frame='altaz').to_string('dms')
                     coord = ' '.join(reversed(coord.split(' ')))
                     coord = re.sub(r'\.\d+s', 's', coord)
                     hserver.println(coord, 3)
-                    last_coord = (control.last_status['alt'], control.last_status['az'])
             if not control.last_status['slewing']:
                 return 'complete'
             time.sleep(0.25)
@@ -825,14 +825,14 @@ class ManualSlewMenu:
         hserver.println(self.speed.capitalize() + ' Slew', 0)
         hserver.println('Press and hold', 1)
         hserver.println('Direction buttons', 2)
-        last_coord = (-1, -1)
+        ts = -1.0
         while not kill:
-            if control.last_status['ra'] != last_coord[0] and control.last_status['dec'] != last_coord[1]:
+            if time.monotonic() - ts >= 0.5:
+                ts = time.monotonic()
                 coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
                                  frame='icrs').to_string('hmsdms')
                 coord = re.sub(r'\.\d+s', 's', coord)
                 hserver.println(coord, 3)
-                last_coord = (control.last_status['ra'], control.last_status['dec'])
             leave = self.input()
             if leave == "base":
                 return "base"

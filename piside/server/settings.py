@@ -4,6 +4,7 @@ import threading
 import os
 import logging
 import copy
+import shutil
 import subprocess
 
 _lock = threading.RLock()
@@ -29,6 +30,17 @@ def write_settings(settings):
     with _lock:
         with open('settings.json', mode='w') as f:
             json.dump(settings, f)
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
+
+
+@fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
+def copy_settings(tfile):
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
+    with _lock:
+        with open('settings.json', mode='wb') as sfile:
+            shutil.copyfileobj(tfile, sfile)
     if not is_simulation():
         subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
 
@@ -83,7 +95,7 @@ def get_logger(name):
     logger = logging.getLogger(name)
     abspath = os.path.abspath(__file__)
     dname = os.path.dirname(abspath)
-    p = os.path.join('/home/pi/', 'logs')
+    p = os.path.join(os.path.expanduser('~'), 'logs')
     if not os.path.exists(p):
         os.makedirs(p)
     p = os.path.join(p, name + '.log')

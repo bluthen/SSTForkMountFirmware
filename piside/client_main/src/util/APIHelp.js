@@ -394,6 +394,7 @@ const APIHelp = {
                 state.slewlimit.model = d.pointing_model;
                 state.misc.encoder_logging = d.encoder_logging;
                 state.misc.calibration_logging = d.calibration_logging;
+                state.color_scheme = d.color_scheme;
                 for (const key of Object.keys(d)) {
                     if (typeof d[key] === 'object') {
                         console.log('=== micro object' + key);

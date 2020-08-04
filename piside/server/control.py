@@ -49,9 +49,9 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.22"
+version = "0.0.25"
 version_short = "0.0"
-version_date_str = "Mar 17 2020"
+version_date_str = "Aug 04 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -73,7 +73,8 @@ park_sync = False
 cancel_slew = False
 last_status = None
 
-encoder_error = None
+ra_encoder_error = None
+dec_encoder_error = None
 
 encoder_logging_enabled = False
 encoder_logging_file = None
@@ -451,6 +452,12 @@ def update_location():
     """
     Takes current location set in settings and sets runtime earth location.
     """
+    # only do altaz sync if after first init
+    do_altaz_sync = settings.runtime_settings['earth_location'] is not None
+    if do_altaz_sync:
+        send_status()
+        alt = last_status['alt']
+        az = last_status['az']
     # print(settings.settings['location'])
     if 'location' not in settings.settings or not settings.settings['location'] or \
             not settings.settings['location']['lat']:
@@ -468,6 +475,8 @@ def update_location():
                        height=elevation * u.m)
     settings.runtime_settings['earth_location_set'] = True
     settings.runtime_settings['earth_location'] = el
+    if do_altaz_sync:
+        set_sync(alt=alt, az=az)
 
 
 def calc_status(status):
@@ -478,7 +487,7 @@ def calc_status(status):
     :rtype status: dict
     :return: Updates status but also returns it.
     """
-    global cancel_slew, encoder_error
+    global cancel_slew, ra_encoder_error, dec_encoder_error
     if settings.settings['ra_use_encoder']:
         ra_steps_per_encoder = settings.settings['ra_ticks_per_degree'] / settings.settings[
             'ra_encoder_pulse_per_degree']
@@ -489,10 +498,13 @@ def calc_status(status):
             if abs(status['ri']) > abs(10 * settings.settings['ra_ticks_per_degree']):
                 # Something wrong with encoder/motor
                 cancel_slew = True
-                encoder_error = 'Movement not detected by RA Encoder'
+                ra_encoder_error = 'Movement not detected by RA Encoder'
                 stepper.update_settings({'ra_disable': True})
+            else:
+                ra_encoder_error = None
         rep = status['re'] * ra_steps_per_encoder + ri
     else:
+        ra_encoder_error = None
         rep = status['rp']
 
     if settings.settings['dec_use_encoder']:
@@ -505,10 +517,13 @@ def calc_status(status):
             if abs(status['di']) > abs(10 * settings.settings['dec_ticks_per_degree']):
                 # Something wrong with encoder/motor
                 cancel_slew = True
-                encoder_error = 'Movement not detected by DEC Encoder'
+                dec_encoder_error = 'Movement not detected by DEC Encoder'
                 stepper.update_settings({'dec_disable': True})
+            else:
+                dec_encoder_error = None
         dep = status['de'] * dec_steps_per_encoder + di
     else:
+        dec_encoder_error = None
         dep = status['dp']
     status['rep'] = rep
     status['dep'] = dep
@@ -552,7 +567,7 @@ def send_status():
     :return:
     """
     import handpad_server
-    global slewing, last_status, last_slew, cancel_slew, encoder_error
+    global slewing, last_status, last_slew, cancel_slew, ra_encoder_error, dec_encoder_error
     status = calc_status(stepper.get_status())
     status['ra'] = None
     status['dec'] = None
@@ -599,12 +614,20 @@ def send_status():
             set_last_slew(altaz, obstime=obstime)
             status['alert'] = 'In horizon limit, tracking stopped'
         # print(altaz)
-    if encoder_error:
-        status['alert'] = encoder_error
-        if encoder_error[-1] == ' ':
-            encoder_error = encoder_error.strip()
+    if ra_encoder_error:
+        status['alert'] = ra_encoder_error
+        # Hack to make the error keep coming up
+        if ra_encoder_error[-1] == ' ':
+            ra_encoder_error = ra_encoder_error.strip()
         else:
-            encoder_error = encoder_error + ' '
+            ra_encoder_error = ra_encoder_error + ' '
+    elif dec_encoder_error:
+        status['alert'] = dec_encoder_error
+        # Hack to make the error keep coming up
+        if dec_encoder_error[-1] == ' ':
+            dec_encoder_error = dec_encoder_error.strip()
+        else:
+            dec_encoder_error = dec_encoder_error + ' '
     status['slewing'] = slewing
     status['tracking'] = settings.runtime_settings['tracking']
     last_status = status
@@ -649,6 +672,7 @@ def init():
     stepper = stepper_control.StepperControl(settings.settings['microserial']['port'],
                                              settings.settings['microserial']['baud'])
     skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+    #TODO: Lets get time/location from GPS if we can
     update_location()
     micro_update_settings()
 
@@ -877,9 +901,13 @@ def set_time(iso_timestr):
         return True, 'Date Set'
     ntpstat = subprocess.run(['/usr/bin/ntpstat'])
     if ntpstat.returncode != 0:
+        send_status()
+        alt = last_status['alt']
+        az = last_status['az']
         d = d + (datetime.datetime.now() - s)
         time_s = d.isoformat()
         daterun = subprocess.run(['/usr/bin/sudo', '/bin/date', '-s', time_s])
+        set_sync(alt=alt, az=az)
         if daterun.returncode == 0:
             settings.runtime_settings['time_been_set'] = True
             return True, 'Date Set'

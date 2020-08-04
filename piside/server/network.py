@@ -146,12 +146,10 @@ channel=%d
 macaddr_acl=0
 auth_algs=1
 ignore_broadcast_ssid=0
-rsn_pairwise=CCMP    
-    """
+rsn_pairwise=CCMP"""  # Can't have whitespace
     hostapd_security = """wpa=2
 wpa_passphrase=%s
-wpa_key_mgmt=WPA-PSK
-"""
+wpa_key_mgmt=WPA-PSK"""
     stemp[0].write(hostapd_conf % (settings.settings['network']['wifi_device'], ssid, channel))
     if password:
         stemp[0].write('\n' + hostapd_security % (password,))

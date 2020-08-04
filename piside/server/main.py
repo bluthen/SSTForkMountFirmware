@@ -153,8 +153,7 @@ def settings_dl_post():
         tfile.seek(0)
         json.load(tfile) # just to check it is at least a json
         tfile.seek(0)
-        with open('./settings.json', 'wb') as sfile:
-            shutil.copyfileobj(tfile, sfile)
+        settings.copy_settings(tfile)
     if not settings.is_simulation():
         t = threading.Timer(5, reboot)
         t.start()
@@ -180,7 +179,7 @@ def logger_get():
     logger_name = request.args.get('name')
     if logger_name == 'pointing':
         pointing_logger.handlers[0].flush()
-        return send_from_directory('/home/pi/logs', 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
+        return send_from_directory(os.path.join(os.path.expanduser('~'), 'logs'), 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
     elif logger_name == 'calibration':
         ret = []
         for row in control.calibration_log:
@@ -195,7 +194,7 @@ def logger_get():
     elif logger_name == 'encoder':
         if control.encoder_logging_enabled:
             control.encoder_logging_file.flush()
-        return send_from_directory('/home/pi/logs', 'stepper_encoder.csv', as_attachment=True,
+        return send_from_directory(os.path.join(os.path.expanduser('~'), 'logs'), 'stepper_encoder.csv', as_attachment=True,
                                    attachment_filename='stepper_encoder.csv')
 
 
@@ -355,15 +354,18 @@ def settings_network_wifi():
     if len(ssid) > 31:
         return 'SSID must be less than 32 characters', 400
     network.hostapd_write(ssid, channel, wpa2key)
-    # Stop hostapd and dnsmasq let autohotspot go
-    if not settings.is_simulation():
-        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
-        subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
-        subprocess.run(['sudo', '/usr/bin/autohotspotcron'])
     settings.settings['network']['ssid'] = ssid
     settings.settings['network']['wpa2key'] = wpa2key
     settings.settings['network']['channel'] = channel
     settings.write_settings(settings.settings)
+    if not settings.is_simulation():
+        def reconnect():
+            # Stop hostapd and dnsmasq let autohotspot go
+            subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
+            subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
+            subprocess.run(['sudo', '/usr/bin/autohotspot'])
+        t1 = threading.Thread(target=reconnect)
+        t1.start()
     return "Updated Wifi Settings", 200
 
 
@@ -383,8 +385,11 @@ def wifi_connect_delete():
     # If we are currently connected
     wificon = network.current_wifi_connect()
     if wificon['ssid'] == ssid or wificon['mac'] == mac:
-        if not settings.is_simulation():
-            subprocess.run(['sudo', '/usr/bin/autohotspot'])
+        def reconnect():
+            if not settings.is_simulation():
+                subprocess.run(['sudo', '/usr/bin/autohotspot'])
+        t1 = threading.Thread(target=reconnect)
+        t1.start()
     return 'Removed', 200
 
 
@@ -435,10 +440,13 @@ def wifi_connect():
 
     network.wpa_supplicant_write(stemp[0], wpasup['other'], wpasup['networks'])
     network.root_file_close(stemp)
-    # TODO: Maybe we do this after responding for user feedback?
-    if not settings.is_simulation():
-        subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
-        subprocess.run(['sudo', '/usr/bin/autohotspot'])
+
+    def reconnect():
+        if not settings.is_simulation():
+            subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
+            subprocess.run(['sudo', '/usr/bin/autohotspot'])
+    t1 = threading.Thread(target=reconnect)
+    t1.start()
     return 'Connecting...', 200
 
 

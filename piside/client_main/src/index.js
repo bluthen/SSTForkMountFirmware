@@ -1,6 +1,7 @@
 import 'typeface-roboto';
 import React from "react";
 import {render} from "react-dom";
+import {ThemeProvider} from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Container from '@material-ui/core/Container';
 import state from './State';
@@ -20,6 +21,7 @@ import APIHelp from './util/APIHelp';
 import SlewingDialog from './SlewingDialog';
 import SyncingDialog from './SyncingDialog';
 import InfoSnackbar from './InfoSnackbar';
+import {defaultTheme, darkTheme, redTheme} from './Themes';
 
 const tabMap = ['manual', 'goto', 'setup'];
 
@@ -32,6 +34,12 @@ class App extends React.Component {
 
     render() {
         const tabIndex = tabMap.indexOf(state.topTabs);
+        let theme = defaultTheme;
+        if (state.color_scheme === 'dark') {
+            theme = darkTheme;
+        } else if (state.color_scheme === 'red') {
+            theme = redTheme;
+        }
         let content = null;
         let tabs = <Container>
             <Tabs value={tabIndex} onChange={this.tabChange} aria-label="setup goto manual"
@@ -73,15 +81,17 @@ class App extends React.Component {
         }
 
         return <React.Fragment>
-            <CssBaseline/>
-            <Container>
-                <Paper square style={{paddingLeft: '3ex', paddingRight: '3ex', height: '100%'}}>
-                    {tabs}
-                    {content}
-                    {dialog}
-                </Paper>
-                <InfoSnackbar/>
-            </Container>
+            <ThemeProvider theme={theme}>
+                <CssBaseline/>
+                <Container>
+                    <Paper square style={{paddingLeft: '3ex', paddingRight: '3ex', height: '100%'}}>
+                        {tabs}
+                        {content}
+                        {dialog}
+                    </Paper>
+                    <InfoSnackbar/>
+                </Container>
+            </ThemeProvider>
         </React.Fragment>;
     }
 }

@@ -8,6 +8,7 @@ const state = observable({
     topTabs: 'manual',
     coordDisplay: 'radec',
     fatal_error: null,
+    color_scheme: 'default',
     version: {version: "", version_date: ""},
     manual: {
         speed: 'fastest',
