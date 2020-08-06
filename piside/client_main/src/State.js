@@ -38,6 +38,7 @@ const state = observable({
         slewing: false,
         started_parked: false,
         synced: false,
+        sidereal_time: null,
         time: null,
         time_been_set: false,
         tracking: true,

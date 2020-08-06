@@ -113,4 +113,4 @@ def get_logger(name):
 
 
 runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
-                    'tracking': True, 'started_parked': False, 'calibration_logging': False}
+                    'tracking': True, 'started_parked': False, 'calibration_logging': False, 'last_locationtz': None}

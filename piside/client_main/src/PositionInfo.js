@@ -56,9 +56,9 @@ class PositionInfo extends React.Component {
                 {Formatting.degLat2Str(state.location_set.lat)}/{Formatting.degLong2Str(state.location_set.long)} {state.location_set.elevation}m
             </span></Typography>
             <Typography component="h4" style={bold}>
-                Mount Time
+                Mount Local Time [Sidereal Time]
             </Typography>
-            <Typography component="div" style={indent}>{new Date(state.status.time).toLocaleString()}</Typography>
+            <Typography component="div" style={indent}>{new Date(state.status.time).toLocaleString()} [{state.status.sidereal_time}]</Typography>
             <Grid container>
                 <Grid item xs={8}>
                     <Grid container>

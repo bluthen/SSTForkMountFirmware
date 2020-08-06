@@ -45,6 +45,8 @@ import pointing_model
 import pendulum
 import subprocess
 
+from timezonefinder import TimezoneFinder
+
 import skyconv
 import settings
 import motion
@@ -477,6 +479,10 @@ def update_location():
     settings.runtime_settings['earth_location'] = el
     if do_altaz_sync:
         set_sync(alt=alt, az=az)
+    try:
+        settings.runtime_settings['last_locationtz'] = TimezoneFinder().timezone_at(lng=el.lon.deg, lat=el.lat.deg)
+    except:
+        pass
 
 
 def calc_status(status):
@@ -576,6 +582,8 @@ def send_status():
     status['hostname'] = socket.gethostname()
     status['started_parked'] = settings.runtime_settings['started_parked']
     status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
+    st = skyconv.get_sidereal_time(earth_location=settings.runtime_settings['earth_location']).hms
+    status['sidereal_time'] = '%02d:%02d:%02d' % (int(st.h), int(st.m), int(st.s))
     status['time_been_set'] = settings.runtime_settings['time_been_set']
     status['synced'] = settings.runtime_settings['sync_info'] is not None
     if not handpad_server.handpad_server:  #If server has not started yet

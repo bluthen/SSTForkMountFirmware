@@ -16,7 +16,6 @@ import network
 
 import settings
 import pynmea2
-from timezonefinder import TimezoneFinder
 import pendulum
 
 # TODO This global limits us to one handpad.
@@ -38,12 +37,9 @@ def parse_gps(lines):
     if gga.lat == '':
         # We've not got a satalite yet
         return None
-    tf = TimezoneFinder()
-    locationtz = tf.timezone_at(lng=gga.longitude, lat=gga.latitude)
     utc = pendulum.datetime(rmc.datestamp.year, rmc.datestamp.month, rmc.datestamp.day, rmc.timestamp.hour,
                             rmc.timestamp.minute, rmc.timestamp.second)
-    local = pendulum.timezone(locationtz).convert(utc)
-    return {'utc': utc, 'local': local,
+    return {'utc': utc,
             'location': {'lat': gga.latitude, 'long': gga.longitude, 'elevation': gga.altitude}}
 
 
@@ -110,11 +106,13 @@ class GPSMenu:
                     count += 1
                     time.sleep(10)
                     continue
+                control.set_time(info['utc'].isoformat())
                 control.set_location(info['location']['lat'], info['location']['long'], info['location']['elevation'],
                                      'GPS')
-                control.set_time(info['utc'].isoformat())
                 m = InfoMenu('Time/Location Set')
-                return m.run_loop()
+                m.run_loop()
+                TimeSiderealInfo().run_loop()
+                return GeoInfo().run_loop()
             else:
                 m = InfoMenu('Error in GPS empty.')
                 return m.run_loop()
@@ -668,9 +666,11 @@ class SlewingMenu:
         hserver.println('Slewing...', 0)
 
         if 'ra' in self.target:
-            coord = SkyCoord(ra=self.target['ra'] * u.deg, dec=self.target['dec'] * u.deg, frame='icrs').to_string('hmsdms')
+            coord = SkyCoord(ra=self.target['ra'] * u.deg, dec=self.target['dec'] * u.deg, frame='icrs').to_string(
+                'hmsdms')
         else:
-            coord = SkyCoord(alt=self.target['alt'] * u.deg, az=self.target['az'] * u.deg, frame='altaz').to_string('dms')
+            coord = SkyCoord(alt=self.target['alt'] * u.deg, az=self.target['az'] * u.deg, frame='altaz').to_string(
+                'dms')
             coord = ' '.join(reversed(coord.split(' ')))
         coord = re.sub(r'\.\d+s', 's', coord)
         hserver.println(coord, 1)
@@ -682,14 +682,14 @@ class SlewingMenu:
                     control.cancel_slews()
                     return 'canceled'
             if 'ra' in self.target:
-                if time.monotonic() - ts >= 0.5:
+                if time.monotonic() - ts >= 1.5:
                     ts = time.monotonic()
                     coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
                                      frame='icrs').to_string('hmsdms')
                     coord = re.sub(r'\.\d+s', 's', coord)
                     hserver.println(coord, 3)
             else:
-                if time.monotonic() - ts >= 0.5:
+                if time.monotonic() - ts >= 1.5:
                     ts = time.monotonic()
                     coord = SkyCoord(alt=control.last_status['alt'] * u.deg, az=control.last_status['az'] * u.deg,
                                      frame='altaz').to_string('dms')
@@ -705,7 +705,8 @@ class SyncSlewMenu(Menu):
     def __init__(self, slew_object):
         self.object = slew_object
         if 'ra' in slew_object:
-            coord = SkyCoord(ra=slew_object['ra'] * u.deg, dec=slew_object['dec'] * u.deg, frame='icrs').to_string('hmsdms')
+            coord = SkyCoord(ra=slew_object['ra'] * u.deg, dec=slew_object['dec'] * u.deg, frame='icrs').to_string(
+                'hmsdms')
         else:
             coord = SkyCoord(alt=slew_object['alt'] * u.deg, az=slew_object['az'] * u.deg, frame='altaz').to_string(
                 'dms')
@@ -931,6 +932,142 @@ class Brightness:
         return m.run_loop()
 
 
+class TimeSiderealInfo:
+    def __init__(self):
+        pass
+
+    def input(self):
+        for hin in hserver.input():
+            if hin == 'E':
+                return "escape"
+            if hin == 'S':
+                return "escape"
+        return "stay"
+
+    def run_loop(self):
+        hserver.clearall()
+        hserver.println('Time/Sidereal Info', 0)
+        ts = -1.0
+        while not kill:
+            if time.monotonic() - ts >= 1.0:
+                ts = time.monotonic()
+                tz = settings.runtime_settings['last_locationtz']
+                if tz:
+                    offset = 'UTC Offset: %.1f' % (pendulum.from_timestamp(0, tz).offset_hours,)
+                    local = pendulum.now(tz).to_datetime_string()
+                else:
+                    offset = 'UTC Offset: 0.0'
+                    local = pendulum.now('UTC').to_datetime_string() + 'Z'
+                hserver.println(offset, 1)
+                hserver.println(local, 2)
+                hserver.println('Sidereal: ' + control.last_status['sidereal_time'], 3)
+            leave = self.input()
+            if leave == "base":
+                return "base"
+            elif leave == "escape":
+                return "stay"
+            time.sleep(0.1)
+
+
+class MountPositionInfo:
+    def __init__(self):
+        pass
+
+    def input(self):
+        for hin in hserver.input():
+            if hin == 'E':
+                return "escape"
+            if hin == 'S':
+                return "escape"
+        return "stay"
+
+    def run_loop(self):
+        hserver.clearall()
+        hserver.println('Mount Position', 0)
+        hserver.println('RA/DEC and Alt/Az', 1)
+        ts = -1.0
+        while not kill:
+            if time.monotonic() - ts >= 1.5:
+                ts = time.monotonic()
+
+                coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
+                                 frame='icrs').to_string('hmsdms')
+                coord = re.sub(r'\.\d+s', 's', coord)
+                hserver.println(coord, 2)
+                coord = SkyCoord(alt=control.last_status['alt'] * u.deg, az=control.last_status['az'] * u.deg,
+                                 frame='altaz').to_string('dms')
+                coord = ' '.join(reversed(coord.split(' ')))
+                coord = re.sub(r'\.\d+s', 's', coord)
+                hserver.println(coord, 3)
+            leave = self.input()
+            if leave == "base":
+                return "base"
+            elif leave == "escape":
+                return "stay"
+            time.sleep(0.1)
+
+
+class GeoInfo:
+    def __init__(self):
+        pass
+
+    def input(self):
+        for hin in hserver.input():
+            if hin == 'E':
+                return "escape"
+            if hin == 'S':
+                return "escape"
+        return "stay"
+
+    def deg_lat2str(self, lat):
+        lat = float(lat)
+        if lat < 0:
+            latstr = 'S'
+        else:
+            latstr = 'N'
+        lat = abs(lat)
+        latd = int(lat)
+        remain = lat - int(lat)
+        latmin = int(remain * 60)
+        latsec = int((remain - (latmin / 60.0)) * 60 * 60)
+        return "{latstr:s}{latd:d}d{latmin:d}'{latsec:d}\"".format(latstr=latstr, latd=latd, latmin=latmin,
+                                                                   latsec=latsec)
+
+    def deg_long2str(self, long):
+        long = float(long)
+        if long < 0:
+            longstr = 'W'
+        else:
+            longstr = 'E'
+        long = abs(long)
+        longd = int(long)
+        remain = long - longd
+        longmin = int(remain * 60)
+        longsec = int((remain - (longmin / 60.0)) * 60 * 60)
+        return "{longstr:s}{longd:d}d{longmin:d}'{longsec:d}\"".format(longstr=longstr, longd=longd, longmin=longmin,
+                                                                       longsec=longsec)
+
+    def run_loop(self):
+        hserver.clearall()
+        hserver.println('Geo Info', 0)
+        hserver.println('RA/DEC and Alt/Az', 1)
+        ts = -1.0
+        while not kill:
+            if time.monotonic() - ts >= 10:
+                ts = time.monotonic()
+
+                el = settings.runtime_settings['earth_location']
+                hserver.println('   '+self.deg_lat2str(el.lat.deg), 1)
+                hserver.println('   '+self.deg_long2str(el.lon.deg), 2)
+                hserver.println('   %dm' % (int(el.height.value+0.5),), 3)
+            leave = self.input()
+            if leave == "base":
+                return "base"
+            elif leave == "escape":
+                return "stay"
+            time.sleep(0.1)
+
+
 named_stars = ['Achernar', 'Acrux', 'Adhara', 'Albireo', 'Aldebaran', 'Alhna', 'Alioth', 'Alkaid', 'Alnilan', 'Alphard',
                'Altair', 'Antares', 'Arcturus', 'Atria', 'Avior', 'Bellatrix', 'Betelgeuse', 'Canopus', 'Capella',
                'Castor', 'Deneb', 'Deneb', 'Dubhe', 'El Nath', 'Fomalhaut', 'Gacrux', 'Hadar', 'Hamal',
@@ -976,6 +1113,11 @@ menu_structure = {
                 "RA/DEC": ManualCoordRADec(),
                 "Alt/Az": ManualCoordAltAz()
             }
+        },
+        "Scope Info": {
+            "Time/Sidereal": TimeSiderealInfo(),
+            "Geo Info": GeoInfo(),
+            "Mount Position": MountPositionInfo(),
         },
         "Settings": {
             "Brightness": {
