@@ -51,9 +51,9 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.25"
+version = "0.0.26"
 version_short = "0.0"
-version_date_str = "Aug 04 2020"
+version_date_str = "Aug 05 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
