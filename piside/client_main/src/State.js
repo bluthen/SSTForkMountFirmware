@@ -42,7 +42,8 @@ const state = observable({
         time: null,
         time_been_set: false,
         tracking: true,
-        handpad: false
+        handpad: false,
+        cpustats: {tempc: null, tempf: null, load_percent: null, memory_percent_usage: null}
     },
     goto: {
         slewing: false,

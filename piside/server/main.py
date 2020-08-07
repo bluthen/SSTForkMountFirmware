@@ -1,15 +1,14 @@
+import update_python_paths
 import copy
 import datetime
 import json
 import logging
 import os
-import shutil
 import socket
 import subprocess
 import sys
 import tempfile
 import threading
-import time
 import traceback
 import zipfile
 from functools import wraps, update_wrapper
@@ -23,24 +22,16 @@ from werkzeug.serving import make_ssl_devcert
 
 import control
 import db
+import handpad_menu
+import handpad_server
 import lx200proto_server
 import network
 import settings
 import skyconv
-import handpad_server
-import handpad_menu
 
 iers.conf.auto_download = False
 iers.auto_max_age = None
 
-
-def correct_dir():
-    abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
-    os.chdir(dname)
-
-
-correct_dir()
 
 avahi_process = None
 

@@ -1057,9 +1057,43 @@ class GeoInfo:
                 ts = time.monotonic()
 
                 el = settings.runtime_settings['earth_location']
-                hserver.println('   '+self.deg_lat2str(el.lat.deg), 1)
-                hserver.println('   '+self.deg_long2str(el.lon.deg), 2)
-                hserver.println('   %dm' % (int(el.height.value+0.5),), 3)
+                hserver.println('   ' + self.deg_lat2str(el.lat.deg), 1)
+                hserver.println('   ' + self.deg_long2str(el.lon.deg), 2)
+                hserver.println('   %dm' % (int(el.height.value + 0.5),), 3)
+            leave = self.input()
+            if leave == "base":
+                return "base"
+            elif leave == "escape":
+                return "stay"
+            time.sleep(0.1)
+
+
+class CPUInfo:
+    def __init__(self):
+        pass
+
+    def input(self):
+        for hin in hserver.input():
+            if hin == 'E':
+                return "escape"
+            if hin == 'S':
+                return "escape"
+        return "stay"
+
+    def run_loop(self):
+        hserver.clearall()
+        hserver.println('CPU Info', 0)
+        ts = -1.0
+        while not kill:
+            if time.monotonic() - ts >= 5:
+                ts = time.monotonic()
+
+                tempc = control.last_status['cpustats']['tempc']
+                tempf = control.last_status['cpustats']['tempf']
+                hserver.println('T %.1fC(%.1fF)' % (tempc, tempf), 1)
+                load = control.last_status['cpustats']['load_percent']
+                hserver.println("CPU %d%%" % (int(load + 0.5),), 2)
+                hserver.println("RAM %.1f%%" % (control.last_status['cpustats']['memory_percent_usage'],), 3)
             leave = self.input()
             if leave == "base":
                 return "base"
@@ -1118,6 +1152,7 @@ menu_structure = {
             "Time/Sidereal": TimeSiderealInfo(),
             "Geo Info": GeoInfo(),
             "Mount Position": MountPositionInfo(),
+            "CPU Info": CPUInfo()
         },
         "Settings": {
             "Brightness": {

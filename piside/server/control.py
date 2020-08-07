@@ -30,6 +30,8 @@ from functools import partial
 import time
 import traceback
 import sys
+import os
+import psutil
 
 # from sstutil import ProfileTimer as PT
 
@@ -51,9 +53,9 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.26"
+version = "0.0.27"
 version_short = "0.0"
-version_date_str = "Aug 05 2020"
+version_date_str = "Aug 07 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -567,6 +569,22 @@ def encoder_log():
     encoder_logging_file.flush()
 
 
+def get_cpustats():
+    ret = {'tempc': 0.0, 'tempf': 0.0, 'load_percent': 0.0, 'memory_percent_usage': 0.0}
+    tempc = subprocess.run(['/usr/bin/vcgencmd', 'measure_temp'],
+                           stdout=subprocess.PIPE).stdout.decode().strip().split('=')[1].split("'")[0]
+    tempc = float(tempc)
+    tempf = 32 + tempc * 9. / 5
+    load_percent = psutil.cpu_percent()
+    tot_m, used_m, free_m = map(int, os.popen('/usr/bin/free -t -m').readlines()[-1].split()[1:])
+    memory_percent_usage = 100*float(used_m)/tot_m
+    ret['tempc'] = tempc
+    ret['tempf'] = tempf
+    ret['load_percent'] = load_percent
+    ret['memory_percent_usage'] = memory_percent_usage
+    return ret
+
+
 def send_status():
     """
     Sets last_status global and sends last_status to socket.
@@ -586,6 +604,7 @@ def send_status():
     status['sidereal_time'] = '%02d:%02d:%02d' % (int(st.h), int(st.m), int(st.s))
     status['time_been_set'] = settings.runtime_settings['time_been_set']
     status['synced'] = settings.runtime_settings['sync_info'] is not None
+    status['cpustats'] = get_cpustats()
     if not handpad_server.handpad_server:  #If server has not started yet
         status['handpad'] = False
     else:
