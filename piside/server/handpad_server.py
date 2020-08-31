@@ -200,7 +200,7 @@ class HandpadServer:
             s = self.__read_serial_cmd()
             # print('pressed', s)
             if len(s) > 2:
-                return s[len(s) - 2]
+                return s[1:len(s) - 1]
             return ''
 
     def gps(self):
