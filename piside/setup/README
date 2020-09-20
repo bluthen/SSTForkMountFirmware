@@ -1,6 +1,7 @@
 unzip 2020-05-27-raspios-buster-lite-armhf.zip
 sudo dd if=2020-05-27-raspios-buster-lite-armhf.img of=/dev/sdd bs=4M
 sync
+e2fsck -f /dev/sdd2
 fdisk /dev/sdd
   p
   d
@@ -30,6 +31,7 @@ sync
 # Logged onto Pi
 
 sudo apt update --fix-missing && sudo apt upgrade -y
+sudo reboot
 
 sudo raspi-config
 	update
@@ -141,6 +143,7 @@ crontab -e
 */2 * * * * /usr/bin/autohotspot
 */1 * * * * /root/dnsmasq.eth0.sh
 
+chmod a+x /root/dnsmasq.eth0.sh
 
 copy index data to /usr/share/astrometry
 

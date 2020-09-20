@@ -745,7 +745,7 @@ def search_location():
     if not search:
         return
     search = search.strip()
-    cities = db.search_stars(search)
+    cities = db.search_cities(search)
     return jsonify(cities)
 
 
