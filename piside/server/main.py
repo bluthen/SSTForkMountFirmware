@@ -1,4 +1,5 @@
 import update_python_paths
+import time
 import copy
 import datetime
 import json
@@ -819,6 +820,15 @@ def main():
     # TODO: What about when they change hostname? Or can move this to systemd?
     avahi_process = subprocess.Popen(
         ['/usr/bin/avahi-publish-service', hostname, '_sstmount._tcp', '5000', '/'])
+    def reconnect():
+        time.sleep(30)
+        # Stop hostapd and dnsmasq let autohotspot go
+        subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
+        subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
+        subprocess.run(['sudo', '/usr/bin/autohotspot'])
+    t1 = threading.Thread(target=reconnect)
+    t1.start()
+
     print('Running...')
     try:
         ssl_context = None
