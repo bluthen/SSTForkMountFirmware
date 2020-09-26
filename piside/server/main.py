@@ -767,6 +767,13 @@ def status_get():
     return jsonify(control.last_status)
 
 
+@app.route('/api/extra_logging', methods=['GET'])
+@nocache
+def extra_logging_get():
+    lx200proto_server.extra_logging = True
+    return 'Okay', 200
+
+
 @app.route('/')
 @nocache
 def root():

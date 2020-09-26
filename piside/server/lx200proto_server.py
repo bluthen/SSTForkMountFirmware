@@ -20,6 +20,7 @@ slew_speed = 'fastest'
 target = {'ra': None, 'dec': None, 'alt': None, 'az': None}
 slew_intervals = {'n': None, 's': None, 'e': None, 'w': None}
 slewing_time_buffer = False
+extra_logging = False
 
 
 def slew_commanded_delay_done():

@@ -53,9 +53,9 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.29"
+version = "0.0.30"
 version_short = "0.0"
-version_date_str = "Sep 19 2020"
+version_date_str = "Sep 22 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -484,7 +484,8 @@ def update_location():
     try:
         settings.runtime_settings['last_locationtz'] = TimezoneFinder().timezone_at(lng=el.lon.deg, lat=el.lat.deg)
     except:
-        pass
+        print('Error getting timezone from location.')
+        traceback.print_exc(file=sys.stdout)
 
 
 def calc_status(status):
