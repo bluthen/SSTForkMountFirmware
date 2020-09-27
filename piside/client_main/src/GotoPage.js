@@ -8,6 +8,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
 import ObjectSearch from './ObjectSearch';
 import CoordinatesInput from './CoordinatesInput';
+import DebugStepsInput from './DebugStepsInput';
 
 
 @observer
@@ -30,22 +31,39 @@ class ManualPage extends React.Component {
 
         if (state.goto.option === 'object_search') {
             option = <ObjectSearch/>;
+        } else if (state.goto.option === 'coordinates') {
+            option =
+                <CoordinatesInput coordinateType={state.goto.coordinates.type} onTypeChange={this.handleTypeChange}/>;
         } else {
-            option = <CoordinatesInput coordinateType={state.goto.coordinates.type} onTypeChange={this.handleTypeChange}/>;
+            option = <DebugStepsInput/>
         }
+        let radioSize = 4;
+        let stepsGotoRadio = null;
+        if (state.misc.debug_options) {
+            stepsGotoRadio = <Grid item xs={radioSize}>
+                <FormControlLabel value="steps" control={<Radio checked={state.goto.option === 'steps'}/>}
+                                  label="Steps"/>
+            </Grid>;
+        }
+
 
         return <React.Fragment>
             <PositionInfo/>
             <RadioGroup aria-label="goto option" name="goto_option" onChange={this.gotoOptionChange}>
                 <Grid container>
-                    <Grid item xs={2}/>
-                    <Grid item xs={4}>
-                        <FormControlLabel value="object_search" control={<Radio checked={state.goto.option === 'object_search'}/>} label="Object Search"/>
+                    {!state.misc.debug_options ? <Grid item xs={2}/> : null}
+                    <Grid item xs={radioSize}>
+                        <FormControlLabel value="object_search"
+                                          control={<Radio checked={state.goto.option === 'object_search'}/>}
+                                          label="Object Search"/>
                     </Grid>
-                    <Grid item xs={4}>
-                        <FormControlLabel value="coordinates" control={<Radio checked={state.goto.option === 'coordinates'}/>} label="Coordinates"/>
+                    <Grid item xs={radioSize}>
+                        <FormControlLabel value="coordinates"
+                                          control={<Radio checked={state.goto.option === 'coordinates'}/>}
+                                          label="Coordinates"/>
                     </Grid>
-                    <Grid item xs={2}/>
+                    {stepsGotoRadio}
+                    {!state.misc.debug_options ? <Grid item xs={2}/> : null}
                 </Grid>
             </RadioGroup>
             {option}

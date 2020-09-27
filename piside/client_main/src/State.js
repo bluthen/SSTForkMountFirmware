@@ -16,7 +16,8 @@ const state = observable({
     },
     misc: {
         encoder_logging: false,
-        calibration_logging: false
+        calibration_logging: false,
+        debug_options: false
     },
     status: {
         alert: null,
@@ -86,6 +87,12 @@ const state = observable({
             alt_error: {d: null, m: null, s: null},
             az: {d: null, m: null, s: null},
             az_error: {d: null, m: null, s: null}
+        },
+        steps: {
+            ra: null,
+            ra_error: null,
+            dec: null,
+            dec_error: null
         },
         slewingdialog: {
             target: {

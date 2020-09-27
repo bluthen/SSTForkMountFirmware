@@ -318,6 +318,25 @@ const APIHelp = {
         });
     },
 
+    slewToSteps(coord) {
+        state.goto.slewing = true;
+        setTimeout(()=> {
+            state.goto.slewing = false;
+        }, 3000);
+        return fetch('/api/slewto',  {
+            method: 'put',
+            body: JSON.stringify(coord),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(handleFetchError).catch((e) => {
+            state.goto.slewing = false;
+            state.snack_bar = 'Error: ' + e.message;
+            state.snack_bar_error = true;
+            throw e;
+        });
+    },
+
     sync(coord) {
         state.goto.syncing = true;
         return fetch('/api/sync', {

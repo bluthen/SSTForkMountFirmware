@@ -53,9 +53,9 @@ import skyconv
 import settings
 import motion
 
-version = "0.0.30"
+version = "0.0.31"
 version_short = "0.0"
-version_date_str = "Sep 22 2020"
+version_date_str = "Sep 26 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -572,8 +572,11 @@ def encoder_log():
 
 def get_cpustats():
     ret = {'tempc': 0.0, 'tempf': 0.0, 'load_percent': 0.0, 'memory_percent_usage': 0.0}
-    tempc = subprocess.run(['/usr/bin/vcgencmd', 'measure_temp'],
-                           stdout=subprocess.PIPE).stdout.decode().strip().split('=')[1].split("'")[0]
+    if not settings.is_simulation():
+        tempc = subprocess.run(['/usr/bin/vcgencmd', 'measure_temp'],
+                               stdout=subprocess.PIPE).stdout.decode().strip().split('=')[1].split("'")[0]
+    else:
+        tempc = 20.0
     tempc = float(tempc)
     tempf = 32 + tempc * 9. / 5
     load_percent = psutil.cpu_percent()

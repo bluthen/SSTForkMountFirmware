@@ -75,6 +75,11 @@ class MiscellaneousSettings extends React.Component {
         APIHelp.toggleLog('calibration', enabled);
     }
 
+    debugOptionsChanged(e) {
+        const enabled = e.target.checked;
+        state.misc.debug_options = enabled;
+    }
+
     clearEncoderClicked() {
         APIHelp.clearLog('encoder');
     }
@@ -93,7 +98,7 @@ class MiscellaneousSettings extends React.Component {
 
     render() {
         let dialog = null;
-        if(state.updateDialog.show) {
+        if (state.updateDialog.show) {
             dialog = <UpdateDialog/>;
         }
         return <Grid container spacing={3}>
@@ -145,12 +150,23 @@ class MiscellaneousSettings extends React.Component {
                         ref={this.settingsRef}
                     />
                 </Button>
-                <Button color="secondary" variant="contained" onClick={this.handleSettingImportClicked}>Import Settings</Button>
+                <Button color="secondary" variant="contained" onClick={this.handleSettingImportClicked}>Import
+                    Settings</Button>
                 <br/><br/>
-                <Button color="primary" variant="contained" onClick={this.handlExportSettingsClicked}>Export Settings</Button>
+                <Button color="primary" variant="contained" onClick={this.handlExportSettingsClicked}>Export
+                    Settings</Button>
             </Grid>
+            <Grid item xs={3}/>
+            <Grid item xs={6} style={{textAlign: "center", padding: '3ex'}}>
+                <h3>CPU Stats</h3>
+                Temperature: {parseInt(state.status.cpustats.tempc, 10)}&deg;
+                C({parseInt(state.status.cpustats.tempf, 10)}&deg;F)<br/>
+                CPU Load: {parseInt(state.status.cpustats.load_percent, 10)}%<br/>
+                Memory Use: {parseInt(state.status.cpustats.memory_percent_usage, 10)}%
+            </Grid>
+            <Grid item xs={3}/>
             <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
-                <h3>Calibration Tools</h3>
+                <h3>Calibration Tools and Debug Options</h3>
                 <FormControlLabel
                     control={
                         <Checkbox
@@ -160,18 +176,17 @@ class MiscellaneousSettings extends React.Component {
                             onChange={this.calibrationLoggingChanged}
                         />
                     }
-                    label="Enable Calibration Table"/>
-            </Grid>
-            <Grid item xs={3}/>
-            <Grid item xs={6} style={{textAlign: "center", padding: '3ex'}}>
-                <h3>CPU Stats</h3>
-                Temperature: {parseInt(state.status.cpustats.tempc, 10)}&deg;C({parseInt(state.status.cpustats.tempf, 10)}&deg;F)<br/>
-                CPU Load: {parseInt(state.status.cpustats.load_percent, 10)}%<br/>
-                Memory Use: {parseInt(state.status.cpustats.memory_percent_usage, 10)}%
-            </Grid>
-            <Grid item xs={3}/>
-            <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>
-                <h3>Encoder Debugging</h3>
+                    label="Enable Calibration Table"/><br/>
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            value="toggle"
+                            color="primary"
+                            checked={state.misc.debug_options}
+                            onChange={this.debugOptionsChanged}
+                        />
+                    }
+                    label="Enable Debug Options"/><br/>
             </Grid>
             <Grid item xs={4}>
                 <FormControlLabel
@@ -186,7 +201,8 @@ class MiscellaneousSettings extends React.Component {
                     label="Enable encoder Logging"/>
             </Grid>
             <Grid item xs={4}>
-                <Button color="primary" variant="contained" onClick={this.clearEncoderClicked}>Clear encoder logs</Button>
+                <Button color="primary" variant="contained" onClick={this.clearEncoderClicked}>Clear encoder
+                    logs</Button>
             </Grid>
             <Grid item xs={4}>
                 <Button color="primary" variant="contained" onClick={this.plotEncoderLogs}>Plot encoder logs</Button>
