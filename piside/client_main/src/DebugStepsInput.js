@@ -25,7 +25,7 @@ class DebugStepsInput extends React.Component {
             v = null;
         }
         state.goto.steps[coord] = v;
-        if (v) {
+        if (v !== null) {
             state.goto.steps[coord + '_error'] = null;
         } else {
             state.goto.steps[coord + '_error'] = 'invalid value';
