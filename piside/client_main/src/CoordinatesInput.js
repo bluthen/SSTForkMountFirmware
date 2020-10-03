@@ -28,12 +28,24 @@ class CoordinatesInput extends React.Component {
     onCoordChange(e, coord, sub) {
 
         let v = e.currentTarget.value;
+        //console.log('======='+v);
+        const l = v.length;
+        let first = '';
+        const negativeAllowed = sub.min < 0;
+        let maxDigits = parseInt(Math.log10(sub.max), 10)+1;
+        if (l > 0) {
+            first = v[0];
+            if (first === '-' && negativeAllowed) {
+                maxDigits += 1;
+            }
+        }
         v = parseInt(v);
         if (isNaN(v)) {
             v = null;
         }
+        //console.log(v, l, maxDigits, first, negativeAllowed);
         state.goto.coordinates[coord][sub.key] = v;
-        if (v * 10 > sub.max || v * 10 < sub.min) {
+        if (v * 10 > sub.max || v * 10 < sub.min || l === maxDigits) {
             sub.nextRef.current.focus();
         }
         if (v > sub.max || v < sub.min) {

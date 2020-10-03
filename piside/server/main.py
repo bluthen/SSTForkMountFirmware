@@ -1,5 +1,6 @@
 import update_python_paths
 import time
+import re
 import copy
 import datetime
 import json
@@ -654,6 +655,9 @@ def conver_coord():
 @nocache
 def search_object():
     search = request.args.get('search', None)
+    m = re.match(r'^([a-zA-Z]+)(\d+)$', search)
+    if m:
+        search = m.group(1)+' '+m.group(2)
     if not search:
         return
     planets = db.search_planets(search)
