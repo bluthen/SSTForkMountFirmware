@@ -42,6 +42,25 @@ void autoguide_init()
   digitalWrite(AUTOGUIDE_RA_POSX_PIN, HIGH);
 }
 
+void configVarsInit()
+{
+    //Some dumb initial values
+    configvars_ra_max_tps = 12000;
+    configvars_ra_guide_rate = 20;
+    configvars_dec_max_tps = 12000;
+    configvars_dec_guide_rate = 6;
+    configvars_ra_accel_tpss = 10000;
+    configvars_dec_accel_tpss = 10000;
+    configvars_debug_enabled = false;
+    configvars_autoguide_enabled = true;
+    configvars_ra_direction = 1;
+    configvars_dec_direction = 1;
+    configvars_ra_accel_tpss = 10000;
+    configvars_dec_accel_tpss = 10000;
+    configvars_dec_disable = 0;
+    configvars_ra_disable = 0;
+}
+
 /**
  * When first powered up. sets up serial, sstvars, stepper, console, resets tracker.
  */
@@ -51,6 +70,7 @@ void setup()
   ra_autoguiding = false;
   dec_autoguiding = false;
 
+  configVarsInit();
   stepperInit();
   setRASpeed(0.0);
   setDECSpeed(0.0);
@@ -58,21 +78,6 @@ void setup()
   command_init();
   Serial.print(F("StarSync Tracker Fork Mount "));
   Serial.println(sstversion);
-  //Some dumb initial values
-  configvars_ra_max_tps = 12000;
-  configvars_ra_guide_rate = 20;
-  configvars_dec_max_tps = 12000;
-  configvars_dec_guide_rate = 6;
-  configvars_ra_accel_tpss = 10000;
-  configvars_dec_accel_tpss = 10000;
-  configvars_debug_enabled = false;
-  configvars_autoguide_enabled = true;
-  configvars_ra_direction = 1;
-  configvars_dec_direction = 1;
-  configvars_ra_accel_tpss = 10000;
-  configvars_dec_accel_tpss = 10000;
-  configvars_dec_disable = 0;
-  configvars_ra_disable = 0;
 }
 
 
