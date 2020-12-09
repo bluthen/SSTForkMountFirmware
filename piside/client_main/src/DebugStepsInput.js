@@ -20,7 +20,7 @@ class DebugStepsInput extends React.Component {
 
     onCoordChange(e, coord, sub) {
         let v = e.currentTarget.value;
-        v = parseInt(v);
+        v = ~~v;
         if (isNaN(v)) {
             v = null;
         }
@@ -38,7 +38,7 @@ class DebugStepsInput extends React.Component {
 
 
     goodClick() {
-        APIHelp.slewToSteps({ra_steps: state.goto.steps.ra, dec_steps: state.goto.steps.dec});
+        APIHelp.slewTo({ra_steps: state.goto.steps.ra, dec_steps: state.goto.steps.dec, frame:'steps'});
     }
 
     handleClick(e) {

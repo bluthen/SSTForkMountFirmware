@@ -21,28 +21,28 @@ class TestSkyConv(unittest.TestCase):
         self.assertAlmostEqual(skyconv.get_sidereal_time(obstime=obstime, earth_location=el).deg, SR_RA, places=5)
 
     def test_clean_deg(self):
-        r = skyconv.clean_deg(91.0, True)
+        r = skyconv._clean_deg(91.0, True)
         self.assertEqual(r, (89.0, 1))
 
-        r = skyconv.clean_deg(-91.0, True)
+        r = skyconv._clean_deg(-91.0, True)
         self.assertEqual(r, (-89.0, 1))
 
-        r = skyconv.clean_deg(-190.0, True)
+        r = skyconv._clean_deg(-190.0, True)
         self.assertEqual(r, (10.0, 1))
 
-        r = skyconv.clean_deg(190.0, True)
+        r = skyconv._clean_deg(190.0, True)
         self.assertEqual(r, (-10.0, 1))
 
-        r = skyconv.clean_deg(390.0, True)
+        r = skyconv._clean_deg(390.0, True)
         self.assertEqual(r, (30.0, 2))
 
-        r = skyconv.clean_deg(390.0, False)
+        r = skyconv._clean_deg(390.0, False)
         self.assertEqual(r, 30.0)
 
-        r = skyconv.clean_deg(-390.0, False)
+        r = skyconv._clean_deg(-390.0, False)
         self.assertEqual(r, 330.0)
 
-        r = skyconv.clean_deg(20.0, False)
+        r = skyconv._clean_deg(20.0, False)
         self.assertEqual(r, 20.0)
 
     def test_clean_altaz(self):
@@ -56,32 +56,32 @@ class TestSkyConv(unittest.TestCase):
         self.assertIsNone(clean_coord.location)
 
     def test_ha_delta_deg(self):
-        self.assertEqual(skyconv.ha_delta_deg(359.0, 370.0), 11.0)
-        self.assertEqual(skyconv.ha_delta_deg(359.0, -5.0), -4.0)
-        self.assertEqual(skyconv.ha_delta_deg(90.0, 92.0), 2.0)
-        self.assertEqual(skyconv.ha_delta_deg(-20.0, -5.0), 15.0)
+        self.assertEqual(skyconv._ha_delta_deg(359.0, 370.0), 11.0)
+        self.assertEqual(skyconv._ha_delta_deg(359.0, -5.0), -4.0)
+        self.assertEqual(skyconv._ha_delta_deg(90.0, 92.0), 2.0)
+        self.assertEqual(skyconv._ha_delta_deg(-20.0, -5.0), 15.0)
 
     def test_icrs_to_hadec(self):
         coord = SkyCoord(ra=283 * u.deg, dec=50.0 * u.deg, frame='icrs')
-        hadec = skyconv.icrs_to_hadec(coord, obstime=obstime, earth_location=el)
-        self.assertAlmostEqual(hadec.ra.deg, skyconv.clean_deg(SR_RA - coord.ra.deg))
+        hadec = skyconv._icrs_to_hadec(coord, obstime=obstime, earth_location=el)
+        self.assertAlmostEqual(hadec.ra.deg, skyconv._clean_deg(SR_RA - coord.ra.deg))
         self.assertAlmostEqual(hadec.dec.deg, coord.dec.deg)
 
     def test_altaz_to_hadec(self):
         coord = SkyCoord(alt=90*u.deg, az=0*u.deg, frame='altaz')
-        hadec = skyconv.altaz_to_hadec(coord, obstime=obstime, earth_location=el)
+        hadec = skyconv._altaz_to_hadec(coord, obstime=obstime, earth_location=el)
         self.assertEqual(hadec.ra.deg, 0.)
         self.assertEqual(hadec.dec.deg, el.lat.deg)
 
     def test_hadec_to_icrs(self):
         icrs = SkyCoord(ra=223 * u.deg, dec=50.0 * u.deg, frame='icrs')
-        hadec = skyconv.icrs_to_hadec(icrs, obstime=obstime, earth_location=el)
-        result = skyconv.hadec_to_icrs(hadec, obstime=obstime, earth_location=el)
+        hadec = skyconv._icrs_to_hadec(icrs, obstime=obstime, earth_location=el)
+        result = skyconv._hadec_to_icrs(hadec, obstime=obstime, earth_location=el)
         self.assertAlmostEqual(icrs.ra.deg, result.ra.deg)
         self.assertAlmostEqual(icrs.dec.deg, result.dec.deg)
 
     def test_earth_location_to_pressure(self):
-        p = skyconv.earth_location_to_pressure(el).to_value(usi.Pa)
+        p = skyconv._earth_location_to_pressure(el).to_value(usi.Pa)
         self.assertAlmostEqual(p, 98170.13549856932)
 
 

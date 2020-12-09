@@ -1,14 +1,13 @@
-[[source]]
-url = "https://www.piwheels.org/simple"
-verify_ssl = true
-name = "piwheels"
+#[[source]]
+#url = "https://www.piwheels.org/simple"
+#verify_ssl = true
+#name = "piwheels"
 
 [dev-packages]
 
 [packages]
 astropy = "*"
 fasteners = "*"
-netifaces = "*"
 pendulum = "*"
 pyserial = "*"
 scipy = "*"
@@ -18,6 +17,9 @@ numpy = "*"
 Flask = "*"
 Flask-Compress = "*"
 pynmea2 = "*"
+ifaddr = "*"
+setuptools = "*"
+psutil = "*"
 
 [requires]
 python_version = "3.7"

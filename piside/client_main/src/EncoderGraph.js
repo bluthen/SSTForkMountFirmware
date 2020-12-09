@@ -88,7 +88,7 @@ class EncoderGraph extends React.Component {
         let range = (amax - amin);
         let step = range / 4.0;
         if (step > 10) {
-            step = parseInt(step + 0.5, 10);
+            step = ~~(step + 0.5);
         }
         const ret = [amin, amin + step, amin + 2 * step, amin + 3 * step, amin + 4 * step];
         return ret;

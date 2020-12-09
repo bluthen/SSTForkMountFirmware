@@ -6,7 +6,7 @@ const state = observable({
     client_id: uuidv4(),
     page: 'manual',
     topTabs: 'manual',
-    coordDisplay: 'radec',
+    coordDisplay: 'tete',
     fatal_error: null,
     color_scheme: 'default',
     version: {version: "", version_date: ""},
@@ -29,7 +29,11 @@ const state = observable({
         di: null,
         dp: null,
         ds: null,
+        hadec_ha: null,
+        hadec_dec: null,
         hostname: null,
+        icrs_dec: null,
+        icrs_ra: null,
         ra: null,
         re: null,
         rep: null,
@@ -40,6 +44,8 @@ const state = observable({
         started_parked: false,
         synced: false,
         sidereal_time: null,
+        tete_dec: null,
+        tete_ra: null,
         time: null,
         time_been_set: false,
         tracking: true,
@@ -48,7 +54,6 @@ const state = observable({
     },
     goto: {
         slewing: false,
-        slewingtype: 'radec',
         syncing: false,
         option: 'object_search',
         object_search: {
@@ -60,25 +65,20 @@ const state = observable({
         objectdialog: {
             shown: false,
             name: 'Object Name',
-            radeg: null,
-            decdeg: null,
-            graphdata: [],
-            ra: null,
-            dec: null,
-            alt: null,
-            az: null,
+            wanted_coord: null,
+            all_frames: null,
             size: null,
             mag: null
         },
         coorddialog: {
             shown: false,
-            radeg: null,
-            decdeg: null,
-            altdeg: null,
-            azdeg: null
+            wanted_coord: null,
+            all_frames: null
         },
         coordinates: {
-            type: 'radec',
+            frame: 'icrs',
+            ha: {h: null, m: null, s: null},
+            ha_error: {h: null, m: null, s: null},
             ra: {h: null, m: null, s: null},
             ra_error: {h: null, m: null, s: null},
             dec: {d: null, m: null, s: null},
@@ -95,18 +95,8 @@ const state = observable({
             dec_error: null
         },
         slewingdialog: {
-            target: {
-                ra: null,
-                dec: null,
-                alt: null,
-                az: null
-            },
-            start: {
-                ra: null,
-                dec: null,
-                alt: null,
-                az: null
-            }
+            frame: null,
+            target: null
         }
     },
     advancedSettings: {

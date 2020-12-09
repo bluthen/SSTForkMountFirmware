@@ -5,7 +5,7 @@ import threading
 import astropy.coordinates
 import astropy.time
 import astropy.units as u
-from astropy.coordinates import solar_system_ephemeris, SkyCoord
+from astropy.coordinates import solar_system_ephemeris, ICRS
 from astropy.time import Time as AstroTime
 
 import settings
@@ -44,17 +44,15 @@ def search_planets(search):
                 location = settings.runtime_settings['earth_location']
             coord = astropy.coordinates.get_body(body, AstroTime.now(),
                                                  location=location)
-            ra = coord.ra.deg
-            dec = coord.dec.deg
-            coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+            coord = coord.icrs
             if do_altaz:
-                altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+                altaz = skyconv.to_altaz(coord)
                 altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
             else:
                 altaz = {'alt': None, 'az': None}
             planets.append(
                 {
-                    'type': 'planet', 'name': body.title(), 'ra': coord.icrs.ra.deg, 'dec': coord.icrs.dec.deg,
+                    'type': 'planet', 'name': body.title(), 'ra': coord.ra.deg, 'dec': coord.dec.deg,
                     'alt': altaz['alt'],
                     'az': altaz['az']
                 }
@@ -96,8 +94,8 @@ def search_dso(search):
         else:
             ob['r2'] = float(ob['r2'])
         if do_altaz:
-            coord = SkyCoord(ra=ob['ra'] * u.deg, dec=ob['dec'] * u.deg, frame='icrs')
-            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+            coord = ICRS(ra=ob['ra'] * u.deg, dec=ob['dec'] * u.deg)
+            altaz = skyconv.to_altaz(coord)
             ob['alt'] = altaz.alt.deg
             ob['az'] = altaz.az.deg
         else:
@@ -133,8 +131,8 @@ def search_stars(search):
         else:
             ob['mag'] = float(ob['mag'])
         if do_altaz:
-            coord = SkyCoord(ra=ob['ra'] * u.deg, dec=ob['dec'] * u.deg, frame='icrs')
-            altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+            coord = ICRS(ra=ob['ra'] * u.deg, dec=ob['dec'] * u.deg)
+            altaz = skyconv.to_altaz(coord)
             ob['alt'] = altaz.alt.deg
             ob['az'] = altaz.az.deg
         else:

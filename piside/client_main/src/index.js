@@ -22,6 +22,7 @@ import SlewingDialog from './SlewingDialog';
 import SyncingDialog from './SyncingDialog';
 import InfoSnackbar from './InfoSnackbar';
 import {defaultTheme, darkTheme, redTheme} from './Themes';
+import {dark} from "@material-ui/core/styles/createPalette";
 
 const tabMap = ['manual', 'goto', 'setup'];
 

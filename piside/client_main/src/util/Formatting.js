@@ -13,9 +13,9 @@ const Formatting = {
             latstr += 'N';
         }
         lat = Math.abs(lat);
-        latstr += parseInt(lat, 10) + DEG_SYM;
-        const remain = lat - parseInt(lat);
-        const min = parseInt(remain * 60);
+        latstr += ~~lat + DEG_SYM;
+        const remain = lat - (~~lat);
+        const min = ~~(remain * 60);
         const sec = (remain - (min / 60.0)) * 60 * 60;
         return latstr + min + '\'' + sec.toFixed(1) + '"';
     },
@@ -28,9 +28,9 @@ const Formatting = {
             longstr += 'E';
         }
         long = Math.abs(long);
-        longstr += parseInt(long, 10) + DEG_SYM;
-        const remain = long - parseInt(long);
-        const min = parseInt(remain * 60);
+        longstr += ~~long + DEG_SYM;
+        const remain = long - (~~long);
+        const min = ~~(remain * 60);
         const sec = (remain - (min / 60.0)) * 60 * 60;
         return longstr + min + '\'' + sec.toFixed(1) + '"';
     },
@@ -38,10 +38,10 @@ const Formatting = {
         if (ra !== null) {
             ra = parseFloat(ra);
             ra = ra * (24.0 / 360.0);
-            const remain = ra - parseInt(ra, 10);
-            const min = parseInt(remain * 60);
+            const remain = ra - (~~ra);
+            const min = ~~(remain * 60);
             const sec = (remain - (min / 60.0)) * 60 * 60;
-            return parseInt(ra, 10) + 'h' + min + 'm' + sec.toFixed(1) + 's'
+            return ~~ra + 'h' + min + 'm' + sec.toFixed(1) + 's'
         } else {
             return '';
         }
@@ -49,8 +49,8 @@ const Formatting = {
     hmsRA2deg(h, m, s) {
         return (360.0 / 24) *
             (parseFloat(h) +
-            parseFloat(m) / 60.0 +
-            parseFloat(s) / (60.0 * 60.0));
+                parseFloat(m) / 60.0 +
+                parseFloat(s) / (60.0 * 60.0));
     },
     dmsDEC2deg(d, m, s) {
         const sign = Math.sign(d);
@@ -61,10 +61,11 @@ const Formatting = {
     degDEC2Str(dec) {
         if (dec !== null) {
             dec = parseFloat(dec);
-            const remain = Math.abs(dec - parseInt(dec, 10));
-            const arcmin = parseInt(remain * 60);
-            const arcsec = (remain - (arcmin / 60.0)) * 60 * 60;
-            return parseInt(dec, 10) + DEG_SYM + arcmin + '\'' + arcsec.toFixed(1) + '"'
+            const deg = ~~dec;
+            let remain = Math.abs(dec - deg) * 60 * 60;
+            const arcmin = ~~(remain / 60)
+            const arcsec = (remain) - (arcmin * 60);
+            return deg + DEG_SYM + arcmin + '\'' + arcsec.toFixed(1) + '"'
         } else {
             return '';
         }
@@ -92,13 +93,13 @@ const Formatting = {
 
     dateHourMinuteSecondMSStr(date) {
         const ret = Formatting.dateHourMinuteSecondStr(date);
-        let s = parseInt(date.getMilliseconds() / 10, 10);
+        let s = ~~(date.getMilliseconds() / 10);
         if (s < 10) {
             s = '0' + s;
         }
         return ret + '.' + s;
     },
-    deltaDegRA: function(frompt, topt) {
+    deltaDegRA: function (frompt, topt) {
         const d_1 = topt - frompt;
         const d_2 = 360.0 + d_1;
         const d_3 = d_1 - 360;
@@ -107,11 +108,11 @@ const Formatting = {
         const idx = absar.indexOf(Math.min.apply(Math, absar));
         return ar[idx];
     },
-    deltaDegDec: function(frompt, topt) {
-        return topt-frompt;
+    deltaDegDec: function (frompt, topt) {
+        return topt - frompt;
     },
-    deg2arcseconds: function(pt) {
-        return pt*60.*60.;
+    deg2arcseconds: function (pt) {
+        return pt * 60. * 60.;
     }
 };
 

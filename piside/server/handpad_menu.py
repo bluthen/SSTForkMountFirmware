@@ -684,7 +684,8 @@ class SlewingMenu:
             if 'ra' in self.target:
                 if time.monotonic() - ts >= 1.5:
                     ts = time.monotonic()
-                    coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
+                    coord = SkyCoord(ra=control.last_status['icrs_ra'] * u.deg,
+                                     dec=control.last_status['icrs_dec'] * u.deg,
                                      frame='icrs').to_string('hmsdms')
                     coord = re.sub(r'\.\d+s', 's', coord)
                     hserver.println(coord, 3)
@@ -719,9 +720,9 @@ class SyncSlewMenu(Menu):
     def selected(self):
         if self.menu_selection == 0:  # Slew
             if 'ra' in self.object:
-                control.set_slew(self.object['ra'], self.object['dec'])
+                control.set_slew(self.object['ra'], self.object['dec'], frame='icrs')
             else:
-                control.set_slew(alt=self.object['alt'], az=self.object['az'])
+                control.set_slew(alt=self.object['alt'], az=self.object['az'], frame='altaz')
             time.sleep(1)
             ret = SlewingMenu(self.object).run_loop()
             if ret == 'complete':
@@ -732,9 +733,9 @@ class SyncSlewMenu(Menu):
         elif self.menu_selection == 1:  # Sync
             stop = thinking('Syncing')
             if 'ra' in self.object:
-                control.set_sync(self.object['ra'], self.object['dec'])
+                control.set_sync(self.object['ra'], self.object['dec'], frame='icrs')
             else:
-                control.set_sync(alt=self.object['alt'], az=self.object['az'])
+                control.set_sync(alt=self.object['alt'], az=self.object['az'], frame='altaz')
             stop['stop'] = True
             stop['thread'].join()
             InfoMenu('Synced', 'base').run_loop()
@@ -830,7 +831,7 @@ class ManualSlewMenu:
         while not kill:
             if time.monotonic() - ts >= 0.5:
                 ts = time.monotonic()
-                coord = SkyCoord(ra=control.last_status['ra'] * u.deg, dec=control.last_status['dec'] * u.deg,
+                coord = SkyCoord(ra=control.last_status['icrs_ra'] * u.deg, dec=control.last_status['icrs_dec'] * u.deg,
                                  frame='icrs').to_string('hmsdms')
                 coord = re.sub(r'\.\d+s', 's', coord)
                 hserver.println(coord, 3)

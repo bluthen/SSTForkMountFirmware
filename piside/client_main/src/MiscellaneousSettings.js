@@ -159,10 +159,10 @@ class MiscellaneousSettings extends React.Component {
             <Grid item xs={3}/>
             <Grid item xs={6} style={{textAlign: "center", padding: '3ex'}}>
                 <h3>CPU Stats</h3>
-                Temperature: {parseInt(state.status.cpustats.tempc, 10)}&deg;
-                C({parseInt(state.status.cpustats.tempf, 10)}&deg;F)<br/>
-                CPU Load: {parseInt(state.status.cpustats.load_percent, 10)}%<br/>
-                Memory Use: {parseInt(state.status.cpustats.memory_percent_usage, 10)}%
+                Temperature: {~~(state.status.cpustats.tempc)}&deg;
+                C({~~(state.status.cpustats.tempf)}&deg;F)<br/>
+                CPU Load: {~~(state.status.cpustats.load_percent)}%<br/>
+                Memory Use: {~~(state.status.cpustats.memory_percent_usage)}%
             </Grid>
             <Grid item xs={3}/>
             <Grid item xs={12} style={{textAlign: "center", padding: '3ex'}}>

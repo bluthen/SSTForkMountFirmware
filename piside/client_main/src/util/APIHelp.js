@@ -1,6 +1,6 @@
 /* global fetch */
 import state from '../State';
-import {observe} from "mobx";
+import {observe, toJS} from "mobx";
 import _ from 'lodash';
 import Formatting from './Formatting';
 import Papa from 'papaparse';
@@ -120,31 +120,19 @@ function observeManualDirection(cardinalDir) {
     });
 }
 
-function updateCoordDialogMissing() {
-    const res = {
-        alt: state.goto.coorddialog.altdeg,
-        az: state.goto.coorddialog.azdeg,
-        ra: state.goto.coorddialog.radeg,
-        dec: state.goto.coorddialog.decdeg
-    };
-    if ((res.ra !== null && res.dec !== null && res.alt === null && res.az === null) || (res.alt !== null && res.az !== null && res.ra === null && res.dec === null)) {
-        fetch('/api/convert_coord', {
+function getCordConversions(wanted_coord) {
+    if (wanted_coord) {
+        return fetch('/api/convert_coord', {
             method: 'post',
-            body: JSON.stringify(res),
+            body: JSON.stringify(wanted_coord),
             headers: {
                 'Content-Type': 'application/json'
             }
         }).then(handleFetchError).then((response) => {
-            return response.json()
-        }).then((d) => {
-            if (d.hasOwnProperty('ra')) {
-                state.goto.coorddialog.radeg = d.ra;
-                state.goto.coorddialog.decdeg = d.dec;
-            } else {
-                state.goto.coorddialog.altdeg = d.alt;
-                state.goto.coorddialog.azdeg = d.az;
-            }
+            return response.json();
         });
+    } else {
+        return Promise.resolve(null);
     }
 }
 
@@ -210,17 +198,11 @@ const APIHelp = {
         });
 
         ['north', 'south', 'east', 'west'].forEach(observeManualDirection);
-        observe(state.goto.coorddialog, 'radeg', () => {
-            updateCoordDialogMissing();
+        observe(state.goto.coorddialog, 'wanted_coord', async () => {
+            state.goto.coorddialog.all_frames = await getCordConversions(state.goto.coorddialog.wanted_coord);
         });
-        observe(state.goto.coorddialog, 'decdeg', () => {
-            updateCoordDialogMissing();
-        });
-        observe(state.goto.coorddialog, 'altdeg', () => {
-            updateCoordDialogMissing();
-        });
-        observe(state.goto.coorddialog, 'azdeg', () => {
-            updateCoordDialogMissing();
+        observe(state.goto.objectdialog, 'wanted_coord', async () => {
+            state.goto.objectdialog.all_frames = await getCordConversions(state.goto.objectdialog.wanted_coord);
         });
 
         observe(state.status, 'slewing', () => {
@@ -238,7 +220,7 @@ const APIHelp = {
 
     },
 
-    getAltitudeData: function (ra, dec, alt, az) {
+    getAltitudeData: function (wanted_coord) {
         const now = new Date();
         let times;
         const timesD = [];
@@ -250,7 +232,7 @@ const APIHelp = {
         }
         return fetch('/api/altitude_data', {
             method: 'post',
-            body: JSON.stringify({times: times, ra: ra, dec: dec, alt: alt, az: az}),
+            body: JSON.stringify({times: times, ...wanted_coord}),
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -284,46 +266,14 @@ const APIHelp = {
 
     slewTo(coord) {
         state.goto.slewing = true;
-        if (coord.ra) {
-            state.goto.slewingtype = 'radec';
-        } else {
-            state.goto.slewingtype = 'altaz';
-        }
+        state.goto.slewingdialog.frame = coord.frame;
+        state.goto.slewingdialog.target = coord;
         setTimeout(() => {
+            // If super fast slew maybe didn't catch it toggling.
             state.goto.slewing = false;
         }, 3000);
         //TODO: Steps
-        if (coord.ra) {
-            state.goto.slewingdialog.target.ra = coord.ra;
-            state.goto.slewingdialog.target.dec = coord.dec;
-            state.goto.slewingdialog.target.alt = null;
-            state.goto.slewingdialog.target.az = null;
-        } else if (coord.alt) {
-            state.goto.slewingdialog.target.ra = null;
-            state.goto.slewingdialog.target.dec = null;
-            state.goto.slewingdialog.target.alt = coord.alt;
-            state.goto.slewingdialog.target.az = coord.az;
-        }
         return fetch('/api/slewto', {
-            method: 'put',
-            body: JSON.stringify(coord),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then(handleFetchError).catch((e) => {
-            state.goto.slewing = false;
-            state.snack_bar = 'Error: ' + e.message;
-            state.snack_bar_error = true;
-            throw e;
-        });
-    },
-
-    slewToSteps(coord) {
-        state.goto.slewing = true;
-        setTimeout(()=> {
-            state.goto.slewing = false;
-        }, 3000);
-        return fetch('/api/slewto',  {
             method: 'put',
             body: JSON.stringify(coord),
             headers: {
@@ -373,7 +323,7 @@ const APIHelp = {
 
     park() {
         state.goto.slewing = true;
-        state.goto.slewingtype = 'park';
+        state.goto.slewingdialog.frame = 'park';
         setTimeout(() => {
             state.goto.slewing = false;
         }, 3000);

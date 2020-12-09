@@ -23,37 +23,16 @@ class SlewingDialog extends React.Component {
     @computed
     get slewProgress() {
         //TODO: This needs to be better about loops, maybe can get distance from server?
-        return null;
-        const tra = state.goto.slewingdialog.target.ra;
-        const tdec = state.goto.slewingdialog.target.dec;
-        const talt = state.goto.slewingdialog.target.alt;
-        const taz = state.goto.slewingdialog.target.az;
-
-        const sra = state.goto.slewingdialog.start.ra;
-        const sdec = state.goto.slewingdialog.start.dec;
-        const salt = state.goto.slewingdialog.start.alt;
-        const saz = state.goto.slewingdialog.start.az;
-
-        const ra = state.status.ra;
-        const dec = state.status.dec;
-        const alt = state.status.alt;
-        const az = state.status.az;
-
-        if (tra !== null && sra !== null) {
-            const total = Math.abs(tra - sra) + Math.abs(tdec - sdec);
-            const now = Math.abs(tra - ra) + Math.abs(tdec - dec);
-            return 100 * (1-((total - now) / total));
-        } else if (talt !== null && salt !== null) {
-            const total = Math.abs(talt - salt) + Math.abs(taz - saz);
-            const now = Math.abs(talt - alt) + Math.abs(taz - az);
-            return 100 * (1-((total - now) / total));
-        }
+        // then it can be determinate.
         return null;
     }
 
     @computed
     get target() {
-        const ra = state.goto.slewingdialog.target.ra;
+        if (state.goto.slewingdialog.frame === 'steps') {
+            return state.goto.slewingdialog.target.ra_steps + '/' + state.goto.slewingdialog.target.dec_steps;
+        }
+        const ra = state.goto.slewingdialog.target.ra || state.goto.slewingdialog.target.ha;
         const dec = state.goto.slewingdialog.target.dec;
         const alt = state.goto.slewingdialog.target.alt;
         const az = state.goto.slewingdialog.target.az;
@@ -70,15 +49,23 @@ class SlewingDialog extends React.Component {
 
     @computed
     get current() {
-        const talt = state.goto.slewingdialog.target.alt;
-
-        const ra = state.status.ra;
-        const dec = state.status.dec;
-        const alt = state.status.alt;
-        const az = state.status.az;
-
-        if (talt || state.goto.slewingtype === 'altaz' || state.goto.slewingtype === 'park') {
+        if (state.goto.slewingdialog.frame === 'steps') {
+            return state.status.rp + '/' + state.status.dp;
+        }
+        let ra, dec;
+        if (state.goto.slewingdialog.frame === 'altaz' || state.goto.slewingdialog.frame === 'park') {
+            const alt = state.status.alt;
+            const az = state.status.az;
             return Formatting.degDEC2Str(alt) + '/' + Formatting.degDEC2Str(az);
+        } else if (state.goto.slewingdialog.frame === 'icrs') {
+            ra = state.status.icrs_ra;
+            dec = state.status.icrs_dec;
+        } else if (state.goto.slewingdialog.frame === 'tete') {
+            ra = state.status.tete_ra;
+            dec = state.status.tete_dec;
+        } else {
+            ra = state.status.hadec_ha;
+            dec = state.status.hadec_dec;
         }
         return Formatting.degRA2Str(ra) + '/' + Formatting.degDEC2Str(dec);
     }
@@ -95,8 +82,8 @@ class SlewingDialog extends React.Component {
         }
 
         let title = 'Slewing';
-        if(state.goto.slewingtype === 'park') {
-            title='Parking';
+        if (state.goto.slewingdialog.frame === 'park') {
+            title = 'Parking';
         }
 
         return <Dialog open maxwidth="xs">

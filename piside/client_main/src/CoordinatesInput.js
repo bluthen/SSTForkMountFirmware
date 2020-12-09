@@ -10,6 +10,8 @@ import Button from '@material-ui/core/Button';
 import Formatting from './util/Formatting';
 import CoordDialog from './CoordDialog';
 import CalibrationTable from './CalibrationTable';
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
 
 @observer
 class CoordinatesInput extends React.Component {
@@ -32,14 +34,14 @@ class CoordinatesInput extends React.Component {
         const l = v.length;
         let first = '';
         const negativeAllowed = sub.min < 0;
-        let maxDigits = parseInt(Math.log10(sub.max), 10)+1;
+        let maxDigits = ~~(Math.log10(sub.max)) + 1;
         if (l > 0) {
             first = v[0];
             if (first === '-' && negativeAllowed) {
                 maxDigits += 1;
             }
         }
-        v = parseInt(v);
+        v = ~~v;
         if (isNaN(v)) {
             v = null;
         }
@@ -59,27 +61,33 @@ class CoordinatesInput extends React.Component {
         ref.current.select();
     }
 
-
     goodClick() {
-        let ra = null, dec = null, alt = null, az = null;
-        if (state.goto.coordinates.type === 'radec') {
+        let ra = null, dec = null, alt = null, az = null, ha = null;
+        const frame = state.goto.coordinates.frame;
+        if (frame === 'icrs' || frame === 'tete') {
             ra = Formatting.hmsRA2deg(state.goto.coordinates.ra.h, state.goto.coordinates.ra.m, state.goto.coordinates.ra.s);
             dec = Formatting.dmsDEC2deg(state.goto.coordinates.dec.d, state.goto.coordinates.dec.m, state.goto.coordinates.dec.s);
+            state.goto.coorddialog.wanted_coord = {frame: frame, ra: ra, dec: dec};
+        } else if (frame === 'hadec') {
+            ha = Formatting.hmsRA2deg(state.goto.coordinates.ha.h, state.goto.coordinates.ha.m, state.goto.coordinates.ha.s);
+            dec = Formatting.dmsDEC2deg(state.goto.coordinates.dec.d, state.goto.coordinates.dec.m, state.goto.coordinates.dec.s);
+            state.goto.coorddialog.wanted_coord = {frame: frame, ha: ha, dec: dec};
         } else {
             alt = Formatting.dmsDEC2deg(state.goto.coordinates.alt.d, state.goto.coordinates.alt.m, state.goto.coordinates.alt.s);
             az = Formatting.dmsDEC2deg(state.goto.coordinates.az.d, state.goto.coordinates.az.m, state.goto.coordinates.az.s);
+            state.goto.coorddialog.wanted_coord = {frame: frame, alt: alt, az: az};
         }
-        state.goto.coorddialog.radeg = ra;
-        state.goto.coorddialog.decdeg = dec;
-        state.goto.coorddialog.altdeg = alt;
-        state.goto.coorddialog.azdeg = az;
+        state.goto.coorddialog.all_frames = null;
         state.goto.coorddialog.shown = true;
     }
 
     handleClick(e) {
         let coords;
-        if (state.goto.coordinates.type === 'radec') {
+        const frame = state.goto.coordinates.frame;
+        if (frame === 'icrs' || frame === 'tete') {
             coords = {'ra': ['h', 'm', 's'], 'dec': ['d', 'm', 's']};
+        } else if (frame === 'hadec') {
+            coords = {'ha': ['h', 'm', 's'], 'dec': ['d', 'm', 's']};
         } else {
             coords = {'alt': ['d', 'm', 's'], 'az': ['d', 'm', 's']};
         }
@@ -105,43 +113,54 @@ class CoordinatesInput extends React.Component {
         const v3_error = state.goto.coordinates[coord + '_error'][subs[2].key];
 
         return <>
-        <Grid item xs={1}>
-            {coord.toUpperCase()}
-        </Grid>
-        <Grid item xs={2}>
-            <TextField value={v1 === null ? '' : v1} error={!!v1_error} label={v1_error} onChange={(e) => {
-                this.onCoordChange(e, coord, subs[0]);
-            }} type="number" inputProps={{min: subs[0].min, max: subs[0].max, step: 1}} InputProps={{
-                endAdornment: <InputAdornment position="end">{subs[0].adornment}</InputAdornment>,
-            }} inputRef={subs[0].ref} onFocus={(e) => {
-                this.onSubFocus(e, subs[0].ref)
-            }}/>
-        </Grid>
-        <Grid item xs={2}>
-            <TextField value={v2 === null ? '' : v2} error={!!v2_error} label={v2_error} onChange={(e) => {
-                this.onCoordChange(e, coord, subs[1]);
-            }} type="number" inputProps={{min: subs[0].min, max: subs[1].max, step: 1}} InputProps={{
-                endAdornment: <InputAdornment position="end">{subs[1].adornment}</InputAdornment>,
-            }} inputRef={subs[1].ref} onFocus={(e) => {
-                this.onSubFocus(e, subs[1].ref)
-            }}/>
-        </Grid>
-        <Grid item xs={2}>
-            <TextField value={v3 === null ? '' : v3} error={!!v3_error} label={v3_error} onChange={(e) => {
-                this.onCoordChange(e, coord, subs[2]);
-            }} type="number" inputProps={{min: subs[2].min, max: subs[2].max, step: 1}} InputProps={{
-                endAdornment: <InputAdornment position="end">{subs[2].adornment}</InputAdornment>,
-            }} inputRef={subs[2].ref} onFocus={(e) => {
-                this.onSubFocus(e, subs[2].ref)
-            }}/>
-        </Grid>
+            <Grid item xs={1}>
+                {coord.toUpperCase()}
+            </Grid>
+            <Grid item xs={2}>
+                <TextField value={v1 === null ? '' : v1} error={!!v1_error} label={v1_error} onChange={(e) => {
+                    this.onCoordChange(e, coord, subs[0]);
+                }} type="number" inputProps={{min: subs[0].min, max: subs[0].max, step: 1}} InputProps={{
+                    endAdornment: <InputAdornment position="end">{subs[0].adornment}</InputAdornment>,
+                }} inputRef={subs[0].ref} onFocus={(e) => {
+                    this.onSubFocus(e, subs[0].ref)
+                }}/>
+            </Grid>
+            <Grid item xs={2}>
+                <TextField value={v2 === null ? '' : v2} error={!!v2_error} label={v2_error} onChange={(e) => {
+                    this.onCoordChange(e, coord, subs[1]);
+                }} type="number" inputProps={{min: subs[0].min, max: subs[1].max, step: 1}} InputProps={{
+                    endAdornment: <InputAdornment position="end">{subs[1].adornment}</InputAdornment>,
+                }} inputRef={subs[1].ref} onFocus={(e) => {
+                    this.onSubFocus(e, subs[1].ref)
+                }}/>
+            </Grid>
+            <Grid item xs={2}>
+                <TextField value={v3 === null ? '' : v3} error={!!v3_error} label={v3_error} onChange={(e) => {
+                    this.onCoordChange(e, coord, subs[2]);
+                }} type="number" inputProps={{min: subs[2].min, max: subs[2].max, step: 1}} InputProps={{
+                    endAdornment: <InputAdornment position="end">{subs[2].adornment}</InputAdornment>,
+                }} inputRef={subs[2].ref} onFocus={(e) => {
+                    this.onSubFocus(e, subs[2].ref)
+                }}/>
+            </Grid>
         </>;
     }
 
     render() {
-        let field1, field2, dialog = null, calibration_table= null;
-        if (this.props.coordinateType === 'radec') {
+        let field1, field2, dialog = null, calibration_table = null;
+        if (this.props.coordinateType === 'icrs' || this.props.coordinateType === 'tete') {
             field1 = this.fieldGen('ra', [{key: 'h', min: 0, max: 23, adornment: 'h', ref: this.one, nextRef: this.two},
+                {key: 'm', min: 0, max: 59, adornment: 'm', ref: this.two, nextRef: this.three},
+                {key: 's', min: 0, max: 59, adornment: 's', ref: this.three, nextRef: this.four}]);
+            field2 = this.fieldGen('dec',
+                [
+                    {key: 'd', min: -90, max: 90, adornment: <>&deg;</>, ref: this.four, nextRef: this.five},
+                    {key: 'm', min: 0, max: 59, adornment: '\'', ref: this.five, nextRef: this.six},
+                    {key: 's', min: 0, max: 59, adornment: '"', ref: this.six, nextRef: this.buttonRef}
+                ]
+            );
+        } else if (this.props.coordinateType === 'hadec') {
+            field1 = this.fieldGen('ha', [{key: 'h', min: 0, max: 23, adornment: 'h', ref: this.one, nextRef: this.two},
                 {key: 'm', min: 0, max: 59, adornment: 'm', ref: this.two, nextRef: this.three},
                 {key: 's', min: 0, max: 59, adornment: 's', ref: this.three, nextRef: this.four}]);
             field2 = this.fieldGen('dec',
@@ -174,8 +193,12 @@ class CoordinatesInput extends React.Component {
             <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
                 <Grid item xs={4}/>
                 <Grid item xs={4}>
-                    <TToggle offLabel="RA/Dec" onLabel="Alt/Az" checked={this.props.coordinateType === 'altaz'}
-                             onChange={this.props.onTypeChange}/>
+                    <Select value={this.props.coordinateType} onChange={this.props.onTypeChange}>
+                        <MenuItem value="tete">RA/Dec JNow</MenuItem>
+                        <MenuItem value="icrs">RA/Dec J2000</MenuItem>
+                        <MenuItem value="altaz">Alt/Az</MenuItem>
+                        <MenuItem value="hadec">HA/Dec</MenuItem>
+                    </Select>
                 </Grid>
                 <Grid item xs={4}/>
                 <Grid item xs={2}>
@@ -189,7 +212,8 @@ class CoordinatesInput extends React.Component {
                 <Grid item xs={3}>
                 </Grid>
                 <Grid item xs={12} style={{textAlign: "center"}}>
-                    <Button variant="contained" color="primary" buttonRef={this.buttonRef} onClick={this.handleClick}>Slew/Sync</Button>
+                    <Button variant="contained" color="primary" buttonRef={this.buttonRef}
+                            onClick={this.handleClick}>Slew/Sync</Button>
                 </Grid>
             </Grid>
             {calibration_table}

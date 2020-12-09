@@ -62,7 +62,7 @@ class SlewLimitsSettings extends React.Component {
     }
 
     handleModelChange(e) {
-        state.slewlimit.model = modelMap[parseInt(e.target.value)];
+        state.slewlimit.model = modelMap[~~(e.target.value)];
     }
 
     handleSlewBelowHorizonChange(e) {

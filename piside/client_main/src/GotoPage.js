@@ -18,12 +18,8 @@ class ManualPage extends React.Component {
         state.goto.option = value;
     }
 
-    handleTypeChange(event, checked) {
-        if (checked) {
-            state.goto.coordinates.type = 'altaz';
-        } else {
-            state.goto.coordinates.type = 'radec';
-        }
+    handleTypeChange(e) {
+        state.goto.coordinates.frame = e.target.value;
     }
 
     render() {
@@ -33,7 +29,7 @@ class ManualPage extends React.Component {
             option = <ObjectSearch/>;
         } else if (state.goto.option === 'coordinates') {
             option =
-                <CoordinatesInput coordinateType={state.goto.coordinates.type} onTypeChange={this.handleTypeChange}/>;
+                <CoordinatesInput coordinateType={state.goto.coordinates.frame} onTypeChange={this.handleTypeChange}/>;
         } else {
             option = <DebugStepsInput/>
         }

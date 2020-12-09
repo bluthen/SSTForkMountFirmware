@@ -36,7 +36,8 @@ import psutil
 # from sstutil import ProfileTimer as PT
 
 import datetime
-from astropy.coordinates import EarthLocation, SkyCoord
+from astropy.coordinates import EarthLocation, AltAz, TETE, ICRS
+from skyconv_hadec import HADec
 from astropy.time import Time as AstroTime
 import astropy.units as u
 import math
@@ -86,7 +87,7 @@ encoder_logging_clear = False
 encoder_logging_interval = None
 
 # Last sync or slew info, if tracking sets radec, else altaz.
-last_slew = {'radec': None, 'altaz': None}
+last_slew = {'tete': None, 'icrs': None, 'radec': None, 'altaz': None}
 
 pointing_logger = settings.get_logger('pointing')
 
@@ -98,25 +99,20 @@ def set_last_slew(coord, obstime=None):
         obstime = AstroTime.now()
     with set_last_slew_lock:
         if not coord:
-            last_slew['radec'] = None
+            last_slew['tete'] = None
             last_slew['altaz'] = None
         else:
-            if hasattr(coord, 'ra'):
-                if settings.runtime_settings['tracking']:
-                    last_slew['radec'] = coord
-                    last_slew['altaz'] = None
-                else:
-                    altaz = skyconv.icrs_to_altaz(coord, obstime=obstime, atmo_refraction=True)
-                    last_slew['radec'] = None
-                    last_slew['altaz'] = altaz
+            if settings.runtime_settings['tracking']:
+                tete = skyconv.to_tete(coord, overwrite_time=True)
+                icrs = skyconv.to_icrs(tete)
+                last_slew['tete'] = tete
+                last_slew['icrs'] = icrs
+                last_slew['altaz'] = None
             else:
-                if settings.runtime_settings['tracking']:
-                    icrs = skyconv.altaz_to_icrs(coord, obstime=obstime, atmo_refraction=True)
-                    last_slew['radec'] = icrs
-                    last_slew['altaz'] = None
-                else:
-                    last_slew['radec'] = None
-                    last_slew['altaz'] = coord
+                altaz = skyconv.to_altaz(coord)
+                last_slew['tete'] = None
+                last_slew['icrs'] = None
+                last_slew['altaz'] = altaz
 
 
 sls_debounce = None
@@ -146,14 +142,7 @@ def sync(coord):
     obstime = AstroTime.now()
     with set_last_slew_lock:
         set_last_slew(coord, obstime=obstime)
-        if hasattr(coord, 'ra'):
-            coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=True)
-        elif hasattr(coord, 'alt'):
-            # print(coord)
-            coord = skyconv.altaz_to_icrs(coord, obstime=obstime, atmo_refraction=False)
-            # print(coord)
-            coord = skyconv.icrs_to_hadec(coord, obstime=obstime, atmo_refraction=False)
-            # print(coord)
+        hadec = skyconv.to_hadec(coord, obstime=obstime)
 
         if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
                 skyconv.model_real_stepper.size() > 0:
@@ -161,14 +150,14 @@ def sync(coord):
                                                    frame=skyconv.model_real_stepper.frame(), inverse_model=True,
                                                    obstime=obstime)
             if skyconv.model_real_stepper.frame() == 'hadec':
-                skyconv.model_real_stepper.add_point(coord, stepper_coord)
+                skyconv.model_real_stepper.add_point(hadec, stepper_coord)
             else:  # AltAz model frame
-                print(coord, stepper_coord)
-                coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
-                skyconv.model_real_stepper.add_point(coord, stepper_coord)
+                print(hadec, stepper_coord)
+                altaz = skyconv.to_altaz(hadec)
+                skyconv.model_real_stepper.add_point(altaz, stepper_coord)
         else:
             park_sync = False
-            sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': coord}
+            sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': hadec}
             print('Setting sync_info', sync_info)
             settings.runtime_settings['sync_info'] = sync_info
             if settings.settings['pointing_model'] in ['single', 'buie']:
@@ -176,20 +165,20 @@ def sync(coord):
                 if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
                     skyconv.model_real_stepper = pointing_model.PointingModelBuie()
                 skyconv.model_real_stepper.clear()
-                skyconv.model_real_stepper.add_point(coord, coord)
+                skyconv.model_real_stepper.add_point(hadec, hadec)
             else:  # affine model
                 print('affine sync')
                 if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelAffine):
                     skyconv.model_real_stepper = pointing_model.PointingModelAffine()
-                coord = skyconv.hadec_to_altaz(coord, obstime=obstime)
+                altaz = skyconv.to_altaz(hadec)
                 skyconv.model_real_stepper.clear()
-                skyconv.model_real_stepper.add_point(coord, coord)
+                skyconv.model_real_stepper.add_point(altaz, altaz)
 
 
 def slew(coord, parking=False):
     """
     Slews after going through model
-    :param coord: RADec or AltAz astropy.coordinates or dictionary with
+    :param coord: HaDec, ICRS, TETE, AltAz astropy.coordinates or dictionary with ha, dec steps
     :param parking: True if parking slew
     :return:
     """
@@ -199,6 +188,7 @@ def slew(coord, parking=False):
         raise NotSyncedException('Not Synced')
     settings.not_parked()
     cancel_slew = True
+    # If not TETE altaz or step lets make this ICRS so it recalculated every loop
     thread = threading.Thread(target=move_to_coord_threadf, args=(coord, parking))
     thread.start()
 
@@ -209,8 +199,12 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
         need_step_position = {'ha': wanted_skycoord['ha'], 'dec': wanted_skycoord['dec']}
         close_enough = 0
         steps = True
+    elif wanted_skycoord.name in ['hadec', 'altaz']:
+        need_step_position = skyconv.to_steps(wanted_skycoord)
+        close_enough = 0
+        steps = True
     else:
-        need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
+        need_step_position = skyconv.to_steps(wanted_skycoord)
     count = 0
     close_timer = None
     while not cancel_slew:
@@ -219,7 +213,7 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             break
         count += 1
         if not steps and count != 1 and not parking:
-            need_step_position = skyconv.coord_to_steps(wanted_skycoord, atmo_refraction=True)
+            need_step_position = skyconv.to_steps(wanted_skycoord)
         status = calc_status(stepper.get_status())
 
         if axis == 'ra':
@@ -229,7 +223,7 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             delta = need_step_position['dec'] - status['dep']
             status_pos_key = 'dep'
 
-        if abs(round(delta)) <= 10.0*close_enough and close_timer is None:
+        if abs(round(delta)) <= 10.0 * close_enough and close_timer is None:
             close_timer = time.time()
 
         if abs(round(delta)) <= close_enough:
@@ -377,7 +371,8 @@ class SimpleInterval:
         self._func()
 
 
-def below_horizon_limit(altaz, radec):
+# TODO: Should we really use hadec instead of tete for dec?
+def below_horizon_limit(altaz, tete):
     """
     If horizon limit is enabled and earth location is set, it will set if coordinates are below the horizon limits set.
     :param altaz: SkyCoord in altaz frame.
@@ -387,7 +382,7 @@ def below_horizon_limit(altaz, radec):
     """
     az = altaz.az.deg
     alt = altaz.alt.deg
-    dec = radec.dec.deg
+    dec = tete.dec.deg
     if settings.settings['horizon_limit_enabled']:
         dec_gt = settings.settings['horizon_limit_dec']['greater_than']
         dec_lt = settings.settings['horizon_limit_dec']['less_than']
@@ -433,13 +428,9 @@ def slewtocheck(skycoord):
     """
     if skycoord is None:
         return False
-    if hasattr(skycoord, 'ra'):
-        altaz = skyconv.icrs_to_altaz(skycoord, atmo_refraction=True)
-        radec = skycoord
-    else:  # already AltAz
-        altaz = skycoord
-        radec = skyconv.altaz_to_icrs(skycoord, atmo_refraction=True)
-    if below_horizon_limit(altaz, radec):
+    tete = skyconv.to_tete(skycoord)
+    altaz = skyconv.to_altaz(skycoord)
+    if below_horizon_limit(altaz, tete):
         return False
     else:
         return True
@@ -480,7 +471,7 @@ def update_location():
     settings.runtime_settings['earth_location_set'] = True
     settings.runtime_settings['earth_location'] = el
     if do_altaz_sync:
-        set_sync(alt=alt, az=az)
+        set_sync(alt=alt, az=az, frame='altaz')
     try:
         settings.runtime_settings['last_locationtz'] = TimezoneFinder().timezone_at(lng=el.lon.deg, lat=el.lat.deg)
     except:
@@ -581,7 +572,7 @@ def get_cpustats():
     tempf = 32 + tempc * 9. / 5
     load_percent = psutil.cpu_percent()
     tot_m, used_m, free_m = map(int, os.popen('/usr/bin/free -t -m').readlines()[-1].split()[1:])
-    memory_percent_usage = 100*float(used_m)/tot_m
+    memory_percent_usage = 100 * float(used_m) / tot_m
     ret['tempc'] = tempc
     ret['tempf'] = tempf
     ret['load_percent'] = load_percent
@@ -603,44 +594,55 @@ def send_status():
     status['az'] = None
     status['hostname'] = socket.gethostname()
     status['started_parked'] = settings.runtime_settings['started_parked']
-    status['time'] = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
     st = skyconv.get_sidereal_time(earth_location=settings.runtime_settings['earth_location']).hms
     status['sidereal_time'] = '%02d:%02d:%02d' % (int(st.h), int(st.m), int(st.s))
     status['time_been_set'] = settings.runtime_settings['time_been_set']
     status['synced'] = settings.runtime_settings['sync_info'] is not None
     status['cpustats'] = get_cpustats()
-    if not handpad_server.handpad_server:  #If server has not started yet
+    if not handpad_server.handpad_server:  # If server has not started yet
         status['handpad'] = False
     else:
         status['handpad'] = handpad_server.handpad_server.serial is not None
     if status['synced']:
         obstime = AstroTime.now()
         with set_last_slew_lock:
-            if slewing or (settings.runtime_settings['tracking'] and not last_slew['radec']) or (
+            if slewing or (settings.runtime_settings['tracking'] and not last_slew['tete']) or (
                     not settings.runtime_settings['tracking'] and not last_slew['altaz']):
                 # TODO: If this takes a long time, we should do this in another thread and use the last time we did it.
-                radec = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']}, frame='icrs',
-                                               obstime=obstime,
-                                               atmo_refraction=True, inverse_model=True)
+                icrs = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']}, frame='icrs',
+                                              obstime=obstime, inverse_model=True)
+                tete = skyconv.to_tete(icrs, obstime=obstime)
+                hadec = skyconv.to_hadec(icrs, obstime=obstime)
                 # print('After steps_to_coord', radec)
-                altaz = skyconv.icrs_to_altaz(radec, obstime=obstime, atmo_refraction=True)
+                altaz = skyconv.to_altaz(tete)
                 if not slewing:
-                    set_last_slew(radec, obstime=obstime)
+                    set_last_slew(tete, obstime=obstime)
             else:
                 # Use last slew data if tracking
                 if settings.runtime_settings['tracking']:
-                    radec = last_slew['radec']
-                    altaz = skyconv.icrs_to_altaz(radec, obstime=obstime, atmo_refraction=True)
+                    tete = last_slew['tete']
+                    icrs = skyconv.to_icrs(tete)
+                    hadec = skyconv.to_hadec(icrs, obstime=obstime)
+                    altaz = skyconv.to_altaz(icrs, obstime=obstime)
                 else:
                     altaz = last_slew['altaz']
-                    radec = skyconv.altaz_to_icrs(altaz, obstime=obstime, atmo_refraction=True)
-        status['ra'] = radec.ra.deg
-        status['dec'] = radec.dec.deg
+                    icrs = skyconv.to_icrs(altaz)
+                    tete = skyconv.to_tete(icrs, obstime=obstime)
+                    hadec = skyconv.to_hadec(icrs, obstime=obstime)
+        status['ra'] = tete.ra.deg
+        status['dec'] = tete.dec.deg
+        status['tete_ra'] = tete.ra.deg
+        status['tete_dec'] = tete.dec.deg
+        status['icrs_ra'] = icrs.ra.deg
+        status['icrs_dec'] = icrs.dec.deg
+        status['hadec_ha'] = hadec.ha.deg
+        status['hadec_dec'] = hadec.dec.deg
+        status['time'] = obstime.iso+'Z'
         # print('earth_location', settings.runtime_settings['earth_location'])
         status['alt'] = altaz.alt.deg
         status['az'] = altaz.az.deg
         # if settings.runtime_settings['earth_location_set']:
-        below_horizon = below_horizon_limit(altaz, radec)
+        below_horizon = below_horizon_limit(altaz, tete)
         if below_horizon and settings.runtime_settings['tracking']:
             cancel_slew = True
             settings.runtime_settings['tracking'] = False
@@ -708,27 +710,20 @@ def init():
     stepper = stepper_control.StepperControl(settings.settings['microserial']['port'],
                                              settings.settings['microserial']['baud'])
     skyconv.model_real_stepper = pointing_model.PointingModelBuie()
-    #TODO: Lets get time/location from GPS if we can
+    # TODO: Lets get time/location from GPS if we can
     update_location()
     micro_update_settings()
 
-    if settings.settings['park_position'] and settings.runtime_settings['earth_location_set'] and \
-            settings.last_parked():
+    frame_args = skyconv.get_frame_init_args('altaz')
+    if settings.settings['park_position']:
         settings.runtime_settings['started_parked'] = True
-        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
-                         obstime=AstroTime.now(),
-                         location=settings.runtime_settings['earth_location']).icrs
-    elif settings.settings['park_position']:
-        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz',
-                         obstime=AstroTime.now(),
-                         location=settings.runtime_settings['earth_location']).icrs
+        altaz = AltAz(alt=settings.settings['park_position']['alt'] * u.deg,
+                      az=settings.settings['park_position']['az'] * u.deg, **frame_args)
+        coord = skyconv.to_icrs(altaz)
     else:
-        coord = SkyCoord(alt=DEFAULT_PARK['alt'] * u.deg,
-                         az=DEFAULT_PARK['az'] * u.deg, frame='altaz',
-                         obstime=AstroTime.now(),
-                         location=settings.runtime_settings['earth_location']).icrs
+        altaz = AltAz(alt=DEFAULT_PARK['alt'] * u.deg,
+                      az=DEFAULT_PARK['az'] * u.deg, frame='altaz', **frame_args)
+        coord = skyconv.to_icrs(altaz)
     settings.not_parked()
     sync(coord)
     park_sync = True
@@ -882,9 +877,11 @@ def clear_sync():
     """
     global park_sync
     if settings.runtime_settings['tracking']:
-        scord = SkyCoord(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, frame='icrs')
+        frame_args = skyconv.get_frame_init_args('tete')
+        scord = TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg ** frame_args)
     else:
-        scord = SkyCoord(alt=last_status['alt'] * u.deg, az=last_status['az'] * u.deg, frame='altaz')
+        frame_args = skyconv.get_frame_init_args('altaz')
+        scord = AltAz(alt=last_status['alt'] * u.deg, az=last_status['az'] * u.deg, **frame_args)
     pointing_logger.debug(json.dumps({'func': 'control.clear_sync'}))
     park_sync = True
     sync(scord)
@@ -898,7 +895,7 @@ def stop_tracking():
     """
     settings.runtime_settings['tracking'] = False
     stepper.set_speed_ra(0)
-    set_last_slew(last_slew['radec'])
+    set_last_slew(last_slew['tete'])
 
 
 def start_tracking():
@@ -914,12 +911,13 @@ def start_tracking():
 
 def park_scope():
     stop_tracking()
+    frame_args = skyconv.get_frame_init_args('altaz')
     if not settings.settings['park_position']:
-        coord = SkyCoord(alt=DEFAULT_PARK['alt'] * u.deg,
-                         az=DEFAULT_PARK['az'] * u.deg, frame='altaz')
+        coord = AltAz(alt=DEFAULT_PARK['alt'] * u.deg,
+                      az=DEFAULT_PARK['az'] * u.deg, **frame_args)
     else:
-        coord = SkyCoord(alt=settings.settings['park_position']['alt'] * u.deg,
-                         az=settings.settings['park_position']['az'] * u.deg, frame='altaz')
+        coord = AltAz(alt=settings.settings['park_position']['alt'] * u.deg,
+                      az=settings.settings['park_position']['az'] * u.deg, **frame_args)
     slew(coord, parking=True)
 
 
@@ -933,7 +931,7 @@ def ntp_syncer():
         return
     now = datetime.datetime.now()
     lastnow = datetime.datetime.now()
-    while (now-lastnow).total_seconds() < 3600:
+    while (now - lastnow).total_seconds() < 3600:
         alt = last_status['alt']
         az = last_status['az']
         lastnow = now
@@ -1000,7 +998,7 @@ def set_location(lat, long, elevation, name):
     settings.write_settings(settings.settings)
 
 
-def set_sync(ra=None, dec=None, alt=None, az=None):
+def set_sync(ra=None, dec=None, alt=None, az=None, ha=None, frame='icrs'):
     """
     Sync the mount to coordinates using ra-dec or alt-az.
     :param ra: RA in degrees
@@ -1012,9 +1010,17 @@ def set_sync(ra=None, dec=None, alt=None, az=None):
     :return:
     """
     if alt is not None and az is not None:
-        coord = SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz')
+        frame_args = skyconv.get_frame_init_args('altaz')
+        coord = AltAz(alt=alt * u.deg, az=az * u.deg, **frame_args)
     elif ra is not None and dec is not None:
-        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        if frame == 'icrs':
+            coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
+        else:  # TETE JNow
+            frame_args = skyconv.get_frame_init_args('tete')
+            coord = TETE(ra=ra * u.deg, dec=dec * u.deg, **frame_args)
+    elif ha is not None:
+        frame_args = skyconv.get_frame_init_args('hadec')
+        coord = HADec(ha=ha*u.deg, dec=dec*u.deg, **frame_args)
     else:
         raise Exception('Missing Coordinates')
     if settings.runtime_settings['calibration_logging'] and len(calibration_log) > 0:
@@ -1023,7 +1029,7 @@ def set_sync(ra=None, dec=None, alt=None, az=None):
     return skyconv.model_real_stepper.size()
 
 
-def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None, parking=False):
+def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None, parking=False, ha=None, frame='icrs'):
     """
     Slew to ra-dec, alt-az or, ra_steps-dec_steps.
     :param ra: RA in degrees
@@ -1042,18 +1048,27 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
         slew({'ha': ra_steps, 'dec': dec_steps})
         return
     elif alt is not None and az is not None:
-        coord = SkyCoord(alt=float(alt) * u.deg, az=float(az) * u.deg, frame='altaz')
+        frame_args = skyconv.get_frame_init_args('altaz')
+        coord = AltAz(alt=float(alt) * u.deg, az=float(az) * u.deg, **frame_args)
+    elif ha is not None:
+        frame_args = skyconv.get_frame_init_args('hadec')
+        coord = HADec(ha=ha*u.deg, dec=dec*u.deg, **frame_args)
     else:
         ra = float(ra)
         dec = float(dec)
-        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
+        if frame == 'icrs':
+            coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
+        else:
+            frame_args = skyconv.get_frame_init_args('tete')
+            coord = TETE(ra=ra * u.deg, dec=dec * u.deg, **frame_args)
     if not slewtocheck(coord):
         # print('NNNNNNNNNNNNNNNNNNNNNNNOOOOOOOOOOOOOOOOOTTTT')
         raise Exception('Slew position is below horizon or in keep-out area.')
     else:
         if settings.runtime_settings['calibration_logging']:
+            frame_args = skyconv.get_frame_init_args('tete', obstime=last_status['obstime'])
             calibration_log.append({
-                'slewfrom': SkyCoord(ra=last_status['ra']*u.deg, dec=last_status['dec']*u.deg, frame='icrs'),
+                'slewfrom': TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, **frame_args),
                 'slewto': coord})
         slew(coord, parking)
 
@@ -1074,8 +1089,9 @@ def set_park_position_here():
     Sets current position to park position.
     """
     if settings.runtime_settings['tracking']:
-        coord = SkyCoord(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, frame='icrs')
-        altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
+        frame_args = skyconv.get_frame_init_args('tete', obstime=last_status['obstime'])
+        coord = TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, **frame_args)
+        altaz = skyconv.to_altaz(coord)
         settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
     else:
         settings.settings['park_position'] = {'alt': last_status['alt'], 'az': last_status['az']}

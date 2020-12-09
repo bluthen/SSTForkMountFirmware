@@ -242,7 +242,7 @@ class NetworkSettings extends React.Component {
     }
 
     handleChannelChange(e) {
-        let channel = parseInt(e.currentTarget.value);
+        let channel = ~~(e.currentTarget.value);
         if (channel >= 1 && channel <= 12) {
             state.network.channel = channel;
         }

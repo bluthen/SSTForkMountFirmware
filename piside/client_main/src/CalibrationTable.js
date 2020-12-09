@@ -211,7 +211,7 @@ class CalibrationTable extends React.Component {
             state.calibrationTable.table_select.replace(Array.from(Array(state.calibrationTable.table_data.length).keys()));
         }
         const checked = event.target.checked;
-        const idx = parseInt(event.target.value, 10);
+        const idx = ~~(event.target.value);
         if (!state.calibrationTable.table_select.includes(idx) && checked) {
             state.calibrationTable.table_select.push(idx);
         } else {

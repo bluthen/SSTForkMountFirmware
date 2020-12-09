@@ -207,10 +207,10 @@ class LX200Client:
         elif cmd == ':CM#':
             # Sychronize with current selected object coords PRIORITY DONE
             if target['ra'] and target['dec']:
-                control.set_sync(ra=target['ra'], dec=target['dec'])
+                control.set_sync(ra=target['ra'], dec=target['dec'], frame='tete')
                 self.write(b'M31 EX GAL MAG 3.5 SZ178.0\'#')
             elif target['alt'] and target['az']:
-                control.set_sync(alt=target['alt'], dec=target['az'])
+                control.set_sync(alt=target['alt'], dec=target['az'], frame='altaz')
                 self.write(b'M31 EX GAL MAG 3.5 SZ178.0\'#')
         elif cmd[1] == 'G':
             if cmd == ':Ga#':  # Get Local Telescope Time in 12 Hour Format
@@ -228,7 +228,7 @@ class LX200Client:
                 self.write(b'24#')
             elif cmd == ':GD#':  # Telescope Declination PRIORITY DONE
                 # self.write(b'sDD*MM\'SS#')
-                self.write(dec_format(control.last_status['dec']).encode())
+                self.write(dec_format(control.last_status['tete_dec']).encode())
             elif cmd == ':Gd#':  # Currently selected target dec
                 # TODO: Get slewto object
                 self.write(b'sDD*MM\'SS#')
@@ -276,7 +276,7 @@ class LX200Client:
             elif cmd == ':GR#':  # telescope RA PRIORITY DONE
                 # self.write(b'HH:MM:SS#')
                 control.set_alive(self.client_id)
-                self.write(ra_format(control.last_status['ra']).encode())
+                self.write(ra_format(control.last_status['tete_ra']).encode())
             elif cmd == ':Gr#':  # current target RA
                 self.write(b'HH:MM:SS#')
             elif cmd == ':GS#':  # get sidereal time
@@ -352,10 +352,10 @@ class LX200Client:
                 # 0 slew is possible, 1<string># object below string, 2<string># object higher
                 try:
                     if target['ra'] and target['dec']:
-                        control.set_slew(ra=target['ra'], dec=target['dec'])
+                        control.set_slew(ra=target['ra'], dec=target['dec'], frame='tete')
                         slew_commanded()
                     elif target['alt'] and target['az']:
-                        control.set_slew(alt=target['alt'], az=target['az'])
+                        control.set_slew(alt=target['alt'], az=target['az'], frame='altaz')
                         slew_commanded()
                     else:
                         self.write(b'1Unable to slew#')

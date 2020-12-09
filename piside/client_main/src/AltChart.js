@@ -11,7 +11,7 @@ class AltChart extends React.Component {
     }
 
     componentDidMount() {
-        APIHelp.getAltitudeData(this.props.ra, this.props.dec, this.props.alt, this.props.az).then((data) => {
+        APIHelp.getAltitudeData(this.props.wanted).then((data) => {
             this.setState({data: data});
         })
     }

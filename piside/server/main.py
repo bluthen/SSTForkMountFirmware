@@ -16,7 +16,8 @@ import zipfile
 from functools import wraps, update_wrapper
 
 import astropy.units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import ICRS, TETE, AltAz
+from skyconv_hadec import HADec
 from astropy.utils import iers
 from flask import Flask, redirect, jsonify, request, make_response, url_for, send_from_directory
 from flask_compress import Compress
@@ -33,7 +34,6 @@ import skyconv
 
 iers.conf.auto_download = False
 iers.auto_max_age = None
-
 
 avahi_process = None
 
@@ -134,7 +134,8 @@ def settings_get():
 @app.route('/api/settings_dl')
 @nocache
 def settings_dl_get():
-    return send_from_directory(directory='./', filename='settings.json', as_attachment=True, attachment_filename='ssteq25_settings.json')
+    return send_from_directory(directory='./', filename='settings.json', as_attachment=True,
+                               attachment_filename='ssteq25_settings.json')
 
 
 @app.route('/api/settings_dl', methods=['POST'])
@@ -144,7 +145,7 @@ def settings_dl_post():
     with tempfile.TemporaryFile(suffix='.json') as tfile:
         file.save(tfile)
         tfile.seek(0)
-        json.load(tfile) # just to check it is at least a json
+        json.load(tfile)  # just to check it is at least a json
         tfile.seek(0)
         settings.copy_settings(tfile)
     if not settings.is_simulation():
@@ -172,7 +173,8 @@ def logger_get():
     logger_name = request.args.get('name')
     if logger_name == 'pointing':
         pointing_logger.handlers[0].flush()
-        return send_from_directory(os.path.join(os.path.expanduser('~'), 'logs'), 'pointing.log', as_attachment=True, attachment_filename='pointing_log.txt')
+        return send_from_directory(os.path.join(os.path.expanduser('~'), 'logs'), 'pointing.log', as_attachment=True,
+                                   attachment_filename='pointing_log.txt')
     elif logger_name == 'calibration':
         ret = []
         for row in control.calibration_log:
@@ -187,7 +189,8 @@ def logger_get():
     elif logger_name == 'encoder':
         if control.encoder_logging_enabled:
             control.encoder_logging_file.flush()
-        return send_from_directory(os.path.join(os.path.expanduser('~'), 'logs'), 'stepper_encoder.csv', as_attachment=True,
+        return send_from_directory(os.path.join(os.path.expanduser('~'), 'logs'), 'stepper_encoder.csv',
+                                   as_attachment=True,
                                    attachment_filename='stepper_encoder.csv')
 
 
@@ -357,6 +360,7 @@ def settings_network_wifi():
             subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
             subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
             subprocess.run(['sudo', '/usr/bin/autohotspot'])
+
         t1 = threading.Thread(target=reconnect)
         t1.start()
     return "Updated Wifi Settings", 200
@@ -381,6 +385,7 @@ def wifi_connect_delete():
         def reconnect():
             if not settings.is_simulation():
                 subprocess.run(['sudo', '/usr/bin/autohotspot'])
+
         t1 = threading.Thread(target=reconnect)
         t1.start()
     return 'Removed', 200
@@ -438,6 +443,7 @@ def wifi_connect():
         if not settings.is_simulation():
             subprocess.run(['sudo', '/sbin/wpa_cli', '-i', 'wlan0', 'reconfigure'])
             subprocess.run(['sudo', '/usr/bin/autohotspot'])
+
     t1 = threading.Thread(target=reconnect)
     t1.start()
     return 'Connecting...', 200
@@ -494,18 +500,8 @@ def clear_sync():
 @nocache
 def do_sync():
     reqj = request.json
-    ra = reqj.get('ra', None)
-    dec = reqj.get('dec', None)
-    alt = reqj.get('alt', None)
-    az = reqj.get('az', None)
-    if alt is not None and az is not None:
-        alt = float(alt)
-        az = float(az)
-    else:
-        ra = float(ra)
-        dec = float(dec)
     try:
-        size = control.set_sync(ra, dec, alt, az)
+        size = control.set_sync(**reqj)
     except Exception as e:
         traceback.print_tb(e)
         return str(e), 400
@@ -530,23 +526,8 @@ def post_sync():
 @nocache
 def do_slewto():
     reqj = request.json
-    ra = reqj.get('ra')
-    dec = reqj.get('dec')
-    alt = reqj.get('alt')
-    az = reqj.get('az')
-    ra_steps = reqj.get('ra_steps')
-    dec_steps = reqj.get('dec_steps')
     try:
-        if ra_steps is not None and dec_steps is not None:
-            control.set_slew(ra_steps=int(ra_steps), dec_steps=int(dec_steps))
-        elif alt is not None and az is not None:
-            alt = float(alt)
-            az = float(az)
-            control.set_slew(alt=alt, az=az)
-        else:
-            ra = float(ra)
-            dec = float(dec)
-            control.set_slew(ra=ra, dec=dec)
+        control.set_slew(**reqj)
     except Exception as e:
         return str(e), 400
     return 'Slewing', 200
@@ -556,10 +537,15 @@ def do_slewto():
 @nocache
 def do_slewtocheck():
     reqj = request.json
+    frame = reqj.get('frame')
     ra = float(reqj.get('ra'))
     dec = float(reqj.get('dec', None))
-    radec = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    return jsonify({'slewcheck': control.slewtocheck(radec)})
+    if frame == 'tete':
+        frame_args = skyconv.get_frame_init_args('tete')
+        coord = TETE(ra=ra * u.deg, dec=dec * u.deg, **frame_args)
+    else:
+        coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
+    return jsonify({'slewcheck': control.slewtocheck(coord)})
 
 
 @app.route('/api/slewto', methods=['DELETE'])
@@ -622,15 +608,26 @@ def stop_tracking():
 @nocache
 def altitude_data():
     reqj = request.json
-    if reqj.get('ra'):
+    frame = reqj.get('frame')
+    obstime = reqj['times']
+    if frame in ['tete', 'icrs']:
         ra = reqj['ra']
         dec = reqj['dec']
-        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    else:
-        alt = reqj['alt']
-        az = reqj['az']
-        coord = skyconv.altaz_to_icrs(SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz'))
-    altazes = skyconv.icrs_to_altaz(coord, atmo_refraction=True, obstime=reqj['times'])
+        if frame == 'tete':
+            frame_args = skyconv.get_frame_init_args('tete', obstime=obstime[0])
+            coord = TETE(ra=ra * u.deg, dec=dec * u.deg, **frame_args)
+            coord = skyconv.to_icrs(coord)
+        else:  # ICRS
+            coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
+    elif frame == 'hadec':
+        frame_args = skyconv.get_frame_init_args('hadec', obstime=obstime[0])
+        coord = HADec(ha=reqj['ha'], dec=reqj['dec'], **frame_args)
+        coord = skyconv.to_icrs(coord)
+    else:  # AltAz
+        frame_args = skyconv.get_frame_init_args('altaz', obstime=obstime[0])
+        coord = AltAz(alt=reqj['alt'] * u.deg, az=reqj['az'] * u.deg, **frame_args)
+        coord = skyconv.to_icrs(coord)
+    altazes = skyconv.to_altaz(coord, obstime=obstime)
     return jsonify(altazes.alt.deg.tolist())
 
 
@@ -638,17 +635,29 @@ def altitude_data():
 @nocache
 def conver_coord():
     reqj = request.json
-    if reqj.get('ra'):
+    frame = reqj.get('frame')
+    if frame in ['icrs', 'tete']:
         ra = reqj['ra']
         dec = reqj['dec']
-        coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-        altaz = skyconv.icrs_to_altaz(coord, atmo_refraction=True)
-        return jsonify({'alt': altaz.alt.deg, 'az': altaz.az.deg})
+        if frame == 'tete':
+            frame_args = skyconv.get_frame_init_args('tete')
+            coord = TETE(ra=ra * u.deg, dec=dec * u.deg, **frame_args)
+        else:
+            coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
+    elif frame == 'hadec':
+        frame_args = skyconv.get_frame_init_args('hadec')
+        coord = HADec(ha=reqj['ha'] * u.deg, dec=reqj['dec'] * u.deg, **frame_args)
     else:
-        alt = reqj['alt']
-        az = reqj['az']
-        coord = skyconv.altaz_to_icrs(SkyCoord(alt=alt * u.deg, az=az * u.deg, frame='altaz'))
-        return jsonify({'ra': coord.ra.deg, 'dec': coord.dec.deg})
+        frame_args = skyconv.get_frame_init_args('altaz')
+        coord = AltAz(alt=reqj['alt'] * u.deg, az=reqj['az'] * u.deg, **frame_args)
+    icrs = skyconv.to_icrs(coord)
+    hadec = skyconv.to_hadec(icrs)
+    altaz = skyconv.to_altaz(icrs)
+    tete = skyconv.to_tete(icrs)
+    return jsonify({'icrs': {'ra': icrs.ra.deg, 'dec': icrs.dec.deg},
+                    'altaz': {'alt': altaz.alt.deg, 'az': altaz.az.deg},
+                    'tete': {'ra': tete.ra.deg, 'dec': tete.dec.deg},
+                    'hadec': {'ha': hadec.ha.deg, 'dec': hadec.dec.deg}})
 
 
 @app.route('/api/search_object', methods=['GET'])
@@ -657,7 +666,7 @@ def search_object():
     search = request.args.get('search', None)
     m = re.match(r'^([a-zA-Z]+)(\d+)$', search)
     if m:
-        search = m.group(1)+' '+m.group(2)
+        search = m.group(1) + ' ' + m.group(2)
     if not search:
         return
     planets = db.search_planets(search)
@@ -831,6 +840,7 @@ def main():
         subprocess.run(['sudo', '/root/ctrl_dnsmasq.py', 'wlan0', 'disable'])
         subprocess.run(['sudo', '/usr/bin/killall', 'hostapd'])
         subprocess.run(['sudo', '/usr/bin/autohotspot'])
+
     if not settings.is_simulation():
         t1 = threading.Thread(target=reconnect)
         t1.start()

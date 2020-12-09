@@ -25,13 +25,8 @@ class ObjectSearch extends React.Component {
 
     rowClicked(event, index) {
         const result = state.goto.object_search.results[index];
-        state.goto.objectdialog.radeg = result['ra'];
-        state.goto.objectdialog.decdeg = result['dec'];
-        state.goto.objectdialog.graphdata = [];
-        state.goto.objectdialog.ra = Formatting.degRA2Str(result['ra']);
-        state.goto.objectdialog.dec = Formatting.degDEC2Str(result['dec']);
-        state.goto.objectdialog.alt = Formatting.degDEC2Str(result['alt']);
-        state.goto.objectdialog.az = Formatting.degDEC2Str(result['az']);
+        state.goto.objectdialog.all_frames = null;
+        state.goto.objectdialog.wanted_coord = {frame: 'icrs', ra: result['ra'], dec: result['dec']}
         if (result.type !== 'planet') {
             state.goto.objectdialog.mag = result['mag'];
         } else {
@@ -109,7 +104,7 @@ class ObjectSearch extends React.Component {
                 <TableHead>
                     <TableRow>
                         <TableCell>Object Name</TableCell>
-                        <TableCell><TToggle offLabel="RA/Dec" onLabel="Alt/Az"
+                        <TableCell><TToggle offLabel="RA/Dec J2000" onLabel="Alt/Az"
                                             checked={state.goto.object_search.coord_display === 'altaz'}
                                             onChange={this.onCoordToggle}/></TableCell>
                     </TableRow>

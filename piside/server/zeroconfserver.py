@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 
-import logging
+import re
 import socket
-import sys
 from time import sleep
-import socket
-import netifaces
 
+import ifaddr
 from zeroconf import ServiceInfo, Zeroconf
+
 
 # avahi-publish-service ssteq25r _sstmount._tcp 5000 "/"
 
 
 def get_addresses():
     addresses = []
-    for iface in netifaces.interfaces():
+    adapters = ifaddr.get_adapters()
+    prog = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+    for adapter in adapters:
+        iface = adapter.nice_name
+        print(iface)
         if iface == 'lo':
             continue
-        naddresses = netifaces.ifaddresses(iface)
-        if netifaces.AF_INET in naddresses:
-            for a in naddresses[netifaces.AF_INET]:
-                address = a['addr']
-                if address:
-                    addresses.append(address)
+        for ip in adapter.ips:
+            address = ip.ip
+            if isinstance(address, str) and prog.match(address):
+                addresses.append(address)
     return addresses
 
 

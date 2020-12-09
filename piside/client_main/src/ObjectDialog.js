@@ -9,6 +9,9 @@ import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import AltChart from './AltChart';
 import APIHelp from './util/APIHelp';
+import {computed} from "mobx";
+import Formatting from "./util/Formatting";
+import LinearProgress from "@material-ui/core/LinearProgress";
 
 @observer
 class ObjectDialog extends React.Component {
@@ -18,17 +21,55 @@ class ObjectDialog extends React.Component {
         this.handleSyncClick = this.handleSyncClick.bind(this);
     }
 
+    @computed
+    get ICRSStr() {
+        if (state.goto.objectdialog.all_frames !== null) {
+            return Formatting.degRA2Str(state.goto.objectdialog.all_frames.icrs.ra) + '/' + Formatting.degDEC2Str(state.goto.objectdialog.all_frames.icrs.dec)
+        } else {
+            return <LinearProgress/>;
+        }
+    }
+
+    @computed
+    get TETEStr() {
+        if (state.goto.objectdialog.all_frames !== null) {
+            console.log(state.goto.objectdialog);
+            return Formatting.degRA2Str(state.goto.objectdialog.all_frames.tete.ra) + '/' + Formatting.degDEC2Str(state.goto.objectdialog.all_frames.tete.dec)
+        } else {
+            return <LinearProgress/>;
+        }
+    }
+
+    @computed
+    get HADecStr() {
+        if (state.goto.objectdialog.all_frames !== null) {
+            return Formatting.degRA2Str(state.goto.objectdialog.all_frames.hadec.ha) + '/' + Formatting.degDEC2Str(state.goto.objectdialog.all_frames.hadec.dec)
+        } else {
+            return <LinearProgress/>;
+        }
+    }
+
+    @computed
+    get altAzStr() {
+        if (state.goto.objectdialog.all_frames !== null) {
+            return Formatting.degDEC2Str(state.goto.objectdialog.all_frames.altaz.alt) + '/' + Formatting.degDEC2Str(state.goto.objectdialog.all_frames.altaz.az);
+        } else {
+            return <LinearProgress/>
+        }
+    }
+
+
     handleClose() {
         state.goto.objectdialog.shown = false;
     }
 
     handleSlewClick() {
-        APIHelp.slewTo({ra: state.goto.objectdialog.radeg, dec: state.goto.objectdialog.decdeg});
+        APIHelp.slewTo(state.goto.objectdialog.wanted_coord);
         this.handleClose();
     }
 
     handleSyncClick() {
-        APIHelp.sync({ra: state.goto.objectdialog.radeg, dec: state.goto.objectdialog.decdeg});
+        APIHelp.sync(state.goto.objectdialog.wanted_coord);
         this.handleClose();
     }
 
@@ -38,24 +79,43 @@ class ObjectDialog extends React.Component {
             <DialogContent>
                 <Grid container>
                     <Grid item xs={6}>
-                        <h3>RA/DEC</h3>
-                        {state.goto.objectdialog.ra}/{state.goto.objectdialog.dec}
+                        <b>RA/Dec (JNow):</b>
                     </Grid>
                     <Grid item xs={6}>
-                        <h3>Alt/Az</h3>
-                        {state.goto.objectdialog.alt}/{state.goto.objectdialog.az}
+                        {this.TETEStr}
                     </Grid>
                     <Grid item xs={6}>
-                        <h3>Magnitude</h3>
+                        <b>RA/Dec (J2000):</b>
+                    </Grid>
+                    <Grid item xs={6}>
+                        {this.ICRSStr}
+                    </Grid>
+                    <Grid item xs={6}>
+                        <b>Alt/Az:</b>
+                    </Grid>
+                    <Grid item xs={6}>
+                        {this.altAzStr}
+                    </Grid>
+                    <Grid item xs={6}>
+                        <b>HA/Dec:</b>
+                    </Grid>
+                    <Grid item xs={6}>
+                        {this.HADecStr}
+                    </Grid>
+                    <Grid item xs={6}>
+                        <b>Magnitude</b>
+                    </Grid>
+                    <Grid item xs={6}>
                         {state.goto.objectdialog.mag}
                     </Grid>
                     <Grid item xs={6}>
-                        <h3>Size</h3>
-                        {state.goto.objectdialog.size}
+                        <b>Size (minutes)</b>
+                    </Grid>
+                    <Grid item xs={6}>
+                        {state.goto.objectdialog.size || 'NA'}
                     </Grid>
                     <Grid item xs={12} textalign="center">
-                        <AltChart width={500} height={200} ra={state.goto.objectdialog.radeg}
-                                  dec={state.goto.objectdialog.decdeg} alt={null} az={null}/>
+                        <AltChart width={500} height={200} wanted={state.goto.objectdialog.wanted_coord}/>
                     </Grid>
                 </Grid>
             </DialogContent>

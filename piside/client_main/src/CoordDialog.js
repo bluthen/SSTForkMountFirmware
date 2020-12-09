@@ -28,9 +28,27 @@ class CoordDialog extends React.Component {
     }
 
     @computed
-    get RADecStr() {
-        if (state.goto.coorddialog.radeg !== null && state.goto.coorddialog.decdeg !== null) {
-            return Formatting.degRA2Str(state.goto.coorddialog.radeg) + '/' + Formatting.degDEC2Str(state.goto.coorddialog.decdeg)
+    get ICRSStr() {
+        if (state.goto.coorddialog.all_frames !== null) {
+            return Formatting.degRA2Str(state.goto.coorddialog.all_frames.icrs.ra) + '/' + Formatting.degDEC2Str(state.goto.coorddialog.all_frames.icrs.dec)
+        } else {
+            return <LinearProgress/>;
+        }
+    }
+
+    @computed
+    get TETEStr() {
+        if (state.goto.coorddialog.all_frames !== null) {
+            return Formatting.degRA2Str(state.goto.coorddialog.all_frames.tete.ra) + '/' + Formatting.degDEC2Str(state.goto.coorddialog.all_frames.tete.dec)
+        } else {
+            return <LinearProgress/>;
+        }
+    }
+
+    @computed
+    get HADecStr() {
+        if (state.goto.coorddialog.all_frames !== null) {
+            return Formatting.degRA2Str(state.goto.coorddialog.all_frames.hadec.ha) + '/' + Formatting.degDEC2Str(state.goto.coorddialog.all_frames.hadec.dec)
         } else {
             return <LinearProgress/>;
         }
@@ -38,28 +56,20 @@ class CoordDialog extends React.Component {
 
     @computed
     get altAzStr() {
-        if (state.goto.coorddialog.altdeg !== null && state.goto.coorddialog.azdeg !== null) {
-            return Formatting.degDEC2Str(state.goto.coorddialog.altdeg) + '/' + Formatting.degDEC2Str(state.goto.coorddialog.azdeg);
+        if (state.goto.coorddialog.all_frames !== null) {
+            return Formatting.degDEC2Str(state.goto.coorddialog.all_frames.altaz.alt) + '/' + Formatting.degDEC2Str(state.goto.coorddialog.all_frames.altaz.az);
         } else {
             return <LinearProgress/>
         }
     }
 
     handleSlewClick() {
-        if (state.goto.coordinates.type === 'radec') {
-            APIHelp.slewTo({ra: state.goto.coorddialog.radeg, dec: state.goto.coorddialog.decdeg});
-        } else {
-            APIHelp.slewTo({alt: state.goto.coorddialog.altdeg, az: state.goto.coorddialog.azdeg});
-        }
+        APIHelp.slewTo(state.goto.coorddialog.wanted_coord);
         this.handleClose();
     }
 
     handleSyncClick() {
-        if (state.goto.coordinates.type === 'radec') {
-            APIHelp.sync({ra: state.goto.coorddialog.radeg, dec: state.goto.coorddialog.decdeg});
-        } else {
-            APIHelp.sync({alt: state.goto.coorddialog.altdeg, az: state.goto.coorddialog.azdeg});
-        }
+        APIHelp.sync(state.goto.coorddialog.wanted_coord);
         this.handleClose();
     }
 
@@ -69,17 +79,31 @@ class CoordDialog extends React.Component {
             <DialogContent>
                 <Grid container>
                     <Grid item xs={6}>
-                        <h3>RA/DEC</h3>
-                        {this.RADecStr}
+                        <b>RA/Dec (JNow):</b>
                     </Grid>
                     <Grid item xs={6}>
-                        <h3>Alt/Az</h3>
+                        {this.TETEStr}
+                    </Grid>
+                    <Grid item xs={6}>
+                        <b>RA/Dec (J2000):</b>
+                    </Grid>
+                    <Grid item xs={6}>
+                        {this.ICRSStr}
+                    </Grid>
+                    <Grid item xs={6}>
+                        <b>Alt/Az:</b>
+                    </Grid>
+                    <Grid item xs={6}>
                         {this.altAzStr}
                     </Grid>
+                    <Grid item xs={6}>
+                        <b>HA/Dec:</b>
+                    </Grid>
+                    <Grid item xs={6}>
+                        {this.HADecStr}
+                    </Grid>
                     <Grid item xs={12}>
-                        <AltChart width={500} height={200} ra={state.goto.coorddialog.radeg}
-                                  dec={state.goto.coorddialog.decdeg} alt={state.goto.coorddialog.altdeg}
-                                  az={state.goto.coorddialog.azdeg}/>
+                        <AltChart width={500} height={200} wanted={state.goto.coorddialog.wanted_coord}/>
                     </Grid>
                 </Grid>
             </DialogContent>

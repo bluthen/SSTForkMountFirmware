@@ -7,8 +7,10 @@ import sys
 import scipy
 import scipy.optimize
 
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import AltAz
+from skyconv_hadec import HADec
 import astropy.units as u
+import skyconv
 
 pointing_logger = settings.get_logger('pointing')
 
@@ -45,7 +47,8 @@ def inverse_altaz_projection(xy_coord):
     elif r < 0.0:
         r = 0.0
     alt = 90.0 * (1.0 - r)
-    return SkyCoord(alt=alt, az=az, unit='deg', frame='altaz')
+    frame_args = skyconv.get_frame_init_args('altaz')
+    return AltAz(alt=alt*u.deg, az=az*u.deg, **frame_args)
 
 
 def alt_az_projection(altaz_coord):
@@ -213,27 +216,27 @@ class PointingModelBuie:
             if len(replace_idxex) > 0:
                 replace_idx = replace_idxex[0]
         if replace_idx is not None:
-            fra = self.__from_points.ra.deg
+            fra = self.__from_points.ha.deg
             fdec = self.__from_points.dec.deg
-            fra[replace_idx] = from_point.ra.deg
+            fra[replace_idx] = from_point.ha.deg
             fdec[replace_idx] = from_point.dec.deg
-            self.__to_points[replace_idx] = [to_point.ra.deg, to_point.dec.deg]
+            self.__to_points[replace_idx] = [to_point.ha.deg, to_point.dec.deg]
         else:
-            self.__to_points.append([to_point.ra.deg, to_point.dec.deg])
+            self.__to_points.append([to_point.ha.deg, to_point.dec.deg])
             if self.__from_points is not None:
-                fra = numpy.append(self.__from_points.ra.deg, from_point.ra.deg)
+                fra = numpy.append(self.__from_points.ha.deg, from_point.ha.deg)
                 fdec = numpy.append(self.__from_points.dec.deg, from_point.dec.deg)
             else:
-                fra = [from_point.ra.deg]
+                fra = [from_point.ha.deg]
                 fdec = [from_point.dec.deg]
-        self.__from_points = SkyCoord(ra=fra * u.deg, dec=fdec * u.deg, frame='icrs')
+        self.__from_points = HADec(ha=fra * u.deg, dec=fdec * u.deg)
 
         # Act just like single if number of points is only 1
         if len(self.__from_points) > 1:
             p0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             if len(self.__to_points) < len(p0):
                 p0 = p0[0:len(self.__to_points)]
-            xdata = numpy.array([self.__from_points.ra.deg, self.__from_points.dec.deg]).T
+            xdata = numpy.array([self.__from_points.ha.deg, self.__from_points.dec.deg]).T
             ydata = numpy.array(self.__to_points)
             # Default maxfev=800 fails in some unit tests
             result = scipy.optimize.leastsq(buie_model_error, numpy.array(p0), args=(xdata, ydata), full_output=True,
@@ -256,18 +259,19 @@ class PointingModelBuie:
             # print('buie_vals', self.__buie_vals)
             p0 = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
             p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals):]])
-            new_point = buie_model(numpy.array([[point.ra.deg, point.dec.deg]]), *p0)
-            return SkyCoord(ra=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg, frame='icrs')
+            new_point = buie_model(numpy.array([[point.ha.deg, point.dec.deg]]), *p0)
+            frame_args = skyconv.get_frame_init_args('hadec')
+            return HADec(ha=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg, **frame_args)
         else:
             return point
 
     def inverse_transform_point(self, point):
         if self.__buie_vals is not None:
             def our_func(coord):
-                new_point = self.transform_point(SkyCoord(ra=coord[0] * u.deg, dec=coord[1] * u.deg, frame='icrs'))
-                return (new_point.ra.deg - point.ra.deg) ** 2.0 + (new_point.dec.deg - point.dec.deg) ** 2.0
+                new_point = self.transform_point(HADec(ha=coord[0] * u.deg, dec=coord[1] * u.deg, frame='icrs'))
+                return (new_point.ha.deg - point.ha.deg) ** 2.0 + (new_point.dec.deg - point.dec.deg) ** 2.0
 
-            results = scipy.optimize.fmin(our_func, [point.ra.deg, point.dec.deg], disp=False, full_output=True,
+            results = scipy.optimize.fmin(our_func, [point.ha.deg, point.dec.deg], disp=False, full_output=True,
                                           maxfun=1600)
             inv_point = results[0]
             warnflag = results[4]
@@ -276,7 +280,8 @@ class PointingModelBuie:
                 print('WARNING: model failed, using single point model until successful. ', file=sys.stderr)
                 return point
             else:
-                return SkyCoord(ra=inv_point[0] * u.deg, dec=inv_point[1] * u.deg, frame='icrs')
+                frame_args = skyconv.get_frame_init_args('hadec')
+                return HADec(ha=inv_point[0] * u.deg, dec=inv_point[1] * u.deg, **frame_args)
         else:
             return point
 
@@ -365,7 +370,7 @@ class PointingModelAffine:
             else:
                 alt = [from_point.alt.deg]
                 az = [from_point.az.deg]
-        self.__from_points = SkyCoord(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg, frame='altaz')
+        self.__from_points = AltAz(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg)
 
         if self.__model == 'affine_all':
             if len(self.__sync_points) >= 3:
@@ -395,7 +400,8 @@ class PointingModelAffine:
             new_az = new_az - 360.0
         elif new_az < 0:
             new_az = 360 + new_az
-        to_point = SkyCoord(alt=new_alt, az=new_az, unit='deg', frame='altaz')
+        frame_args = skyconv.get_frame_init_args('altaz')
+        to_point = AltAz(alt=new_alt, az=new_az, unit='deg', **frame_args)
         if self.__log:
             pointing_logger.debug(json.dumps(
                 {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
