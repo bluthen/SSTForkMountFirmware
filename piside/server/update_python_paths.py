@@ -10,3 +10,7 @@ def correct_dir():
 
 
 correct_dir()
+
+
+def keep_import():
+    pass

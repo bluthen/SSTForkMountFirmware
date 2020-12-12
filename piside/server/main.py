@@ -51,6 +51,7 @@ RELAY_PIN = 6
 SWITCH_PIN = 5
 
 compress = Compress()
+update_python_paths.keep_import()
 
 
 # Sets up power switch
@@ -621,7 +622,7 @@ def altitude_data():
             coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
     elif frame == 'hadec':
         frame_args = skyconv.get_frame_init_args('hadec', obstime=obstime[0])
-        coord = HADec(ha=reqj['ha'], dec=reqj['dec'], **frame_args)
+        coord = HADec(ha=reqj['ha'] * u.deg, dec=reqj['dec']*u.deg, **frame_args)
         coord = skyconv.to_icrs(coord)
     else:  # AltAz
         frame_args = skyconv.get_frame_init_args('altaz', obstime=obstime[0])
@@ -649,6 +650,8 @@ def conver_coord():
         coord = HADec(ha=reqj['ha'] * u.deg, dec=reqj['dec'] * u.deg, **frame_args)
     else:
         frame_args = skyconv.get_frame_init_args('altaz')
+        if reqj['alt'] < 5:
+            frame_args['pressure'] = 0
         coord = AltAz(alt=reqj['alt'] * u.deg, az=reqj['az'] * u.deg, **frame_args)
     icrs = skyconv.to_icrs(coord)
     hadec = skyconv.to_hadec(icrs)
@@ -824,8 +827,6 @@ def main():
     lx200proto_thread = threading.Thread(target=lx200proto_server.main)
     lx200proto_thread.start()
 
-    # sstchuck_thread = threading.Thread(target=sstchuck.run)
-    # sstchuck_thread.start()
     handpad_thread = threading.Thread(target=handpad_server.run)
     handpad_thread.start()
 

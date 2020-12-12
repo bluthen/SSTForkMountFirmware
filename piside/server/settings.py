@@ -24,12 +24,12 @@ def deepupdate(to_update, odict):
 
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
-def write_settings(settings):
+def write_settings(arg_settings):
     if not is_simulation():
         subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
     with _lock:
-        with open('settings.json', mode='w') as f:
-            json.dump(settings, f)
+        with open('settings.json', mode='w') as f_settings:
+            json.dump(arg_settings, f_settings)
     if not is_simulation():
         subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
 
@@ -45,7 +45,6 @@ def copy_settings(tfile):
         subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
 
 
-
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
 def read_settings():
     # print(default_settings)
@@ -53,8 +52,8 @@ def read_settings():
         if not os.path.isfile('settings.json'):
             return copy.deepcopy(default_settings)
         else:
-            with open('settings.json') as f:
-                s = json.load(f)
+            with open('settings.json') as f_settings:
+                s = json.load(f_settings)
                 s1 = copy.deepcopy(default_settings)
                 deepupdate(s1, s)
                 # print(json.dumps(s1))
@@ -82,7 +81,7 @@ def parked():
     if not os.path.isfile('last_parked'):
         try:
             with _plock:
-                with open('last_parked', 'a') as f:
+                with open('last_parked', 'a') as f_last_parked:
                     pass
         except:
             pass
@@ -94,7 +93,7 @@ settings = read_settings()
 def get_logger(name):
     logger = logging.getLogger(name)
     abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
+    # dname = os.path.dirname(abspath)
     p = os.path.join(os.path.expanduser('~'), 'logs')
     if not os.path.exists(p):
         os.makedirs(p)

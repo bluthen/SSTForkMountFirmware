@@ -7,6 +7,7 @@ import threading
 import control
 import pendulum
 import settings
+import typing
 
 ourport = 10002
 kill = False
@@ -17,8 +18,9 @@ localtime_daylight_savings = False
 manual_slew_map = {'w': 'left', 'e': 'right', 'n': 'up', 's': 'down'}
 slew_speed_map = {'S': 'fastest', 'M': 'faster', 'C': 'slower', 'G': 'slowest'}
 slew_speed = 'fastest'
-target = {'ra': None, 'dec': None, 'alt': None, 'az': None}
-slew_intervals = {'n': None, 's': None, 'e': None, 'w': None}
+target = {'ra': None, 'dec': None, 'alt': None, 'az': None}  # type: typing.Dict[str, typing.Optional[float]]
+slew_intervals = {'n': None, 's': None, 'e': None,
+                  'w': None}  # type: typing.Dict[str, typing.Optional[threading.Timer]]
 slewing_time_buffer = False
 extra_logging = False
 
@@ -361,7 +363,7 @@ class LX200Client:
                         self.write(b'1Unable to slew#')
                         return
                     self.write(b'0')
-                except Exception as e:
+                except Exception:
                     traceback.print_exc()
                     self.write(b'1Unable to slew#')
             elif cmd[2] == 'g':  # PRIORITY2
@@ -500,7 +502,7 @@ class LX200Client:
                 try:
                     control.set_location(settings.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
                     self.write(b'1')
-                except Exception as e:
+                except Exception:
                     traceback.print_exc()
                     self.write(b'0')
             elif cmd[2] == 'G':  # PRIORITY
@@ -604,7 +606,7 @@ class LX200Client:
                                          settings.runtime_settings['earth_location'].lon.deg,
                                          1000.0, 'site1')
                     self.write(b'1')
-                except Exception as e:
+                except Exception:
                     traceback.print_exc()
                     self.write(b'0')
 
@@ -654,7 +656,7 @@ def terminate():
 
 
 def main():
-    global oursocket, kill
+    global kill
     print('Starting LX200 Protocol server')
     oursocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     oursocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

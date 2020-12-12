@@ -53,7 +53,8 @@ const Formatting = {
                 parseFloat(s) / (60.0 * 60.0));
     },
     dmsDEC2deg(d, m, s) {
-        const sign = Math.sign(d);
+        let sign = Math.sign(d);
+        sign = sign ? sign : 1;
         return parseFloat(d) +
             sign * parseFloat(m) / 60.0 +
             sign * parseFloat(s) / (60.0 * 60.0);

@@ -149,7 +149,7 @@ def hadec_to_icrs(hadec_coo, icrs_frame):
 
 
 def apco(frame_or_coord):
-    '''
+    """
     Wrapper for ``erfa.apco``, used in conversions AltAz <-> ICRS and CIRS <-> ICRS
 
     Arguments
@@ -158,7 +158,7 @@ def apco(frame_or_coord):
         Frame or coordinate instance in the corresponding frame
         for which to calculate the calculate the astrom values.
         For this function, an AltAz or CIRS frame is expected.
-    '''
+    """
     # Also from master https://github.com/astropy/astropy/blob/master/astropy/coordinates/erfa_astrom.py
     # 4.3dev last commit 82a3ef4
     lon, lat, height = frame_or_coord.location.to_geodetic('WGS84')

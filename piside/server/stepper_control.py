@@ -46,7 +46,7 @@ class StepperControl:
         if key not in self.__setting_keys:
             raise KeyError('Invalid setting key')
         with self.serial_lock:
-            self.serial.write(('set_var %s %f\r' % key, value).encode())
+            self.serial.write(('set_var %s %f\r' % (key, value)).encode())
 
     def update_settings(self, settings):
         for setting in settings:

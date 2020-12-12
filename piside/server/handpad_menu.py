@@ -17,9 +17,10 @@ import network
 import settings
 import pynmea2
 import pendulum
+import handpad_server
 
 # TODO This global limits us to one handpad.
-hserver = None
+hserver = None  # type: handpad_server.HandpadServer
 kill = False
 client_id = str(uuid.uuid4())
 
@@ -137,7 +138,7 @@ class GPSDisplay:
         hserver.println(timestr[1], 1)
         hserver.println('{lat:.2f}d {lon:.2f}d '.format(
             lat=self.info['location']['lat'], lon=self.info['location']['lon']), 2)
-        hserver.print('{elevation:.1f}m'.format(elevation=self.info['location']['elevation']), 3)
+        hserver.println('{elevation:.1f}m'.format(elevation=self.info['location']['elevation']), 3)
         while not kill:
             for hin in hserver.input():
                 if hin:

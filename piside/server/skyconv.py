@@ -1,4 +1,4 @@
-from astropy.coordinates import AltAz, ICRS, TETE
+from astropy.coordinates import AltAz, ICRS, TETE, Longitude
 from astropy.time import Time as AstroTime
 
 import astropy.units as u
@@ -6,63 +6,89 @@ import astropy.units.si as usi
 
 import settings
 import skyconv_hadec
+from skyconv_hadec import HADec
+import typing
+import pointing_model
 
-model_real_stepper = None
+model_real_stepper: typing.Union[None, pointing_model.PointingModelBuie, pointing_model.PointingModelAffine] = None
+
+ALT_ATM_THRESHOLD = 6
 
 
-def get_sidereal_time(obstime=None, earth_location=None):
+def get_sidereal_time(obstime=None):
     """
-    Get sidereal time at a particular time and location.
+    Get sidereal time (meridian ra) at a particular time (JNow).
     :param obstime:
     :type obstime: astropy.time.Time
-    :param earth_location:
-    :type earth_location: astropy.coordinates.EarthLocation
-    :return:
+    :return: meridian ra
+    :rtype: Longitude
     """
     if not obstime:
         obstime = AstroTime.now()
     # We don't use astropy.time.Time.sidereal_time because it needs to have update iers tables
-    frame_args = get_frame_init_args('altaz', obstime=obstime, earth_location=earth_location)
-    return _altaz_to_tete(AltAz(alt=90.0 * u.deg, az=0 * u.deg, **frame_args)).ra
-    # if not location:
-    #    location = settings.runtime_settings['earth_location']
-    # t = AstroTime(obstime, location=location)
-    # return t.sidereal_time('mean')
+    frame_args = get_frame_init_args('altaz', obstime=obstime)
+    return _altaz_to_tete(AltAz(alt=90.0 * u.deg, az=0 * u.deg, **frame_args))[0].ra
 
 
-def _icrs_to_hadec(icrs_coord, obstime=None, earth_location=None):
+def _icrs_to_hadec(icrs_coord, obstime=None, pressure=None):
     """
     Transforms icrs coordinate to hadec.
     :param icrs_coord: The RADEC ICRS coordinate
     :param obstime: Observations time to get hadec
-    :param earth_location: Location of observation
-    :return: new hadec coordinate
+    :param pressure: If none uses pression from earth location
+    :return: (hadec coordinate, bool if used atmospheric refraction)
+    :rtype: (HADec, bool)
     """
-    frame_args = get_frame_init_args('hadec', obstime=obstime, earth_location=earth_location)
+    # If we are in low altitude we want to disable atmospheric refraction compensation
+    if pressure is None:
+        altaz, atm = _icrs_to_altaz(icrs_coord, obstime=obstime, pressure=0 * u.hPa)
+        if not atm:
+            pressure = 0 * u.hPa
+    else:
+        atm = int(pressure.value) != 0
+    frame_args = get_frame_init_args('hadec', obstime=obstime, pressure=pressure)
     icrs_coord = skyconv_hadec.icrs_to_hadec(icrs_coord, skyconv_hadec.HADec(**frame_args))
-    return icrs_coord
+    return icrs_coord, atm
 
 
 def _altaz_to_hadec(altaz_coord):
     """
     Convert altaz coordinate to hadec.
-    :param altaz_coord: altaz SkyCoord
-    :param obstime: Time of observation
-    :param earth_location: Locatin of observation
-    :return: hadec SkyCoord
+    :return: (hadec coordinate, bool if used atmospheric refraction)
+    :rtype: (HADec, bool)
     """
-    icrs = _altaz_to_icrs(altaz_coord)
-    return _icrs_to_hadec(icrs, obstime=altaz_coord.obstime, earth_location=altaz_coord.location)
+    # HADec to altaz should be direct conversion, refraction shouldn't matter
+    # ICRS is just a intermediate, using pressure 0 for stability
+    new_altaz_coord = _altaz_threshold_fix_pressure(altaz_coord)
+    icrs, atm = _altaz_to_icrs(new_altaz_coord)
+    hadec_coord = _icrs_to_hadec(icrs, obstime=altaz_coord.obstime, pressure=0 * u.hPa)[0]
+    if altaz_coord.alt.deg > ALT_ATM_THRESHOLD and int(altaz_coord.pressure.value) > 0:
+        frame_args = get_frame_init_args('hadec', frame_copy=hadec_coord)
+        hadec_coord = skyconv_hadec.HADec(ha=hadec_coord.ha, dec=hadec_coord.dec, **frame_args)
+    return hadec_coord, int(hadec_coord.pressure.value) != 0
 
 
-def get_frame_init_args(frame, earth_location=None, obstime=None, frame_copy=None):
-    ret = {'location': earth_location, 'obstime': obstime}
-    if ret['location'] is None:
-        ret['location'] = settings.runtime_settings['earth_location']
+def get_frame_init_args(frame, obstime=None, frame_copy=None, pressure=None):
+    """
+    Get some intial coordinate frame arguments.
+    :param frame: Name of the frame to make arguments for.
+    :type frame: str
+    :param obstime: Observation time to set in frame
+    :type obstime: AstroTime
+    :param frame_copy: Frame to copy instead of using arguments or defaults.
+    :param pressure: If none uses location
+    :rtype: u.Quantity
+    :return: Dictionary of coordinate frame arguments
+    :rtype: dict
+    """
+    ret = {'location': settings.runtime_settings['earth_location'], 'obstime': obstime}
     if ret['obstime'] is None:
         ret['obstime'] = AstroTime.now()
     if frame == 'altaz' or frame == 'hadec':
-        ret['pressure'] = _earth_location_to_pressure(ret['location'])
+        if pressure is None:
+            ret['pressure'] = _earth_location_to_pressure(ret['location'])
+        else:
+            ret['pressure'] = pressure
         ret['obswl'] = 540 * u.nm
         ret['temperature'] = 20 * u.deg_C
         ret['relative_humidity'] = 0.35
@@ -73,26 +99,54 @@ def get_frame_init_args(frame, earth_location=None, obstime=None, frame_copy=Non
     return ret
 
 
-def _hadec_to_icrs(hadec_coord):
+def _hadec_to_icrs(hadec_coord, pressure=None):
     """
-    HADec SkyCoord to ICRS RADec SkyCoord
-    :param hadec_coord:  The HADec SkyCoord
-    :return: SkyCoord in ICRS Frame as RADec
+    HADec to ICRS RADec
+    :param hadec_coord:  The HADec coord
+    :type hadec_coord: HADec
+    :param pressure: A pressure to useduring conversion, if none uses hadec_coord.pressure.
+    :type: pressure: u.Quantity
+    :return: (ICRS coordinate, if atm refraction used)
+    :rtype: (ICRS, bool)
     """
-    return skyconv_hadec.hadec_to_icrs(hadec_coord, ICRS())
+    # HADec to altaz should be direct conversion, refraction shouldn't matter
+    atm = True
+    new_hadec_coord = hadec_coord
+    if pressure is None and int(hadec_coord.pressure.value) != 0:
+        altaz = _hadec_to_altaz(hadec_coord)[0]
+        if altaz.alt.deg <= ALT_ATM_THRESHOLD:
+            atm = False
+    else:
+        atm = False
+    if not atm:
+        frame_args = get_frame_init_args('hadec', frame_copy=hadec_coord)
+        frame_args['pressure'] = 0 * u.hPa
+        new_hadec_coord = skyconv_hadec.HADec(ha=hadec_coord.ha, dec=hadec_coord.dec, **frame_args)
+    return skyconv_hadec.hadec_to_icrs(new_hadec_coord, ICRS()), atm
 
 
 def _hadec_to_altaz(hadec_coord):
     """
-    HADec SkyCoord to AltAz SkyCoord.
-    :param coord: HADec SkyCoord.
-    :param obstime: Time of observation, default now
-    :param earth_location: location of observation, default settings
-    :return:
+    HADec to AltAz coordinate.
+    :param hadec_coord: HADec coord to convert.
+    :type hadec_coord: HADec
+    :return: (AltAz coordinate, if atm refraction used)
+    :rtype: (AltAz, bool)
     """
-    icrs = _hadec_to_icrs(hadec_coord)
-    altaz = _icrs_to_altaz(icrs, earth_location=hadec_coord.location, obstime=hadec_coord.obstime)
-    return altaz
+    # HADec to altaz should be direct conversion, refraction shouldn't matter
+    if int(hadec_coord.pressure.value) != 0:
+        frame_args = get_frame_init_args('hadec', frame_copy=hadec_coord)
+        frame_args['pressure'] = 0 * u.hPa
+        new_hadec_coord = skyconv_hadec.HADec(ha=hadec_coord.ha, dec=hadec_coord.dec, **frame_args)
+    else:
+        new_hadec_coord = hadec_coord
+    # ICRS is just intermediate pressure doesn't matter.
+    icrs = _hadec_to_icrs(new_hadec_coord, pressure=0 * u.hPa)[0]
+    altaz = _icrs_to_altaz(icrs, obstime=hadec_coord.obstime, pressure=0 * u.hPa)[0]
+    if altaz.alt.deg > ALT_ATM_THRESHOLD and int(hadec_coord.pressure.value) > 0:
+        frame_args = get_frame_init_args('altaz', frame_copy=hadec_coord)
+        altaz = AltAz(alt=altaz.alt, az=altaz.az, **frame_args)
+    return altaz, altaz.pressure.value != 0
 
 
 def _ha_delta_deg(started_angle, end_angle):
@@ -103,12 +157,8 @@ def _ha_delta_deg(started_angle, end_angle):
     :type started_angle: float
     :param end_angle: Second angle
     :type end_angle: float
-    :return: The shortest difference between started_angle, end_angle.
+    :return: The shortest difference between started_angle and end_angle.
     :rtype: float
-    :Example:
-        >>> import skyconv
-        >>> skyconv._ha_delta_deg(359.0, 370.0)
-        11.0
     """
     end_angle = _clean_deg(end_angle)
     started_angle = _clean_deg(started_angle)
@@ -123,13 +173,16 @@ def _ha_delta_deg(started_angle, end_angle):
 def _hadec_to_steps(hadec_coord, sync_info=None, ha_steps_per_degree=None, dec_steps_per_degree=None,
                     model_transform=False):
     """
-    Takes HaDec SkyCoord and converts it to steps.
+    Takes HaDec coord and converts it to steps.
     :param hadec_coord:
+    :type hadec_coord: HADec
     :param sync_info:
-    :param model_transform:
+    :type sync_info: dict
     :param ha_steps_per_degree:
     :param dec_steps_per_degree:
-    :return:
+    :param model_transform: If should use transform coordinate using model.
+    :return: {'ha': Step counts get to disired HA, 'dec': Step counts to get to desired Dec}
+    :rtype: dict
     """
     if not sync_info:
         sync_info = settings.runtime_settings['sync_info']
@@ -150,97 +203,165 @@ def _hadec_to_steps(hadec_coord, sync_info=None, ha_steps_per_degree=None, dec_s
     return {'ha': steps_ha, 'dec': steps_dec}
 
 
+def _altaz_threshold_fix_pressure(altaz_coord):
+    """
+    Makes a new coordinate if alt is less than ALT_ATM_THRESHOLD that has no pressure in frame.
+    :param altaz_coord: The coordinate to check
+    :return: The original coordinate or a new one with pressure set to zero.
+    :rtype: AltAz
+    """
+    new_altaz_coord = altaz_coord
+    if altaz_coord.alt.deg <= ALT_ATM_THRESHOLD and int(altaz_coord.pressure.value) != 0:
+        frame_args = get_frame_init_args('altaz', frame_copy=altaz_coord)
+        frame_args['pressure'] = 0 * u.hPa
+        new_altaz_coord = AltAz(alt=altaz_coord.alt, az=altaz_coord.az, **frame_args)
+    return new_altaz_coord
+
+
 def _altaz_to_icrs(altaz_coord):
     """
-    Converts an alt-az coordinate to ICRS ra-dec coordinate.
+    Converts an AltAz coordinate to ICRS coordinate.
     :param altaz_coord: coordinate to convert
-    :return: astropy.coordinate.SkyCoord in ICRS frame.
-    :Example:
-        >>> import skyconv
-        >>> from astropy.coordinates import EarthLocation, AltAz
-        >>> from astropy.time import Time as AstroTime
-        >>> import astropy.units as u
-        >>> el = EarthLocation(lat=38.9369*u.deg, lon=-95.242*u.deg, height=266.0*u.m)
-        >>> t = AstroTime('2018-12-26T22:55:32.281', format='isot', scale='utc')
-        >>> b = AltAz(alt=80*u.deg, az=90*u.deg)
-        >>> c = skyconv._altaz_to_icrs(b)
-        >>> c.ra.deg, c.dec.deg
-        (356.5643249365523, 38.12981040209684)
+    :type altaz_coord: AltAz
+    :return: (coordinate in ICRS, if atm refraction was used in conversion)
+    :rtype: (ICRS, bool)
     """
-    icrs = altaz_coord.transform_to(ICRS())
-    return icrs
+    new_altaz_coord = _altaz_threshold_fix_pressure(altaz_coord)
+    atm = int(new_altaz_coord.pressure.value) != 0
+    icrs = new_altaz_coord.transform_to(ICRS())
+    return icrs, atm
 
 
-def _icrs_to_altaz(icrs_coord, earth_location=None, obstime=None):
+def _icrs_to_altaz(icrs_coord, obstime=None, pressure=None):
     """
     Convert a skycoordinate to altaz frame.
     :param icrs_coord: The coordinates you would want to covert to altaz, probably icrs frame.
-    :type icrs_coord: astropy.coordinates.SkyCoord
-    :param earth_location: Location to base altaz on, defaults runtime_settings['earth_location']
-    :type earth_location: astropy.coordinates.EarthLocation
+    :type icrs_coord: ICRS
     :param obstime: The observation time to get altaz coordinates, defaults to astropy.time.Time.now()
-    :type obstime: astropy.time.Time
-    :return: SkyCoord in altaz or None if unable to compute (missing earth_location)
-    :rtype: astropy.coordinates.SkyCoord
-    :Example:
-        >>> import skyconv
-        >>> from astropy.coordinates import EarthLocation, SkyCoord
-        >>> import astropy.units as u
-        >>> from astropy.time import Time
-        >>> t = Time('2018-12-26T22:55:32.281', format='isot', scale='utc')
-        >>> earth_location = EarthLocation(lat=38.9369*u.deg, lon= -95.242*u.deg, height=266.0*u.m)
-        >>> radec = SkyCoord(ra=30*u.deg, dec=45*u.deg, frame='icrs')
-        >>> altaz = skyconv._icrs_to_altaz(radec, earth_location, t)
-        >>> altaz.alt.deg, altaz.az.deg
-        (55.558034184006516, 64.41850865846912)
+    :type obstime: AstroTime
+    :param pressure: Pressure to use otherwise uses from location
+    :type pressure: u.Quantity
+    :return: (AltAz coordinate, if atm refraction was used in conversion)
+    :rtype: (AltAz, bool)
     """
-    aa_frame = get_frame_init_args('altaz', earth_location=earth_location, obstime=obstime)
+    aa_frame = get_frame_init_args('altaz', obstime=obstime, pressure=0 * u.hPa)
     altaz = icrs_coord.transform_to(AltAz(**aa_frame))
-    return altaz
+    # TODO: For array coord can we just set the pressure to 0 where it alt is less than threshold instead of if any?
+    if (altaz.alt.deg <= ALT_ATM_THRESHOLD).any() or (pressure is not None and int(pressure.value) == 0):
+        return altaz, False
+    aa_frame = get_frame_init_args('altaz', obstime=obstime, pressure=pressure)
+    altaz = icrs_coord.transform_to(AltAz(**aa_frame))
+    return altaz, True
 
 
 def _tete_to_hadec(tete_coord):
+    """
+    Convert TETE Coordinate to HADec
+    :param tete_coord: TETE Coordinate to convert
+    :return: (HADec coordinate, if atm refraction used in conversion)
+    :rtype: (HADec, atm)
+    """
     icrs = tete_coord.transform_to(ICRS())
-    hadec = _icrs_to_hadec(icrs, earth_location=tete_coord.location, obstime=tete_coord.obstime)
-    return hadec
+    altaz = _icrs_to_altaz(icrs, pressure=0 * u.hPa)[0]
+    pressure = None
+    if altaz.alt.deg < 0:
+        pressure = 0 * u.hPa
+    hadec, atm = _icrs_to_hadec(icrs, obstime=tete_coord.obstime, pressure=pressure)
+    return hadec, atm
 
 
-def _icrs_to_tete(icrs_coord, earth_location=None, obstime=None):
-    frame_args = get_frame_init_args('tete', earth_location=earth_location, obstime=obstime)
+def _icrs_to_tete(icrs_coord, obstime=None):
+    """
+    Convert ICRS to TETE.
+    :param icrs_coord: ICRS Coord to convert
+    :param obstime: Time to use otherwise now.
+    :type obstime: AstroTime
+    :return: TETE Coordinate
+    :rtype: TETE
+    """
+    frame_args = get_frame_init_args('tete', obstime=obstime)
     tete = icrs_coord.transform_to(TETE(**frame_args))
     return tete
 
 
 def _tete_to_icrs(tete_coord):
+    """
+    Convert TETE coordinate to ICRS.
+    :param tete_coord: The TETE coordinate to convert.
+    :type tete_coord: TETE
+    :return: ICRS Coordinate
+    :rtype: ICRS
+    """
     icrs = tete_coord.transform_to(ICRS())
     return icrs
 
 
 def _hadec_to_tete(hadec_coord):
+    """
+    Convert HADec coordinate to TETE coordinate.
+    :param hadec_coord: The HADec Coordinate to convert.
+    :return: (The TETE Coordinate, if atm refraction was used in conversion)
+    :rtype: (TETE, bool)
+    """
+    new_hadec_coord = hadec_coord
+    if int(new_hadec_coord.pressure.value) != 0:
+        altaz = _hadec_to_altaz(hadec_coord)[0]
+        if altaz.alt.deg <= ALT_ATM_THRESHOLD:
+            frame_args = get_frame_init_args('hadec', frame_copy=hadec_coord)
+            frame_args['pressure'] = 0 * u.hPa
+            new_hadec_coord = skyconv_hadec.HADec(ha=hadec_coord.ha, dec=hadec_coord.dec, **frame_args)
+    atm = int(new_hadec_coord.pressure.value) != 0
     icrs = skyconv_hadec.hadec_to_icrs(hadec_coord, ICRS())
-    tete = _icrs_to_tete(icrs, obstime=hadec_coord.obstime, earth_location=hadec_coord.location)
-    return tete
+    tete = _icrs_to_tete(icrs, obstime=hadec_coord.obstime)
+    return tete, atm
 
 
 def _tete_to_altaz(tete_coord):
-    frame_args = get_frame_init_args('altaz', earth_location=tete_coord.location, obstime=tete_coord.obstime)
-    return tete_coord.transform_to(AltAz(**frame_args))
+    """
+    Convert TETE coordinate to AltAz coordinate.
+    :param tete_coord: The TETE coordinate to convert.
+    :type tete_coord: TETE
+    :return: (AltAz coordinate, if atm refraction used)
+    :rtype: (AltAz, bool)
+    """
+    frame_args = get_frame_init_args('altaz', obstime=tete_coord.obstime)
+    frame_args['pressure'] = 0 * u.hPa
+    altaz = tete_coord.transform_to(AltAz(**frame_args))
+    if altaz.alt.deg <= ALT_ATM_THRESHOLD:
+        return altaz, False
+    frame_args = get_frame_init_args('altaz', obstime=tete_coord.obstime)
+    return tete_coord.transform_to(AltAz(**frame_args)), True
 
 
 def _altaz_to_tete(altaz_coord):
-    frame_args = get_frame_init_args('tete', earth_location=altaz_coord.location, obstime=altaz_coord.obstime)
-    return altaz_coord.transform_to(TETE(**frame_args))
+    """
+    Convert AltAz coordinate to TETE
+    :param altaz_coord: The coordinate to convert
+    :type altaz_coord: AltAz
+    :return: (TETE coordinate, if atm refraction used in conversion)
+    :rtype: (TETE, bool)
+    """
+    new_altaz_coord = _altaz_threshold_fix_pressure(altaz_coord)
+    frame_args = get_frame_init_args('tete', obstime=altaz_coord.obstime)
+    return new_altaz_coord.transform_to(TETE(**frame_args)), int(new_altaz_coord.pressure.value) != 0
 
 
-def to_altaz(coord, obstime=None, earth_location=None):
+def to_altaz(coord, obstime=None):
+    """
+    Convert any type of coord to AltAz
+    :param coord: coord to convert
+    :param obstime: observation time
+    :return: AltAz coordinate
+    :rtype: AltAz
+    """
     if coord.name == 'altaz':
         altaz = coord
     elif coord.name == 'icrs':
-        altaz = _icrs_to_altaz(coord, obstime=obstime, earth_location=earth_location)
+        altaz, atm = _icrs_to_altaz(coord, obstime=obstime)
     elif coord.name == 'tete':
-        altaz = _tete_to_altaz(coord)
+        altaz, atm = _tete_to_altaz(coord)
     elif coord.name == 'hadec':
-        altaz = _hadec_to_altaz(coord)
+        altaz, atm = _hadec_to_altaz(coord)
     else:
         print('ERROR Unable to handle frame')
         return None
@@ -248,27 +369,40 @@ def to_altaz(coord, obstime=None, earth_location=None):
 
 
 def to_icrs(coord):
+    """
+    Convert any coordinate to ICRS
+    :param coord: The coordinate to convert
+    :return: The ICRS Coordinate
+    :rtype: ICRS
+    """
     if coord.name == 'altaz':
-        icrs = _altaz_to_icrs(coord)
+        icrs, atm = _altaz_to_icrs(coord)
     elif coord.name == 'icrs':
         icrs = coord
     elif coord.name == 'tete':
         icrs = _tete_to_icrs(coord)
     elif coord.name == 'hadec':
-        icrs = _hadec_to_icrs(coord)
+        icrs, atm = _hadec_to_icrs(coord)
     else:
         print('ERROR Unable to handle frame')
         return None
     return icrs
 
 
-def to_hadec(coord, obstime=None, earth_location=None):
+def to_hadec(coord, obstime=None):
+    """
+    Convert any coordinate to HADec
+    :param coord: The coordinate to convert
+    :param obstime: Time to use or now or coord.obstime
+    :return: HADec coordinate
+    :rtype: HADec
+    """
     if hasattr(coord, 'alt'):
-        hadec = _altaz_to_hadec(coord)
+        hadec, atm = _altaz_to_hadec(coord)
     elif coord.name == 'icrs':
-        hadec = _icrs_to_hadec(coord, obstime=obstime, earth_location=earth_location)
+        hadec, atm = _icrs_to_hadec(coord, obstime=obstime)
     elif coord.name == 'tete':
-        hadec = _tete_to_hadec(coord)
+        hadec, atm = _tete_to_hadec(coord)
     elif coord.name == 'hadec':
         hadec = coord
     else:
@@ -277,7 +411,15 @@ def to_hadec(coord, obstime=None, earth_location=None):
     return hadec
 
 
-def to_tete(coord, obstime=None, earth_location=None, overwrite_time=False):
+def to_tete(coord, obstime=None, overwrite_time=False):
+    """
+    Convert any coordinate to TETE.
+    :param coord: Coordinate to convert.
+    :param obstime: Time to use or now or coord.obstime
+    :param overwrite_time: If should overwrite coord.obstime with obstime arg.
+    :return: TETE coordinate
+    :rtype: TETE
+    """
     if coord.name == 'altaz':
         if overwrite_time:
             frame_args = get_frame_init_args('altaz', frame_copy=coord)
@@ -288,7 +430,7 @@ def to_tete(coord, obstime=None, earth_location=None, overwrite_time=False):
         else:
             tete = _altaz_to_tete(coord)
     elif coord.name == 'icrs':
-        tete = _icrs_to_tete(coord, obstime=obstime, earth_location=earth_location)
+        tete = _icrs_to_tete(coord, obstime=obstime)
     elif coord.name == 'tete':
         if overwrite_time:
             frame_args = get_frame_init_args('tete', frame_copy=coord)
@@ -312,31 +454,32 @@ def to_tete(coord, obstime=None, earth_location=None, overwrite_time=False):
     return tete
 
 
-def to_steps(coord, sync_info=None, obstime=None, earth_location=None,
-             model_transform=False, ha_steps_per_degree=None, dec_steps_per_degree=None):
+def to_steps(coord, sync_info=None, obstime=None, model_transform=False, ha_steps_per_degree=None,
+             dec_steps_per_degree=None):
     """
     Takes a HaDec,TETE,IRCS,AltAz, or dict(steps) coordinate and converts to to steps.
-    :param coord: RADec, AltAz, dict {'ha': int, 'dec': int}
+    :param coord: RADec, AltAz, TETE, HADec, or dict {'ha': int, 'dec': int}
     :param sync_info: If none uses runtime sync_info
     :param obstime: If None uses now
-    :param earth_location: If none uses runtime
+    :type obstime: AstroTime
     :param model_transform: If true will send through pointing model if applicable.
     :param ha_steps_per_degree: If none uses settings
     :param dec_steps_per_degree: If None uses settings
     :return: dict {'ha': int, 'dec': int}
+    :rtype: dict
     """
     if type(coord) is dict and 'ha' in coord:  # Already ha dec steps
         return coord
     if coord.name == 'tete':
         coord = to_tete(coord, obstime=obstime, overwrite_time=True)
-    hadec = to_hadec(coord, earth_location=earth_location, obstime=obstime)
+    hadec = to_hadec(coord, obstime=obstime)
     ret = _hadec_to_steps(hadec, sync_info=sync_info, ha_steps_per_degree=ha_steps_per_degree,
                           dec_steps_per_degree=dec_steps_per_degree, model_transform=model_transform)
     return ret
 
 
-def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_model=False, earth_location=None,
-                   ha_steps_per_degree=None, dec_steps_per_degree=None):
+def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_model=False, ha_steps_per_degree=None,
+                   dec_steps_per_degree=None):
     """
     Steps to hour angle dec.
     :param steps: keys ha, and dec
@@ -345,10 +488,9 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
     :param sync_info: defaults to runtime_settings['sync_info']
     :param obstime: time of observation default now
     :param inverse_model: Should go through inverse model doing conversion
-    :param earth_location: location of observation, defaults settings
     :param ha_steps_per_degree: defaults to settings
     :param dec_steps_per_degree: defaults to settings
-    :return: astropy.coordinates.SkyCoord in frame as specified.
+    :return: coordinate in specified frame
     """
     if not sync_info:
         sync_info = settings.runtime_settings['sync_info']
@@ -359,10 +501,6 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
     d_ha = (steps['ha'] - sync_info['steps']['ha']) / ha_steps_per_degree
     d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_steps_per_degree
 
-    # print({'d_ha': d_ha, 'steps_ha': steps['ha'], 'sync_ha': sync_info['steps']['ha'], 'ha_spd': ha_steps_per_degree, 'ha_sync_coord': sync_info['coord'].ra.deg})
-
-    # print({'d_dec': d_dec, 'steps_dec': steps['dec'], 'sync_dec': sync_info['steps']['dec'], 'dec_spd': dec_steps_per_degree, 'dec_sync_coord': sync_info['coord'].dec.deg})
-
     ha_deg = _clean_deg(sync_info['coord'].ha.deg + d_ha)
     # print({'frame': frame, 'ha_deg': ha_deg})
     dec_deg, pole_count = _clean_deg(sync_info['coord'].dec.deg + d_dec, True)
@@ -371,7 +509,7 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
         ha_deg = _clean_deg(ha_deg + 180.0)
     # print({'frame': frame, 'dec_deg': dec_deg})
 
-    frame_args = get_frame_init_args('hadec', earth_location=earth_location, obstime=obstime)
+    frame_args = get_frame_init_args('hadec', obstime=obstime)
     hadec_coord = skyconv_hadec.HADec(ha=ha_deg * u.deg, dec=dec_deg * u.deg, **frame_args)
     # print('hadec_coord', hadec_coord)
     if inverse_model:
@@ -408,10 +546,6 @@ def _clean_deg(deg, dec=False):
     :type dec: bool
     :return: Cleaned up value. Second argument exists only when dec is True.
     :rtype: float, (int)
-    :Example:
-        >>> import skyconv
-        >>> skyconv._clean_deg(91.0, True)
-        (89.0, 1)
     """
     if dec:
         pole_count = 0
@@ -437,14 +571,6 @@ def _earth_location_to_pressure(earth_location=None):
     Gives you expected absolute pressure at elevation.
     :param earth_location: astropy.coordinates.EarthLocation defaults to runtime_settings['earth_location']
     :return: pressure astropy.units.Quantity
-    :Example:
-        >>> import skyconv
-        >>> from astropy.coordinates import EarthLocation
-        >>> import astropy.units as u
-        >>> from astropy.units import si as usi
-        >>> earth_location = EarthLocation(lat=38.9369*u.deg, lon= -95.242*u.deg, height=266.0*u.m)
-        >>> skyconv._earth_location_to_pressure(earth_location).to_value(usi.Pa)
-        98170.13549856932
     """
     if earth_location is None:
         earth_location = settings.runtime_settings['earth_location']
