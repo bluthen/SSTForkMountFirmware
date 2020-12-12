@@ -48,8 +48,8 @@ static char cmd[MAX_CMD_SIZE];
 static uint8_t BOUNCE_DELAY = 20;
 
 void display_sleep() {
-  analogWrite(lcd_pwm, PWM_LEVELS_LCD[brightness_pwm]);
-  analogWrite(button_pwm, PWM_LEVELS_BUTTONS[brightness_pwm]);  
+  analogWrite(lcd_pwm, 0);
+  analogWrite(button_pwm, 0);  
 }
 
 
