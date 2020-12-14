@@ -7,10 +7,9 @@ import sys
 import scipy
 import scipy.optimize
 
-from astropy.coordinates import AltAz
+from astropy.coordinates import AltAz, SkyCoord
 from skyconv_hadec import HADec
 import astropy.units as u
-import skyconv
 
 pointing_logger = settings.get_logger('pointing')
 
@@ -19,22 +18,11 @@ SEPERATION_THRESHOLD = 0.5
 
 def inverse_altaz_projection(xy_coord):
     """
-    Convert x-y azimuthal project coord back to altaz SkyCoord
+    Convert x-y azimuthal project coord back to AltAz
     :param xy_coord: projected x, y values to go back to altaz coordinates.
-    :type xy_coord: dict with keys x, y
+    :type xy_coord: Dict[str, float]
     :return: Coordinates projected back to altaz frame.
-    :rtype: astropy.coordinates.SkyCoord
-    :Example:
-        >>> import pointing_model
-        >>> import numpy
-        >>> xy = {'x': 0.8888888888888888, 'y': 0.0}
-        >>> b = pointing_model.inverse_altaz_projection(xy)
-        >>> b.alt.deg, b.az.deg
-        (10.000000000000004, 90.0)
-        >>> xy = {'x': numpy.array([0.88888889, 0.3320649 , 0.76596159]), 'y': numpy.array([0., -0.02905191, -0.13505969])}
-        >>> b = pointing_model.inverse_altaz_projection(xy)
-        >>> b.alt.deg, b.az.deg
-        (array([ 9.9999999 , 59.99999998, 19.99999968]), array([90.        , 94.99999926, 99.99999967]))
+    :rtype: SkyCoord
     """
     x = numpy.array(xy_coord['x'])
     y = numpy.array(xy_coord['y'])
@@ -47,28 +35,16 @@ def inverse_altaz_projection(xy_coord):
     elif r < 0.0:
         r = 0.0
     alt = 90.0 * (1.0 - r)
-    frame_args = skyconv.get_frame_init_args('altaz')
-    return AltAz(alt=alt*u.deg, az=az*u.deg, **frame_args)
+    return SkyCoord(AltAz(alt=alt*u.deg, az=az*u.deg))
 
 
 def alt_az_projection(altaz_coord):
     """
-    Convert alt-az coordinate to x, y coordinates through azimuthal projection
-    :param altaz_coord: A skyCoord with a arrow of coords inside or just one in altaz frame.
-    :type altaz_coord: astropy.coordiantes.SkyCord
+    Convert AltAz coordinate to x, y coordinates through azimuthal projection
+    :param altaz_coord: A SkyCoord in AltAz frame with a array of coords inside or just one.
+    :type altaz_coord: SkyCoord
     :return: projected x, y coordinates, array if given array, otherwise single values.
-    :rtype: dict with keys x, y
-    :Example:
-        >>> import pointing_model
-        >>> from astropy.coordinates import SkyCoord
-        >>> a=SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-        >>> xy = pointing_model.alt_az_projection(a)
-        >>> xy
-        {'x': 0.8888888888888888, 'y': 0.0}
-        >>> a=SkyCoord(alt=[10, 60, 20], az=[90, 95, 100], unit='deg', frame='altaz')
-        >>> xy = pointing_model.alt_az_projection(a)
-        >>> xy
-        {'x': array([0.88888889, 0.3320649 , 0.76596159]), 'y': array([ 0.        , -0.02905191, -0.13505969])}
+    :rtype: Union[Dict[str, float], Dict[str, List[float]]]
     """
     alt = numpy.array(altaz_coord.alt.deg)
     az = numpy.array(altaz_coord.az.deg)
@@ -83,14 +59,13 @@ def get_projection_coords(indexes, sync_points, sync_point_key):
     """
 
     :param indexes:
+    :type indexes: List[int]
     :param sync_points:
+    :type sync_points: Dict[str, Dict[str, float]]
     :param sync_point_key:
+    :type sync_point_key: str
     :return:
-    :Example:
-        >>> import pointing_model
-        >>> sp = [{'t': {'x': 4.3, 'y': 1.2}}, {'t': {'x': 4.3, 'y': 1.2}}, {'t': {'x': 4.5, 'y': 1.3}}]
-        >>> pointing_model.get_projection_coords([1, 2], sp, 't')
-        [[4.3, 1.2], [4.5, 1.3]]
+    :rtype: List[List[float]]
     """
     ret = []
     for idx in indexes:
@@ -99,18 +74,50 @@ def get_projection_coords(indexes, sync_points, sync_point_key):
 
 
 def test_altaz_transform(oalt, oaz, alt, az, deg):
+    """
+    Calculates alt az values with offset and rotation
+    :param oalt: Alt offset
+    :param oaz: Az offset
+    :param alt: Given Alt
+    :param az: Given Az
+    :param deg: Rotation value
+    :return: Dictionary with alt and az as keys for new offset rotated coordinate
+    :rtype: Dict[str, float]
+    """
     theta = deg * math.pi / 180.0
     return {'alt': oalt + (alt - oalt) * math.cos(theta) + (az - oaz) * math.sin(theta),
             'az': oaz + (az - oaz) * math.cos(theta) - (alt - oalt) * math.sin(theta)}
 
 
 def test_hadec_transform(offset_dec, offset_ha, dec, ha, deg):
+    """
+    Calculate ha dec values with a offset and rotation.
+    :param offset_dec: Dec Offset
+    :type offset_dec: float
+    :param offset_ha: HA offset
+    :type offset_ha: float
+    :param dec: given dec
+    :type dec: float
+    :param ha: given HA
+    :type ha: float
+    :param deg: rotation value
+    :type deg: float
+    :return: dictionary with 'ha', 'dec' as keys for new offseted rotated coordinate
+    :rtype: Dict[str, float]
+    """
     theta = deg * math.pi / 180.0
     return {'ha': offset_ha + (ha - offset_ha) * math.cos(theta) + (dec - offset_dec) * math.sin(theta),
             'dec': offset_dec + (dec - offset_dec) * math.cos(theta) - (ha - offset_ha) * math.sin(theta)}
 
 
 def log_p2dict(point):
+    """
+    Takes degrees out of coordinate and makes a dictionary for easier logging.
+    :param point: An AltAz or Dec Coordinate
+    :type point: Union[SkyCoord, HADec]
+    :return: dictionary with key values being coordinate axis
+    :rtype: Dict[str, float]
+    """
     if hasattr(point, 'alt'):
         return {'alt': point.alt.deg, 'az': point.az.deg}
     elif hasattr(point, 'dec'):
@@ -203,13 +210,20 @@ class PointingModelBuie:
         """
         self.__from_points = None
         self.__to_points = []
-        self.__model = 'buie'
         self.__buie_vals = None
 
-    def set_model(self, model):
-        pass
-
     def add_point(self, from_point, to_point):
+        """
+        Add a point to the model.
+        :param from_point: What mount thinks it is at
+        :type from_point: HADec
+        :param to_point: What mount is actually at.
+        :type to_point: HADec
+        :return: None
+        :rtype: None
+        """
+        from_point = HADec(ha=from_point.ha, dec=from_point.dec)
+        to_point = HADec(ha=to_point.ha, dec=to_point.dec)
         replace_idx = None
         if self.__from_points is not None:
             replace_idxex = numpy.where(self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD)[0]
@@ -255,20 +269,33 @@ class PointingModelBuie:
                 self.__buie_vals = None
 
     def transform_point(self, point):
+        """
+        Given desired point give us what we to tell the mount to go to.
+        :param point: Desired Point
+        :type point: HADec
+        :return: Point the mount should go to.
+        :rtype: HADec
+        """
         if self.__buie_vals is not None:
             # print('buie_vals', self.__buie_vals)
             p0 = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
             p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals):]])
             new_point = buie_model(numpy.array([[point.ha.deg, point.dec.deg]]), *p0)
-            frame_args = skyconv.get_frame_init_args('hadec')
-            return HADec(ha=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg, **frame_args)
+            return HADec(ha=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg)
         else:
             return point
 
     def inverse_transform_point(self, point):
+        """
+        Given what the mount is pointed give us what it should actually be at.
+        :param point: Mount point
+        :type point: HADec
+        :return: What model thinks it is actually pointed at.
+        :rtype: HADec
+        """
         if self.__buie_vals is not None:
             def our_func(coord):
-                new_point = self.transform_point(HADec(ha=coord[0] * u.deg, dec=coord[1] * u.deg, frame='icrs'))
+                new_point = self.transform_point(HADec(ha=coord[0] * u.deg, dec=coord[1] * u.deg))
                 return (new_point.ha.deg - point.ha.deg) ** 2.0 + (new_point.dec.deg - point.dec.deg) ** 2.0
 
             results = scipy.optimize.fmin(our_func, [point.ha.deg, point.dec.deg], disp=False, full_output=True,
@@ -280,23 +307,41 @@ class PointingModelBuie:
                 print('WARNING: model failed, using single point model until successful. ', file=sys.stderr)
                 return point
             else:
-                frame_args = skyconv.get_frame_init_args('hadec')
-                return HADec(ha=inv_point[0] * u.deg, dec=inv_point[1] * u.deg, **frame_args)
+                return HADec(ha=inv_point[0] * u.deg, dec=inv_point[1] * u.deg)
         else:
             return point
 
     def frame(self):
+        """
+        Gives string of frame this model deals with.
+        :return: 'hadec'
+        :rtype: str
+        """
         return 'hadec'
 
     def clear(self):
+        """
+        Resets the model removing all points and model values.
+        :return: None
+        :rtype: None
+        """
         self.__from_points = None
         self.__to_points = []
         self.__buie_vals = None
 
     def get_from_points(self):
+        """
+        Gives you the from points in the model.
+        :return:
+        """
         return numpy.array(self.__from_points)
 
     def size(self):
+        """
+        Gives how many points are in the model
+        :return: points in model
+        :rtype: int
+        """
         return len(self.__to_points)
 
 
@@ -310,7 +355,6 @@ class PointingModelAffine:
 
         self.__sync_points = []
         self.__from_points = None
-        self.__model = 'affine_all'
         # Distance matrix for sync_points
         # https://en.wikipedia.org/wiki/Distance_matrix
         #: distance matrix created with sync_points
@@ -322,28 +366,28 @@ class PointingModelAffine:
         self.debug = False
 
     def get_from_points(self):
+        """
+        Get model from points
+        :return:
+        """
         ret = []
         for point in self.__sync_points:
             ret.append(point['from_point'])
         return ret
 
-    def set_model(self, model):
-        if model in ['single', '1point', 'affine_all']:
-            if self.__log:
-                pointing_logger.debug(json.dumps({'func': 'set_model', 'model': model}))
-            self.__model = model
-
     def add_point(self, from_point, to_point):
         """
         Updates parameters so it will use point for transforming future points.
         :param from_point: AltAz from point.
-        :type from_point: astropy.coordinates.SkyCoord in AltAz frame
+        :type from_point: Union[AltAz, SkyCoord]
         :param to_point: AltAz to point
-        :type to_point: astropy.coordinates.SkyCoord in AltAz frame
-        :return: triangle mainly used for debugging.
+        :type to_point: Union[AltAz, SkyCoord]
         """
-        if not hasattr(from_point, 'alt'):
-            raise ValueError('coord should be an alt-az coordinate')
+        if from_point.name != 'altaz' or to_point.name != 'altaz':
+            raise ValueError('coords should be an alt-az coordinate')
+
+        from_point = SkyCoord(AltAz(alt=from_point.alt, az=from_point.az))
+        to_point = SkyCoord(AltAz(alt=to_point.alt, az=to_point.az))
 
         # If it is close enough to a point already there, we will replace it.
 
@@ -370,17 +414,16 @@ class PointingModelAffine:
             else:
                 alt = [from_point.alt.deg]
                 az = [from_point.az.deg]
-        self.__from_points = AltAz(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg)
+        self.__from_points = SkyCoord(AltAz(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg))
 
-        if self.__model == 'affine_all':
-            if len(self.__sync_points) >= 3:
-                if self.__log:
-                    pointing_logger.debug(json.dumps({'func': 'add_point', 'model': 'affine_all'}))
-                from_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
-                                                 'from_projection')
-                to_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
-                                               'to_projection')
-                self.__affineAll = affine_fit.affine_fit(from_npa, to_npa)
+        if len(self.__sync_points) >= 3:
+            if self.__log:
+                pointing_logger.debug(json.dumps({'func': 'add_point', 'model': 'affine_all'}))
+            from_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
+                                             'from_projection')
+            to_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
+                                           'to_projection')
+            self.__affineAll = affine_fit.affine_fit(from_npa, to_npa)
         if self.__inverseModel:
             self.__inverseModel.add_point(to_point, from_point)
 
@@ -400,8 +443,7 @@ class PointingModelAffine:
             new_az = new_az - 360.0
         elif new_az < 0:
             new_az = 360 + new_az
-        frame_args = skyconv.get_frame_init_args('altaz')
-        to_point = AltAz(alt=new_alt, az=new_az, unit='deg', **frame_args)
+        to_point = SkyCoord(AltAz(alt=new_alt*u.deg, az=new_az*u.deg))
         if self.__log:
             pointing_logger.debug(json.dumps(
                 {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
@@ -410,10 +452,13 @@ class PointingModelAffine:
 
     def transform_point(self, point):
         """
-        Transform point using the model created by adding points.
-        :param point: AltAz point to transform.
-        :return:
+        Transform point using the model.
+        :param point: AltAz desired point
+        :type point: Union[AltAz, SkyCoord]
+        :return: What the mount should goto to get to desired point, SkyCorod in altaz frame.
+        :rtype: SkyCoord
         """
+        point = SkyCoord(AltAz(alt=point.alt, az=point.az))
         proj_coord = alt_az_projection(point)
         if self.__affineAll:
             transformed_projection = self.__affineAll.Transform([proj_coord['x'], proj_coord['y']])
@@ -443,10 +488,23 @@ class PointingModelAffine:
             raise ValueError('No sync points.')
 
     def inverse_transform_point(self, point):
+        """
+        Given what point mount is pointed to what is the model say real AltAz is.
+        :param point: The mount point.
+        :type point: Union[AltAz, SkyCoord]
+        :return: The point the model thinks mount is pointed at. SkyCoord in AltAz frame.
+        :rtype: SkyCoord
+        """
         # A possible other alternative is to use fmin with transform_point
+        point = SkyCoord(AltAz(alt=point.alt, az=point.az))
         return self.__inverseModel.transform_point(point)
 
     def frame(self):
+        """
+        Gives you string of the frame the model deals in.
+        :return: 'altaz'
+        :rtype: str
+        """
         return 'altaz'
 
     def clear(self):
@@ -461,6 +519,10 @@ class PointingModelAffine:
             self.__inverseModel.clear()
 
     def size(self):
+        """
+        :return: The number of point that make up the model.
+        :rtype: int
+        """
         return len(self.__sync_points)
 
 
@@ -480,22 +542,15 @@ def tr_point_in_triangle(pt, t1, t2, t3):
     """
     Tests if point is in a triangle that is defined by three points.
     :param pt: Point checking
-    :type pt: array [float, float]
+    :type pt: List[float, float]
     :param t1: first point of triangle
-    :type t1: array [float, float]
+    :type t1: List[float, float]
     :param t2: second point of triangle
-    :type t2: array [float, float]
+    :type t2: List[float, float]
     :param t3: third point of triangle
-    :type t3: array [float, float]
+    :type t3: List[float, float]
     :return: true if point in triangle
     :rtype: bool
-    :Example:
-        >>> import pointing_model
-        >>> t1=pointing_model.tr_point_in_triangle([95., 50.], [90., 10.], [95., 60.0], [100, 20.0])
-        >>> t2=pointing_model.tr_point_in_triangle([90., 50.], [90., 10.], [95., 60.0], [100, 20.0])
-        >>> t3=pointing_model.tr_point_in_triangle([90., 30.], [45., 20.], [135., 20.0], [175, 80.0])
-        >>> t1, t2, t3
-        (True, False, True)
     """
     d1 = tr_sign(pt, t1, t2)
     d2 = tr_sign(pt, t2, t3)

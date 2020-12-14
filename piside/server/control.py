@@ -79,7 +79,7 @@ def set_last_slew(coord):
             last_slew['altaz'] = None
         else:
             if settings.runtime_settings['tracking']:
-                tete = skyconv.to_tete(coord, overwrite_time=True)
+                tete = skyconv.to_tete(coord, overwrite_time=True, obstime=AstroTime.now())
                 icrs = skyconv.to_icrs(tete)
                 last_slew['tete'] = tete
                 last_slew['icrs'] = icrs
@@ -123,8 +123,7 @@ def sync(coord):
         if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
                 skyconv.model_real_stepper.size() > 0:
             stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
-                                                   frame=skyconv.model_real_stepper.frame(), inverse_model=True,
-                                                   obstime=obstime)
+                                                   frame=skyconv.model_real_stepper.frame(), obstime=obstime)
             if skyconv.model_real_stepper.frame() == 'hadec':
                 skyconv.model_real_stepper.add_point(hadec, stepper_coord)
             else:  # AltAz model frame
@@ -586,7 +585,7 @@ def send_status():
                     not settings.runtime_settings['tracking'] and not last_slew['altaz']):
                 # TODO: If this takes a long time, we should do this in another thread and use the last time we did it.
                 icrs = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']}, frame='icrs',
-                                              obstime=obstime, inverse_model=True)
+                                              obstime=obstime)
                 tete = skyconv.to_tete(icrs, obstime=obstime)
                 hadec = skyconv.to_hadec(icrs, obstime=obstime)
                 # print('After steps_to_coord', radec)

@@ -1,11 +1,18 @@
 import unittest
 import pointing_model
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import AltAz, EarthLocation, SkyCoord
+from skyconv_hadec import HADec
+import astropy.units as u
 import numpy
-import sys
+import settings
+
+el = EarthLocation(lat=38.9369 * u.deg, lon=-95.242 * u.deg, height=266.0 * u.m)
+settings.runtime_settings['earth_location'] = el
+
+ASSERT_PLACES = 4
 
 
-def assert_almost_equal_list(self, one, two, places=6, msg=None, delta=None):
+def assert_almost_equal_list(self, one, two, places=ASSERT_PLACES, msg=None, delta=None):
     assert len(one) == len(two)
     for i in range(len(one)):
         self.assertAlmostEqual(one[i], two[i], places=places, msg=msg, delta=delta)
@@ -18,13 +25,13 @@ class TestHelperMethods(unittest.TestCase):
         self.assertEqual(result, [[4.3, 1.2], [4.5, 1.3]])
 
     def test_alt_az_projection(self):
-        a = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        a = SkyCoord(AltAz(alt=10 * u.deg, az=90 * u.deg))
         xy = pointing_model.alt_az_projection(a)
         self.assertEqual(xy, {'x': 0.8888888888888888, 'y': 0.0})
-        a = SkyCoord(alt=[10, 60, 20], az=[90, 95, 100], unit='deg', frame='altaz')
+        a = SkyCoord(AltAz(alt=[10 * u.deg, 60 * u.deg, 20 * u.deg], az=[90 * u.deg, 95 * u.deg, 100 * u.deg]))
         xy = pointing_model.alt_az_projection(a)
-        assert_almost_equal_list(self, xy['x'].tolist(), [0.88888889, 0.3320649, 0.76596159], places=7)
-        assert_almost_equal_list(self, xy['y'].tolist(), [0., -0.02905191, -0.13505969], places=7)
+        assert_almost_equal_list(self, xy['x'].tolist(), [0.88888889, 0.3320649, 0.76596159])
+        assert_almost_equal_list(self, xy['y'].tolist(), [0., -0.02905191, -0.13505969])
 
     def test_inverse_altaz_projection(self):
         xy = {'x': 0.8888888888888888, 'y': 0.0}
@@ -48,81 +55,81 @@ class TestPointingModelBuie(unittest.TestCase):
         self.pm = pointing_model.PointingModelBuie()
 
     def test_unity(self):
-        sync_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
+        sync_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
+        stepper_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
+        sync_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
+        stepper_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=20, ra=100, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=20, ra=100, unit='deg', frame='icrs')
+        sync_point = HADec(dec=20 * u.deg, ha=100 * u.deg)
+        stepper_point = HADec(dec=20 * u.deg, ha=100 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(dec=50, ra=95, unit='deg', frame='icrs')
+        point = HADec(dec=50 * u.deg, ha=95 * u.deg)
         tpt = self.pm.transform_point(point)
-        self.assertEqual((tpt.ra.deg, tpt.dec.deg), (95.0, 50.0))
+        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (95.0, 50.0))
         tpt = self.pm.inverse_transform_point(tpt)
-        self.assertEqual((tpt.ra.deg, tpt.dec.deg), (95.0, 50.0))
+        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (95.0, 50.0))
 
     def test_two_point_unity(self):
-        sync_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
+        sync_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
+        stepper_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
+        sync_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
+        stepper_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(dec=50, ra=95, unit='deg', frame='icrs')
+        point = HADec(dec=50 * u.deg, ha=95 * u.deg)
         tpt = self.pm.transform_point(point)
-        self.assertEqual((tpt.ra.deg, tpt.dec.deg), (95.0, 50.0))
+        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (95.0, 50.0))
         tpt = self.pm.inverse_transform_point(tpt)
-        self.assertEqual((tpt.ra.deg, tpt.dec.deg), (95.0, 50.0))
+        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (95.0, 50.0))
 
     def test_twop_stretch(self):
-        sync_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
+        sync_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
+        stepper_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=10 + (60 - 10) * 1.02, ra=90 + (95 - 90) * 1.02, unit='deg', frame='icrs')
+        sync_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
+        stepper_point = HADec(dec=(10 + (60 - 10) * 1.02) * u.deg, ha=(90 + (95 - 90) * 1.02) * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=20, ra=100, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=10 + (20 - 10) * 1.02, ra=90 + (100 - 90) * 1.02, unit='deg', frame='icrs')
+        sync_point = HADec(dec=20 * u.deg, ha=100 * u.deg)
+        stepper_point = HADec(dec=(10 + (20 - 10) * 1.02) * u.deg, ha=(90 + (100 - 90) * 1.02) * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(dec=50, ra=95, unit='deg', frame='icrs')
+        point = HADec(dec=50 * u.deg, ha=95 * u.deg)
         tpt = self.pm.transform_point(point)
         # TODO: Really expect 95.1 and 50.8, is this close enough?
-        assert_almost_equal_list(self, (tpt.ra.deg, tpt.dec.deg), (95.1016616, 50.7997827))
+        assert_almost_equal_list(self, (tpt.ha.deg, tpt.dec.deg), (95.1016616, 50.7996))
         tpt = self.pm.inverse_transform_point(tpt)
         # TODO: Really expect 95.0 and 50.0, is this close enough
-        assert_almost_equal_list(self, (tpt.ra.deg, tpt.dec.deg), (94.9999727, 50.000011))
+        assert_almost_equal_list(self, (tpt.ha.deg, tpt.dec.deg), (95.0000, 50.0000))
 
     def test_one_degree(self):
-        sync_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
-        stepper_point = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
+        sync_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
+        stepper_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
+        sync_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
         sp = pointing_model.test_hadec_transform(10.0, 90.0, 60., 95.0, 1.)
-        stepper_point = SkyCoord(dec=sp['dec'], ra=sp['ha'], unit='deg', frame='icrs')
+        stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(dec=20, ra=100, unit='deg', frame='icrs')
+        sync_point = HADec(dec=20 * u.deg, ha=100 * u.deg)
         sp = pointing_model.test_hadec_transform(10.0, 90.0, 20., 100.0, 1.0)
-        stepper_point = SkyCoord(dec=sp['dec'], ra=sp['ha'], unit='deg', frame='icrs')
+        stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(dec=50, ra=95, unit='deg', frame='icrs')
+        point = HADec(dec=50 * u.deg, ha=95 * u.deg)
         tpt = self.pm.transform_point(point)
-        self.assertEqual((tpt.ra.deg, tpt.dec.deg), (95.42570155323564, 49.90590943208097))
+        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (95.42570155323564, 49.90590943208097))
         tpt = self.pm.inverse_transform_point(tpt)
-        self.assertEqual((tpt.ra.deg, tpt.dec.deg), (94.99998504751636, 49.9999766439837))
+        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (94.99998504751636, 49.9999766439837))
 
     def test_single(self):
-        point1 = SkyCoord(dec=10, ra=90, unit='deg', frame='icrs')
-        point2 = SkyCoord(dec=60, ra=95, unit='deg', frame='icrs')
-        point3 = SkyCoord(dec=21.212, ra=13.123, unit='deg', frame='icrs')
-        point4 = SkyCoord(dec=-75.232, ra=272.23, unit='deg', frame='icrs')
+        point1 = HADec(dec=10 * u.deg, ha=90 * u.deg)
+        point2 = HADec(dec=60 * u.deg, ha=95 * u.deg)
+        point3 = HADec(dec=21.212 * u.deg, ha=13.123 * u.deg)
+        point4 = HADec(dec=-75.232 * u.deg, ha=272.23 * u.deg)
         for pt_add in [point1, point2, point3, point4]:
             self.pm.clear()
             self.pm.add_point(pt_add, pt_add)
             for pt in [point1, point2, point3, point4]:
                 tpt = self.pm.transform_point(pt)
-                self.assertEqual((tpt.ra.deg, tpt.dec.deg), (pt.ra.deg, pt.dec.deg))
+                self.assertEqual((tpt.ha.deg, tpt.dec.deg), (pt.ha.deg, pt.dec.deg))
 
     def test_clear(self):
         self.test_twop_stretch()
@@ -135,63 +142,63 @@ class PointingModelAffine(unittest.TestCase):
         self.pm = pointing_model.PointingModelAffine()
 
     def test_unity(self):
-        sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
+        stepper_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=60 * u.deg, az=95 * u.deg)
+        stepper_point = AltAz(alt=60 * u.deg, az=95 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=20 * u.deg, az=100 * u.deg)
+        stepper_point = AltAz(alt=20 * u.deg, az=100 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
+        point = AltAz(alt=50 * u.deg, az=95 * u.deg)
         tpt = self.pm.transform_point(point)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (50.0, 95.0))
         tpt = self.pm.inverse_transform_point(tpt)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (50.0, 95.0))
 
     def test_two_point_unit(self):
-        sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
+        stepper_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=60 * u.deg, az=95 * u.deg)
+        stepper_point = AltAz(alt=60 * u.deg, az=95 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
+        point = AltAz(alt=50 * u.deg, az=95 * u.deg)
         tpt = self.pm.transform_point(point)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (50.0, 95.0))
         tpt = self.pm.inverse_transform_point(tpt)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (50.0, 95.0))
 
     def test_twop_stretch(self):
-        sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
+        stepper_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=10 + (60 - 10) * 1.02, az=90 + (95 - 90) * 1.02, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=60 * u.deg, az=95 * u.deg)
+        stepper_point = AltAz(alt=(10 + (60 - 10) * 1.02) * u.deg, az=(90 + (95 - 90) * 1.02) * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=10 + (20 - 10) * 1.02, az=90 + (100 - 90) * 1.02, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=20 * u.deg, az=100 * u.deg)
+        stepper_point = AltAz(alt=(10 + (20 - 10) * 1.02) * u.deg, az=(90 + (100 - 90) * 1.02) * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
+        point = AltAz(alt=50 * u.deg, az=95 * u.deg)
         tpt = self.pm.transform_point(point)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (50.80120905913654, 95.09687722671514))
         tpt = self.pm.inverse_transform_point(tpt)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (49.999999999999986, 94.99999999999999))
 
     def test_one_degree(self):
-        sync_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
-        stepper_point = SkyCoord(alt=10, az=90, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
+        stepper_point = AltAz(alt=10 * u.deg, az=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=60, az=95, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=60 * u.deg, az=95 * u.deg)
         sp = pointing_model.test_altaz_transform(10.0, 90.0, 60., 95.0, 1.)
-        stepper_point = SkyCoord(alt=sp['alt'], az=sp['az'], unit='deg', frame='altaz')
+        stepper_point = AltAz(alt=sp['alt'] * u.deg, az=sp['az'] * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        sync_point = SkyCoord(alt=20, az=100, unit='deg', frame='altaz')
+        sync_point = AltAz(alt=20 * u.deg, az=100 * u.deg)
         sp = pointing_model.test_altaz_transform(10.0, 90.0, 20., 100.0, 1.0)
-        stepper_point = SkyCoord(alt=sp['alt'], az=sp['az'], unit='deg', frame='altaz')
+        stepper_point = AltAz(alt=sp['alt'] * u.deg, az=sp['az'] * u.deg)
         self.pm.add_point(sync_point, stepper_point)
-        point = SkyCoord(alt=50, az=95, unit='deg', frame='altaz')
+        point = AltAz(alt=50 * u.deg, az=95 * u.deg)
         tpt = self.pm.transform_point(point)
         self.assertEqual((tpt.alt.deg, tpt.az.deg), (50.08108010292904, 94.4534133318961))
         tpt = self.pm.inverse_transform_point(tpt)

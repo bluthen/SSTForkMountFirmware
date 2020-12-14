@@ -1,14 +1,14 @@
-from astropy.coordinates import AltAz, ICRS, TETE, Longitude
-from astropy.time import Time as AstroTime
+import typing
 
 import astropy.units as u
 import astropy.units.si as usi
+from astropy.coordinates import AltAz, ICRS, TETE, Longitude
+from astropy.time import Time as AstroTime
 
+import pointing_model
 import settings
 import skyconv_hadec
 from skyconv_hadec import HADec
-import typing
-import pointing_model
 
 model_real_stepper: typing.Union[None, pointing_model.PointingModelBuie, pointing_model.PointingModelAffine] = None
 
@@ -304,28 +304,20 @@ def _ha_delta_deg(started_angle, end_angle):
     return min([d_1, d_2, d_3], key=abs)
 
 
-def _hadec_to_steps(hadec_coord, sync_info=None, ha_steps_per_degree=None, dec_steps_per_degree=None,
-                    model_transform=False):
+def _hadec_to_steps(hadec_coord):
     """
     Takes HaDec coord and converts it to steps.
     :param hadec_coord:
     :type hadec_coord: HADec
-    :param sync_info:
-    :type sync_info: dict
-    :param ha_steps_per_degree:
-    :param dec_steps_per_degree:
     :param model_transform: If should use transform coordinate using model.
+    :type model_transform: bool
     :return: {'ha': Step counts get to disired HA, 'dec': Step counts to get to desired Dec}
-    :rtype: dict
+    :rtype: Dict[str, float]
     """
-    if not sync_info:
-        sync_info = settings.runtime_settings['sync_info']
-    if not ha_steps_per_degree:
-        ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
-    if not dec_steps_per_degree:
-        dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
-    if model_transform:
-        hadec_coord = model_real_stepper.transform_point(hadec_coord)
+    sync_info = settings.runtime_settings['sync_info']
+    ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
+    dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
+    hadec_coord = model_real_stepper.transform_point(hadec_coord)
     # TODO: Do we neeed something like ra_deg_d? Or stop it from twisting even with tracking?
     #  How does this affect the model?
     # d_ha = ha_dec_coord.ra.deg - sync_info['coord'].ha.deg
@@ -460,50 +452,40 @@ def to_tete(coord, obstime=None, overwrite_time=False):
     return tete
 
 
-def to_steps(coord, sync_info=None, obstime=None, model_transform=False, ha_steps_per_degree=None,
-             dec_steps_per_degree=None):
+def to_steps(coord, obstime=None):
     """
     Takes a HaDec,TETE,IRCS,AltAz, or dict(steps) coordinate and converts to to steps.
     :param coord: RADec, AltAz, TETE, HADec, or dict {'ha': int, 'dec': int}
-    :param sync_info: If none uses runtime sync_info
+    :type coord: Union[RADec, AltAz, TETE, HADec, typing.Dict[str, float]]
     :param obstime: If None uses now
     :type obstime: AstroTime
-    :param model_transform: If true will send through pointing model if applicable.
-    :param ha_steps_per_degree: If none uses settings
-    :param dec_steps_per_degree: If None uses settings
-    :return: dict {'ha': int, 'dec': int}
-    :rtype: dict
+    :return: Dictionary with step counts to goto in HA and Dec to get to coordinate.
+    :rtype: Dict[str, float]
     """
     if type(coord) is dict and 'ha' in coord:  # Already ha dec steps
         return coord
     if coord.name == 'tete':
+        if obstime is None:
+            obstime = AstroTime.now()
         coord = to_tete(coord, obstime=obstime, overwrite_time=True)
     hadec = to_hadec(coord, obstime=obstime)
-    ret = _hadec_to_steps(hadec, sync_info=sync_info, ha_steps_per_degree=ha_steps_per_degree,
-                          dec_steps_per_degree=dec_steps_per_degree, model_transform=model_transform)
+    ret = _hadec_to_steps(hadec)
     return ret
 
 
-def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_model=False, ha_steps_per_degree=None,
-                   dec_steps_per_degree=None):
+def steps_to_coord(steps, frame='icrs', obstime=None):
     """
     Steps to hour angle dec.
     :param steps: keys ha, and dec
     :rtype steps: dict
     :param frame: One of, 'icrs', 'altaz', 'hadec', default 'icrs'
-    :param sync_info: defaults to runtime_settings['sync_info']
     :param obstime: time of observation default now
-    :param inverse_model: Should go through inverse model doing conversion
-    :param ha_steps_per_degree: defaults to settings
-    :param dec_steps_per_degree: defaults to settings
+    :type obstime: Union[None, AstroTime]
     :return: coordinate in specified frame
     """
-    if not sync_info:
-        sync_info = settings.runtime_settings['sync_info']
-    if not ha_steps_per_degree:
-        ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
-    if not dec_steps_per_degree:
-        dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
+    sync_info = settings.runtime_settings['sync_info']
+    ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
+    dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
     d_ha = (steps['ha'] - sync_info['steps']['ha']) / ha_steps_per_degree
     d_dec = (steps['dec'] - sync_info['steps']['dec']) / dec_steps_per_degree
 
@@ -518,29 +500,33 @@ def steps_to_coord(steps, frame='icrs', sync_info=None, obstime=None, inverse_mo
     frame_args = get_frame_init_args('hadec', obstime=obstime)
     hadec_coord = skyconv_hadec.HADec(ha=ha_deg * u.deg, dec=dec_deg * u.deg, **frame_args)
     # print('hadec_coord', hadec_coord)
-    if inverse_model:
-        if model_real_stepper.frame() == 'altaz':
-            altaz_coord = _hadec_to_altaz(hadec_coord)
-            altaz_coord = model_real_stepper.inverse_transform_point(altaz_coord)
-            if frame == 'hadec':
-                return _altaz_to_hadec(altaz_coord)
-            elif frame == 'altaz':
-                return altaz_coord
-            elif frame == 'tete':
-                return _altaz_to_tete(altaz_coord)
-            else:
-                return _altaz_to_icrs(altaz_coord)
+    # INVERSE MODEL
+    if model_real_stepper.frame() == 'altaz':
+        altaz_coord = _hadec_to_altaz(hadec_coord)
+        altaz_coord = model_real_stepper.inverse_transform_point(altaz_coord)
+        frame_args = get_frame_init_args('altaz', obstime=obstime)
+        altaz_coord = AltAz(alt=altaz_coord.alt, az=altaz_coord.az, **frame_args)
+        if frame == 'hadec':
+            return _altaz_to_hadec(altaz_coord)
+        elif frame == 'altaz':
+            return altaz_coord
+        elif frame == 'tete':
+            return _altaz_to_tete(altaz_coord)
+        else:
+            return _altaz_to_icrs(altaz_coord)
 
-        elif model_real_stepper.frame() == 'hadec':
-            hadec_coord = model_real_stepper.inverse_transform_point(hadec_coord)
-            if frame == 'hadec':
-                return hadec_coord
-            elif frame == 'altaz':
-                return _hadec_to_altaz(hadec_coord)
-            elif frame == 'tete':
-                return _hadec_to_tete(hadec_coord)
-            else:  # ICRS
-                return _hadec_to_icrs(hadec_coord)
+    elif model_real_stepper.frame() == 'hadec':
+        hadec_coord = model_real_stepper.inverse_transform_point(hadec_coord)
+        frame_args = get_frame_init_args('hadec', obstime=obstime)
+        hadec_coord = skyconv_hadec.HADec(ha=hadec_coord.ha, dec=hadec_coord.dec, **frame_args)
+        if frame == 'hadec':
+            return hadec_coord
+        elif frame == 'altaz':
+            return _hadec_to_altaz(hadec_coord)
+        elif frame == 'tete':
+            return _hadec_to_tete(hadec_coord)
+        else:  # ICRS
+            return _hadec_to_icrs(hadec_coord)
 
 
 def _clean_deg(deg, dec=False):

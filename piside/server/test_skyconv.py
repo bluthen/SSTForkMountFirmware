@@ -1,12 +1,15 @@
 import unittest
-from astropy.coordinates import EarthLocation, ICRS, AltAz, TETE
-from skyconv_hadec import HADec
+
 import astropy.units as u
-from astropy.units import si as usi
-from astropy.time import Time as AstroTime
 import pendulum
-import skyconv
+from astropy.coordinates import EarthLocation, ICRS, AltAz, TETE
+from astropy.time import Time as AstroTime
+from astropy.units import si as usi
+
+import pointing_model
 import settings
+import skyconv
+from skyconv_hadec import HADec
 
 # 38d23m48.8s  95d14m31.2s
 el = EarthLocation(lat=38.9369 * u.deg, lon=-95.242 * u.deg, height=266.0 * u.m)
@@ -215,7 +218,17 @@ class TestSkyConv(unittest.TestCase):
         self.assertEqual(skyconv._ha_delta_deg(-20.0, -5.0), 15.0)
 
     def test_hadec_to_steps(self):
-        pass
+        settings.runtime_settings['sync_info'] = {'coord': m75_hadec, 'steps': {'ha': 0, 'dec': 0}}
+        settings.settings['ra_ticks_per_degree'] = 450
+        settings.settings['dec_ticks_per_degree'] = 200
+        settings.settings['pointing_model'] = 'single'
+        skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+        frame_args = skyconv.get_frame_init_args('hadec', frame_copy=m75_hadec)
+        m75_hadec_1degree = HADec(ha=(m75_hadec.ha.deg + 1.0) * u.deg, dec=(m75_hadec.dec.deg + 1) * u.deg,
+                                  **frame_args)
+        steps = skyconv._hadec_to_steps(m75_hadec_1degree)
+        self.assertEqual(steps['ha'], 450)
+        self.assertEqual(steps['dec'], 200)
 
     def test_altaz_threshold_fix_pressure(self):
         frame_args = skyconv.get_frame_init_args('altaz', obstime=obstime)
@@ -245,10 +258,30 @@ class TestSkyConv(unittest.TestCase):
             self.assertEqual(skyconv.to_tete(coord, obstime=t, overwrite_time=True).obstime.iso, t.iso)
 
     def test_to_steps(self):
-        pass
+        settings.runtime_settings['sync_info'] = {'coord': m75_hadec, 'steps': {'ha': 0, 'dec': 0}}
+        settings.settings['ra_ticks_per_degree'] = 450
+        settings.settings['dec_ticks_per_degree'] = 200
+        settings.settings['pointing_model'] = 'single'
+        skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+        frame_args = skyconv.get_frame_init_args('hadec', frame_copy=m75_hadec)
+        m75_hadec_1degree = HADec(ha=(m75_hadec.ha.deg + 1.0) * u.deg, dec=(m75_hadec.dec.deg + 1) * u.deg,
+                                  **frame_args)
+        steps = skyconv.to_steps(m75_hadec_1degree)
+        self.assertEqual(steps['ha'], 450)
+        self.assertEqual(steps['dec'], 200)
 
     def test_steps_to_coord(self):
-        pass
+        settings.runtime_settings['sync_info'] = {'coord': m75_hadec, 'steps': {'ha': 0, 'dec': 0}}
+        settings.settings['ra_ticks_per_degree'] = 450
+        settings.settings['dec_ticks_per_degree'] = 200
+        settings.settings['pointing_model'] = 'single'
+        skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+        frame_args = skyconv.get_frame_init_args('hadec', frame_copy=m75_hadec)
+        m75_hadec_1degree = HADec(ha=(m75_hadec.ha.deg + 1.0) * u.deg, dec=(m75_hadec.dec.deg + 1) * u.deg,
+                                  **frame_args)
+        coord = skyconv.steps_to_coord({'ha': 450, 'dec': 200}, frame='hadec')
+        self.assertEqual(coord.ha.deg, m75_hadec_1degree.ha.deg)
+        self.assertEqual(coord.dec.deg, m75_hadec_1degree.dec.deg)
 
     def test_clean_deg(self):
         r = skyconv._clean_deg(91.0, True)
