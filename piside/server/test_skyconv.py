@@ -198,7 +198,15 @@ class TestSkyConv(unittest.TestCase):
         self.assertEqual(altaz.pressure.value, 0)
 
     def test_get_frame_init_args(self):
-        pass
+        for test in {'icrs': [], 'tete': ['obstime', 'location'],
+                     'altaz': ['location', 'obstime', 'pressure', 'obswl', 'relative_humidity', 'temperature'],
+                     'hadec': ['location', 'obstime', 'pressure', 'obswl', 'relative_humidity', 'temperature']}.items():
+            frame_args = skyconv.get_frame_init_args(test[0])
+            for testkey in test[1]:
+                for key in frame_args.keys():
+                    self.assertTrue(key in test[1])
+                    self.assertTrue(testkey in frame_args)
+        # TODO: test frame copy and obstime and pressure?
 
     def test_ha_delta_deg(self):
         self.assertEqual(skyconv._ha_delta_deg(359.0, 370.0), 11.0)
@@ -230,6 +238,11 @@ class TestSkyConv(unittest.TestCase):
     def test_to_tete(self):
         for coord in [m75_altaz, m75_hadec, m75_icrs, m75_tete]:
             self.assertEqual(skyconv.to_tete(coord).name, 'tete')
+
+    def test_to_tete_overwrite_time(self):
+        t = AstroTime.now()
+        for coord in [m75_altaz, m75_hadec, m75_icrs, m75_tete]:
+            self.assertEqual(skyconv.to_tete(coord, obstime=t, overwrite_time=True).obstime.iso, t.iso)
 
     def test_to_steps(self):
         pass

@@ -263,6 +263,8 @@ def get_frame_init_args(frame, obstime=None, frame_copy=None, pressure=None):
     :return: Dictionary of coordinate frame arguments
     :rtype: dict
     """
+    if frame == 'icrs':
+        return {}
     ret = {'location': settings.runtime_settings['earth_location'], 'obstime': obstime}
     if ret['obstime'] is None:
         ret['obstime'] = AstroTime.now()
