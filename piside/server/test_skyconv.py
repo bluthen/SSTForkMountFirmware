@@ -28,14 +28,30 @@ m75_altaz = AltAz(alt=27.067210767906897 * u.deg, az=161.7810984394531 * u.deg,
 m75_hadec = HADec(ha=342.54699618235094 * u.deg, dec=-21.835812539832737 * u.deg,
                   **(skyconv.get_frame_init_args('hadec', obstime=obstime)))
 
-ALMOST_PLACES = 4 # Half arc-second
+ALMOST_PLACES = 4  # Half arc-second
 
-
-# KSTARS
+# KStars M75 at Time and location
 # J2000 301.52000000000004, -21.922222222222224
 # JNow  301.8088333333333, -21.86411388888889
 # HADec 342.5416666666667, -21.86411388888889
-# Altaz: 27.55138888888889, 161.69611111111112
+# Altaz 27.55138888888889, 161.69611111111112
+
+# TODO: Lets also test a low altitude object
+# ngc722 = SkyCoord.frame_name('ngc722')
+ngc722_icrs = ICRS(ra=28.69571847 * u.deg, dec=20.69815161 * u.deg)
+ngc722_tete = TETE(ra=28.96145692659277 * u.deg, dec=20.79048436548306 * u.deg,
+                   **(skyconv.get_frame_init_args('tete', obstime=obstime)))
+ngc722_altaz = AltAz(alt=2.269707467152529 * u.deg, az=64.87052807712135 * u.deg,
+                     **(skyconv.get_frame_init_args('altaz', obstime=obstime)))
+ngc722_hadec = HADec(ha=255.3862885373962 * u.deg, dec=20.790452855713287 * u.deg,
+                     **(skyconv.get_frame_init_args('hadec', obstime=obstime)))
+
+
+# KStars NGC 722 at Time and Location
+# J2000 28.695416666666667, 20.698055555555555
+# JNow  28.961166666666667, 20.79041666666667
+# HADec 255.38749999999996, 20.79041666666667
+# AltAz 2.0419444444444443, 64.8536111111111
 
 
 class TestSkyConv(unittest.TestCase):
@@ -47,71 +63,139 @@ class TestSkyConv(unittest.TestCase):
         hadec, atm = skyconv._icrs_to_hadec(m75_icrs, obstime=obstime)
         self.assertAlmostEqual(hadec.ha.deg, m75_hadec.ha.deg, places=ALMOST_PLACES)  # 22h50m:9.28s
         self.assertAlmostEqual(hadec.dec.deg, m75_hadec.dec.deg, places=ALMOST_PLACES)  # -21d51m51.36s
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+        self.assertGreater(hadec.pressure.value, 0)
+
+        hadec, atm = skyconv._icrs_to_hadec(ngc722_icrs, obstime=obstime)
+        self.assertAlmostEqual(hadec.ha.deg, ngc722_hadec.ha.deg, places=ALMOST_PLACES)  # 22h50m:9.28s
+        self.assertAlmostEqual(hadec.dec.deg, ngc722_hadec.dec.deg, places=ALMOST_PLACES)  # -21d51m51.36s
+        self.assertFalse(atm)
+        self.assertEqual(hadec.pressure.value, 0)
 
     def test_icrs_to_altaz(self):
         altaz, atm = skyconv._icrs_to_altaz(m75_icrs, obstime=obstime)
         self.assertAlmostEqual(altaz.alt.deg, m75_altaz.alt.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(altaz.az.deg, m75_altaz.az.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+        self.assertGreater(altaz.pressure.value, 0)
+
+        altaz, atm = skyconv._icrs_to_altaz(ngc722_icrs, obstime=obstime)
+        self.assertAlmostEqual(altaz.alt.deg, ngc722_altaz.alt.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(altaz.az.deg, ngc722_altaz.az.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
+        self.assertEqual(altaz.pressure.value, 0)
 
     def test_icrs_to_tete(self):
         tete = skyconv._icrs_to_tete(m75_icrs, obstime=obstime)
         self.assertAlmostEqual(tete.ra.deg, m75_tete.ra.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(tete.dec.deg, m75_tete.dec.deg, places=ALMOST_PLACES)
 
+        tete = skyconv._icrs_to_tete(ngc722_icrs, obstime=obstime)
+        self.assertAlmostEqual(tete.ra.deg, ngc722_tete.ra.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(tete.dec.deg, ngc722_tete.dec.deg, places=ALMOST_PLACES)
+
     def test_tete_to_hadec(self):
         hadec, atm = skyconv._tete_to_hadec(m75_tete)
         self.assertAlmostEqual(hadec.ha.deg, m75_hadec.ha.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(hadec.dec.deg, m75_hadec.dec.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+        self.assertGreater(hadec.pressure.value, 0)
+
+        hadec, atm = skyconv._tete_to_hadec(ngc722_tete)
+        self.assertAlmostEqual(hadec.ha.deg, ngc722_hadec.ha.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(hadec.dec.deg, ngc722_hadec.dec.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
+        self.assertEqual(hadec.pressure.value, 0)
 
     def test_tete_to_icrs(self):
         icrs = skyconv._tete_to_icrs(m75_tete)
         self.assertAlmostEqual(icrs.ra.deg, m75_icrs.ra.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(icrs.dec.deg, m75_icrs.dec.deg, places=ALMOST_PLACES)
 
+        icrs = skyconv._tete_to_icrs(ngc722_tete)
+        self.assertAlmostEqual(icrs.ra.deg, ngc722_icrs.ra.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(icrs.dec.deg, ngc722_icrs.dec.deg, places=ALMOST_PLACES)
+
     def test_tete_to_altaz(self):
         altaz, atm = skyconv._tete_to_altaz(m75_tete)
         self.assertAlmostEqual(altaz.alt.deg, m75_altaz.alt.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(altaz.az.deg, m75_altaz.az.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+
+        altaz, atm = skyconv._tete_to_altaz(ngc722_tete)
+        self.assertAlmostEqual(altaz.alt.deg, ngc722_altaz.alt.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(altaz.az.deg, ngc722_altaz.az.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
 
     def test_altaz_to_hadec(self):
         hadec, atm = skyconv._altaz_to_hadec(m75_altaz)
         self.assertAlmostEqual(hadec.ha.deg, m75_hadec.ha.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(hadec.dec.deg, m75_hadec.dec.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+        self.assertGreater(hadec.pressure.value, 0)
+
+        hadec, atm = skyconv._altaz_to_hadec(ngc722_altaz)
+        self.assertAlmostEqual(hadec.ha.deg, ngc722_hadec.ha.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(hadec.dec.deg, ngc722_hadec.dec.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
+        self.assertEqual(hadec.pressure.value, 0)
 
     def test_altaz_to_icrs(self):
         icrs, atm = skyconv._altaz_to_icrs(m75_altaz)
         self.assertAlmostEqual(icrs.ra.deg, m75_icrs.ra.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(icrs.dec.deg, m75_icrs.dec.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+
+        icrs, atm = skyconv._altaz_to_icrs(ngc722_altaz)
+        self.assertAlmostEqual(icrs.ra.deg, ngc722_icrs.ra.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(icrs.dec.deg, ngc722_icrs.dec.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
 
     def test_altaz_to_tete(self):
         tete, atm = skyconv._altaz_to_tete(m75_altaz)
         self.assertAlmostEqual(tete.ra.deg, m75_tete.ra.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(tete.dec.deg, m75_tete.dec.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+
+        tete, atm = skyconv._altaz_to_tete(ngc722_altaz)
+        self.assertAlmostEqual(tete.ra.deg, ngc722_tete.ra.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(tete.dec.deg, ngc722_tete.dec.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
 
     def test_hadec_to_tete(self):
         tete, atm = skyconv._hadec_to_tete(m75_hadec)
         self.assertAlmostEqual(tete.ra.deg, m75_tete.ra.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(tete.dec.deg, m75_tete.dec.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+
+        tete, atm = skyconv._hadec_to_tete(ngc722_hadec)
+        self.assertAlmostEqual(tete.ra.deg, ngc722_tete.ra.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(tete.dec.deg, ngc722_tete.dec.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
 
     def test_hadec_to_icrs(self):
         icrs, atm = skyconv._hadec_to_icrs(m75_hadec)
         self.assertAlmostEqual(icrs.ra.deg, m75_icrs.ra.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(icrs.dec.deg, m75_icrs.dec.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+
+        icrs, atm = skyconv._hadec_to_icrs(ngc722_hadec)
+        self.assertAlmostEqual(icrs.ra.deg, ngc722_icrs.ra.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(icrs.dec.deg, ngc722_icrs.dec.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
 
     def test_hadec_to_altaz(self):
         altaz, atm = skyconv._hadec_to_altaz(m75_hadec)
         self.assertAlmostEqual(altaz.alt.deg, m75_altaz.alt.deg, places=ALMOST_PLACES)
         self.assertAlmostEqual(altaz.az.deg, m75_altaz.az.deg, places=ALMOST_PLACES)
-        self.assertEqual(atm, True)
+        self.assertTrue(atm)
+        self.assertGreater(altaz.pressure.value, 0)
+
+        altaz, atm = skyconv._hadec_to_altaz(ngc722_hadec)
+        self.assertAlmostEqual(altaz.alt.deg, ngc722_altaz.alt.deg, places=ALMOST_PLACES)
+        self.assertAlmostEqual(altaz.az.deg, ngc722_altaz.az.deg, places=ALMOST_PLACES)
+        self.assertFalse(atm)
+        self.assertEqual(altaz.pressure.value, 0)
 
     def test_get_frame_init_args(self):
         pass

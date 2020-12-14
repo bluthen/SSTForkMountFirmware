@@ -94,11 +94,11 @@ def _tete_to_hadec(tete_coord):
     :return: (HADec coordinate, if atm refraction used in conversion)
     :rtype: (HADec, atm)
     """
-    icrs = tete_coord.transform_to(ICRS())
-    altaz = _icrs_to_altaz(icrs, pressure=0 * u.hPa)[0]
+    altaz, atm = _tete_to_altaz(tete_coord)
     pressure = None
-    if altaz.alt.deg < 0:
+    if not atm:
         pressure = 0 * u.hPa
+    icrs = tete_coord.transform_to(ICRS())
     hadec, atm = _icrs_to_hadec(icrs, obstime=tete_coord.obstime, pressure=pressure)
     return hadec, atm
 
@@ -195,7 +195,7 @@ def _hadec_to_tete(hadec_coord):
             frame_args['pressure'] = 0 * u.hPa
             new_hadec_coord = skyconv_hadec.HADec(ha=hadec_coord.ha, dec=hadec_coord.dec, **frame_args)
     atm = int(new_hadec_coord.pressure.value) != 0
-    icrs = skyconv_hadec.hadec_to_icrs(hadec_coord, ICRS())
+    icrs = skyconv_hadec.hadec_to_icrs(new_hadec_coord, ICRS())
     tete = _icrs_to_tete(icrs, obstime=hadec_coord.obstime)
     return tete, atm
 
