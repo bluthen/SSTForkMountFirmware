@@ -6,6 +6,7 @@ const Formatting = {
     },
     degLat2Str(lat) {
         lat = parseFloat(lat);
+        lat = Math.round(lat*10000)/10000.0;
         let latstr = "";
         if (lat < 0) {
             latstr += 'S';
@@ -21,6 +22,7 @@ const Formatting = {
     },
     degLong2Str(long) {
         long = parseFloat(long);
+        long = Math.round(long*10000)/10000.0;
         let longstr = "";
         if (long < 0) {
             longstr += 'W';
@@ -37,6 +39,7 @@ const Formatting = {
     degRA2Str(ra) {
         if (ra !== null) {
             ra = parseFloat(ra);
+            ra = Math.round(ra*10000)/10000.0;
             ra = ra * (24.0 / 360.0);
             const remain = ra - (~~ra);
             const min = ~~(remain * 60);
@@ -62,6 +65,7 @@ const Formatting = {
     degDEC2Str(dec) {
         if (dec !== null) {
             dec = parseFloat(dec);
+            dec = Math.round(dec*10000)/10000.0;
             const deg = ~~dec;
             let remain = Math.abs(dec - deg) * 60 * 60;
             const arcmin = ~~(remain / 60)

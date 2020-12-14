@@ -502,18 +502,18 @@ def steps_to_coord(steps, frame='icrs', obstime=None):
     # print('hadec_coord', hadec_coord)
     # INVERSE MODEL
     if model_real_stepper.frame() == 'altaz':
-        altaz_coord = _hadec_to_altaz(hadec_coord)
+        altaz_coord = to_altaz(hadec_coord)
         altaz_coord = model_real_stepper.inverse_transform_point(altaz_coord)
         frame_args = get_frame_init_args('altaz', obstime=obstime)
         altaz_coord = AltAz(alt=altaz_coord.alt, az=altaz_coord.az, **frame_args)
         if frame == 'hadec':
-            return _altaz_to_hadec(altaz_coord)
+            return to_hadec(altaz_coord)
         elif frame == 'altaz':
             return altaz_coord
         elif frame == 'tete':
-            return _altaz_to_tete(altaz_coord)
+            return to_tete(altaz_coord)
         else:
-            return _altaz_to_icrs(altaz_coord)
+            return to_icrs(altaz_coord)
 
     elif model_real_stepper.frame() == 'hadec':
         hadec_coord = model_real_stepper.inverse_transform_point(hadec_coord)
@@ -522,11 +522,11 @@ def steps_to_coord(steps, frame='icrs', obstime=None):
         if frame == 'hadec':
             return hadec_coord
         elif frame == 'altaz':
-            return _hadec_to_altaz(hadec_coord)
+            return to_altaz(hadec_coord)
         elif frame == 'tete':
-            return _hadec_to_tete(hadec_coord)
+            return to_tete(hadec_coord)
         else:  # ICRS
-            return _hadec_to_icrs(hadec_coord)
+            return to_icrs(hadec_coord)
 
 
 def _clean_deg(deg, dec=False):

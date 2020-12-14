@@ -6,7 +6,7 @@ const state = observable({
     client_id: uuidv4(),
     page: 'manual',
     topTabs: 'manual',
-    coordDisplay: 'tete',
+    coordDisplay: 'icrs',
     fatal_error: null,
     color_scheme: 'default',
     version: {version: "", version_date: ""},

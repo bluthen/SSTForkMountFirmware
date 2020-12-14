@@ -17,7 +17,9 @@ import network
 import settings
 import pynmea2
 import pendulum
-import handpad_server
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import handpad_server
 
 # TODO This global limits us to one handpad.
 hserver = None  # type: handpad_server.HandpadServer
