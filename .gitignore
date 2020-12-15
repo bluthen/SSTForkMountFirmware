@@ -1,2 +1,7 @@
 .idea
 ssteq25-firmware*.zip
+*.FCStd1
+*.stl
+*.gcode
+*.bak
+
