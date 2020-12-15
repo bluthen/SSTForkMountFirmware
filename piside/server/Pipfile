@@ -1,12 +1,19 @@
-#[[source]]
-#url = "https://www.piwheels.org/simple"
-#verify_ssl = true
-#name = "piwheels"
+[[source]]
+url = "https://www.piwheels.org/simple"
+verify_ssl = true
+name = "piwheels"
+
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
 
 [dev-packages]
 
 [packages]
-astropy = "*"
+pytzdata = {version="2020.1", index="pypi"}
+astropy = "4.2"
 fasteners = "*"
 pendulum = "*"
 pyserial = "*"
@@ -19,7 +26,6 @@ Flask-Compress = "*"
 pynmea2 = "*"
 ifaddr = "*"
 setuptools = "*"
-psutil = "*"
 
 [requires]
 python_version = "3.7"

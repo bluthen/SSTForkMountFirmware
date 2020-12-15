@@ -32,9 +32,9 @@ import settings
 import motion
 import typing
 
-version = "0.0.32"
+version = "0.0.33"
 version_short = "0.0"
-version_date_str = "Oct 03 2020"
+version_date_str = "Dec 14 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
