@@ -1,0 +1,34 @@
+.mode csv
+.import dso.csv dso
+.import hygdata_v3.csv stars
+
+-- UPDATE dso SET ra = CAST(ra AS real);
+update dso set mag = cast(mag as real);
+
+ALTER TABLE dso ADD COLUMN search TEXT;
+
+UPDATE dso set search = name||'|'||cat1||' '||id1||'|'||cat2||' '||id2||'|'||dupcat||' '||dupid;
+DELETE from stars where gl = '' and proper = '';
+
+
+
+-- US Cities
+
+CREATE TABLE uscities (
+  countrycode TEXT,
+  postalcode TEXT,
+  city TEXT,
+  state TEXT,
+  state_abbr TEXT,
+  county TEXT,
+  count_code TEXT,
+  community TEXT,
+  community_code TEXT,
+  latitude TEXT,
+  longitude TEXT,
+  accuracy TEXT
+);
+
+.mode csv
+.separator "\t"
+.import US.txt uscities
