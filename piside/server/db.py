@@ -40,8 +40,7 @@ def search_planets(search):
             continue
         if body.find(planet_search) != -1:
             location = None
-            if settings.runtime_settings['earth_location_set']:
-                location = settings.runtime_settings['earth_location']
+            location = settings.runtime_settings['earth_location']
             coord = astropy.coordinates.get_body(body, AstroTime.now(),
                                                  location=location)
             coord = coord.icrs

@@ -530,6 +530,7 @@ def do_slewto():
     try:
         control.set_slew(**reqj)
     except Exception as e:
+        traceback.print_exc()
         return str(e), 400
     return 'Slewing', 200
 
@@ -563,8 +564,6 @@ def set_time():
     time_str = reqj.get('time')
     # overwrite = request.form.get('overwrite', None)
     status = control.set_time(time_str)
-    if status[1] == 'NTP Set':
-        return status[1], 200
     return status[1], 200 if status[0] else 500
 
 

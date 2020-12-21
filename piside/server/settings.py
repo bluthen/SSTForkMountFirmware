@@ -111,5 +111,5 @@ def get_logger(name):
     return logger
 
 
-runtime_settings = {'time_been_set': False, 'earth_location': None, 'earth_location_set': True, 'sync_info': None,
+runtime_settings = {'time_from_gps': False, 'earth_location_from_gps': False, 'earth_location': None, 'sync_info': None,
                     'tracking': True, 'started_parked': False, 'calibration_logging': False, 'last_locationtz': None}

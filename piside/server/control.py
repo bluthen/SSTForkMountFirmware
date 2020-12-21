@@ -32,9 +32,9 @@ import settings
 import motion
 import typing
 
-version = "0.0.33"
+version = "0.0.35"
 version_short = "0.0"
-version_date_str = "Dec 14 2020"
+version_date_str = "Dec 21 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -311,6 +311,9 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
         while not math.isclose(status['rs'], rspeed, rel_tol=0.02) and math.isclose(status['ds'], 0, rel_tol=0.02):
             time.sleep(0.25)
             status = stepper.get_status()
+    except:
+        traceback.print_exc()
+        raise
     finally:
         if parking and not cancel_slew:
             settings.parked()
@@ -418,7 +421,7 @@ DEFAULT_LAT_DEG = 0
 DEFAULT_LON_DEG = 0
 
 
-def update_location():
+def update_location(from_gps=False):
     """
     Takes current location set in settings and sets runtime earth location.
     """
@@ -434,7 +437,6 @@ def update_location():
         settings.runtime_settings['earth_location'] = EarthLocation(lat=DEFAULT_LAT_DEG * u.deg,
                                                                     lon=DEFAULT_LON_DEG * u.deg,
                                                                     height=DEFAULT_ELEVATION_M * u.m)
-        settings.runtime_settings['earth_location_set'] = False
         return
     if 'elevation' not in settings.settings['location']:
         elevation = DEFAULT_ELEVATION_M
@@ -443,15 +445,15 @@ def update_location():
     el = EarthLocation(lat=settings.settings['location']['lat'] * u.deg,
                        lon=settings.settings['location']['long'] * u.deg,
                        height=elevation * u.m)
-    settings.runtime_settings['earth_location_set'] = True
     settings.runtime_settings['earth_location'] = el
+    settings.runtime_settings['earth_location_from_gps'] = from_gps
     if do_altaz_sync:
         set_sync(alt=alt, az=az, frame='altaz')
     try:
         settings.runtime_settings['last_locationtz'] = TimezoneFinder().timezone_at(lng=el.lon.deg, lat=el.lat.deg)
     except:
         print('Error getting timezone from location.')
-        traceback.print_exc(file=sys.stdout)
+        traceback.print_exc()
 
 
 def calc_status(status):
@@ -557,92 +559,93 @@ def get_cpustats():
 
 def send_status():
     """
-    Sets last_status global and sends last_status to socket.
+    Calculates and sets last_status global
     :return:
     """
     import handpad_server
     global slewing, last_status, last_slew, cancel_slew, ra_encoder_error, dec_encoder_error
-    status = calc_status(stepper.get_status())
-    status['ra'] = None
-    status['dec'] = None
-    status['alt'] = None
-    status['az'] = None
-    status['hostname'] = socket.gethostname()
-    status['started_parked'] = settings.runtime_settings['started_parked']
-    st = skyconv.get_sidereal_time().hms
-    status['sidereal_time'] = '%02d:%02d:%02d' % (int(st.h), int(st.m), int(st.s))
-    status['time_been_set'] = settings.runtime_settings['time_been_set']
-    status['synced'] = settings.runtime_settings['sync_info'] is not None
-    status['cpustats'] = get_cpustats()
-    if not handpad_server.handpad_server:  # If server has not started yet
-        status['handpad'] = False
-    else:
-        status['handpad'] = handpad_server.handpad_server.serial is not None
-    if status['synced']:
-        obstime = AstroTime.now()
-        with set_last_slew_lock:
-            if slewing or (settings.runtime_settings['tracking'] and not last_slew['tete']) or (
-                    not settings.runtime_settings['tracking'] and not last_slew['altaz']):
-                # TODO: If this takes a long time, we should do this in another thread and use the last time we did it.
-                icrs = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']}, frame='icrs',
-                                              obstime=obstime)
-                tete = skyconv.to_tete(icrs, obstime=obstime)
-                hadec = skyconv.to_hadec(icrs, obstime=obstime)
-                # print('After steps_to_coord', radec)
-                altaz = skyconv.to_altaz(tete)
-                if not slewing:
-                    set_last_slew(tete)
-            else:
-                # Use last slew data if tracking
-                if settings.runtime_settings['tracking']:
-                    tete = last_slew['tete']
-                    icrs = skyconv.to_icrs(tete)
-                    hadec = skyconv.to_hadec(icrs, obstime=obstime)
-                    altaz = skyconv.to_altaz(icrs, obstime=obstime)
-                else:
-                    altaz = last_slew['altaz']
-                    icrs = skyconv.to_icrs(altaz)
+    try:
+        status = calc_status(stepper.get_status())
+        status['ra'] = None
+        status['dec'] = None
+        status['alt'] = None
+        status['az'] = None
+        status['hostname'] = socket.gethostname()
+        status['started_parked'] = settings.runtime_settings['started_parked']
+        st = skyconv.get_sidereal_time().hms
+        status['sidereal_time'] = '%02d:%02d:%02d' % (int(st.h), int(st.m), int(st.s))
+        status['time_been_set'] = settings.runtime_settings['time_been_set']
+        status['synced'] = settings.runtime_settings['sync_info'] is not None
+        status['cpustats'] = get_cpustats()
+        if not handpad_server.handpad_server:  # If server has not started yet
+            status['handpad'] = False
+        else:
+            status['handpad'] = handpad_server.handpad_server.serial is not None
+        if status['synced']:
+            obstime = AstroTime.now()
+            with set_last_slew_lock:
+                if slewing or (settings.runtime_settings['tracking'] and not last_slew['tete']) or (
+                        not settings.runtime_settings['tracking'] and not last_slew['altaz']):
+                    icrs = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']}, frame='icrs',
+                                                  obstime=obstime)
                     tete = skyconv.to_tete(icrs, obstime=obstime)
                     hadec = skyconv.to_hadec(icrs, obstime=obstime)
-        status['ra'] = tete.ra.deg
-        status['dec'] = tete.dec.deg
-        status['tete_ra'] = tete.ra.deg
-        status['tete_dec'] = tete.dec.deg
-        status['icrs_ra'] = icrs.ra.deg
-        status['icrs_dec'] = icrs.dec.deg
-        status['hadec_ha'] = hadec.ha.deg
-        status['hadec_dec'] = hadec.dec.deg
-        status['time'] = obstime.iso + 'Z'
-        # print('earth_location', settings.runtime_settings['earth_location'])
-        status['alt'] = altaz.alt.deg
-        status['az'] = altaz.az.deg
-        # if settings.runtime_settings['earth_location_set']:
-        below_horizon = below_horizon_limit(altaz, tete)
-        if below_horizon and settings.runtime_settings['tracking']:
-            cancel_slew = True
-            settings.runtime_settings['tracking'] = False
-            stepper.set_speed_ra(0)
-            set_last_slew(altaz)
-            status['alert'] = 'In horizon limit, tracking stopped'
-        # print(altaz)
-    if ra_encoder_error:
-        status['alert'] = ra_encoder_error
-        # Hack to make the error keep coming up
-        if ra_encoder_error[-1] == ' ':
-            ra_encoder_error = ra_encoder_error.strip()
-        else:
-            ra_encoder_error = ra_encoder_error + ' '
-    elif dec_encoder_error:
-        status['alert'] = dec_encoder_error
-        # Hack to make the error keep coming up
-        if dec_encoder_error[-1] == ' ':
-            dec_encoder_error = dec_encoder_error.strip()
-        else:
-            dec_encoder_error = dec_encoder_error + ' '
-    status['slewing'] = slewing
-    status['tracking'] = settings.runtime_settings['tracking']
-    last_status = status
-    # socketio.emit('status', status)
+                    # print('After steps_to_coord', radec)
+                    altaz = skyconv.to_altaz(tete)
+                    if not slewing:
+                        set_last_slew(tete)
+                else:
+                    # Use last slew data if tracking
+                    if settings.runtime_settings['tracking']:
+                        tete = last_slew['tete']
+                        icrs = skyconv.to_icrs(tete)
+                        hadec = skyconv.to_hadec(icrs, obstime=obstime)
+                        altaz = skyconv.to_altaz(icrs, obstime=obstime)
+                    else:
+                        altaz = last_slew['altaz']
+                        icrs = skyconv.to_icrs(altaz)
+                        tete = skyconv.to_tete(icrs, obstime=obstime)
+                        hadec = skyconv.to_hadec(icrs, obstime=obstime)
+            status['ra'] = tete.ra.deg
+            status['dec'] = tete.dec.deg
+            status['tete_ra'] = tete.ra.deg
+            status['tete_dec'] = tete.dec.deg
+            status['icrs_ra'] = icrs.ra.deg
+            status['icrs_dec'] = icrs.dec.deg
+            status['hadec_ha'] = hadec.ha.deg
+            status['hadec_dec'] = hadec.dec.deg
+            status['time'] = obstime.iso + 'Z'
+            # print('earth_location', settings.runtime_settings['earth_location'])
+            status['alt'] = altaz.alt.deg
+            status['az'] = altaz.az.deg
+            below_horizon = below_horizon_limit(altaz, tete)
+            if below_horizon and settings.runtime_settings['tracking']:
+                cancel_slew = True
+                settings.runtime_settings['tracking'] = False
+                stepper.set_speed_ra(0)
+                set_last_slew(altaz)
+                status['alert'] = 'In horizon limit, tracking stopped'
+            # print(altaz)
+        if ra_encoder_error:
+            status['alert'] = ra_encoder_error
+            # Hack to make the error keep coming up
+            if ra_encoder_error[-1] == ' ':
+                ra_encoder_error = ra_encoder_error.strip()
+            else:
+                ra_encoder_error = ra_encoder_error + ' '
+        elif dec_encoder_error:
+            status['alert'] = dec_encoder_error
+            # Hack to make the error keep coming up
+            if dec_encoder_error[-1] == ' ':
+                dec_encoder_error = dec_encoder_error.strip()
+            else:
+                dec_encoder_error = dec_encoder_error + ' '
+        status['slewing'] = slewing
+        status['tracking'] = settings.runtime_settings['tracking']
+        last_status = status
+        # socketio.emit('status', status)
+    except:
+        traceback.print_exc()
 
 
 # TMOVE: stepper_control
@@ -739,6 +742,9 @@ def guide_control(direction, time_ms):
         elif direction == 'e':
             stepper.set_speed_ra(status['rs'] - settings.settings['micro']['ra_guide_rate'])
             threading.Timer(time_ms / 1000.0, partial(stepper.set_speed_ra, status['rs']))
+    except:
+        traceback.print_exc()
+        raise
     finally:
         slew_lock.release()
 
@@ -825,6 +831,9 @@ def manual_control(direction, speed, client_id):
                 # speed we are at.
                 timers[direction] = threading.Timer(1, partial(manual_control, direction, speed, client_id))
                 timers[direction].start()
+        except:
+            traceback.print_exc()
+            raise
         finally:
             set_last_slew_none()
             # TODO: none it after 5 seconds if slow acceleration, really should we wait for speed to settle?
@@ -916,23 +925,24 @@ def ntp_syncer():
     set_sync(alt=alt, az=az)
 
 
-def set_time(iso_timestr):
+def set_time(iso_timestr, from_gps=False):
     """
-    Try to set the system time
+    Will not overwrite if higher priority has previously set. Priorities: 1) GPS 2) NTP 3) Everything else
     :param iso_timestr:
     :type iso_timestr: str
     :return: bool, status_str  True if it set date or didn't need to set date, false if failed. status_str is info
     about what it did.
+    :rtype: (bool, str)
     """
-    # if runtime_settings['time_been_set'] and not overwrite:
-    #    return 'Already Set', 200
+    if not from_gps and settings.runtime_settings['time_from_gps']:
+        return True, 'Already Set by GPS'
     s = datetime.datetime.now()
     d = pendulum.parse(iso_timestr)
     if settings.is_simulation():
         settings.runtime_settings['time_been_set'] = True
         return True, 'Date Set'
     ntpstat = subprocess.run(['/usr/bin/ntpstat'])
-    if ntpstat.returncode != 0:
+    if from_gps or ntpstat.returncode != 0:
         send_status()
         alt = last_status['alt']
         az = last_status['az']
@@ -942,6 +952,7 @@ def set_time(iso_timestr):
         set_sync(alt=alt, az=az)
         if daterun.returncode == 0:
             settings.runtime_settings['time_been_set'] = True
+            settings.runtime_settings['time_from_gps'] = from_gps
             return True, 'Date Set'
         else:
             return False, 'Failed to set date'
@@ -949,9 +960,10 @@ def set_time(iso_timestr):
     return True, 'NTP Set'
 
 
-def set_location(lat, long, elevation, name):
+def set_location(lat, long, elevation, name, from_gps=False):
     """
-    Set the mount earth location.
+    Set the mount earth location. Will not overwrite if previously set with higher priority.
+    Priority: 1) GPS 2) Everything else
     :param lat: Latitude in degrees
     :type lat: float
     :param long: Longitude in degrees
@@ -960,16 +972,21 @@ def set_location(lat, long, elevation, name):
     :type elevation: float
     :param name: Name to set location as.
     :type name: str
+    :param from_gps: If location was obtained through GPS
+    :type from_gps: bool
     :return: None
     """
+    if not from_gps and settings.runtime_settings['earth_location_from_gps']:
+        return
     location = {'lat': lat, 'long': long, 'elevation': elevation, 'name': name}
     old_location = settings.settings['location']
     settings.settings['location'] = location
     try:
-        update_location()
+        update_location(from_gps)
     except Exception:
         settings.settings['location'] = old_location
-        traceback.print_exc(file=sys.stdout)
+        traceback.print_exc()
+        update_location(old_location)
         raise
     settings.write_settings(settings.settings)
 

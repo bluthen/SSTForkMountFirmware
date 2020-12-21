@@ -109,9 +109,9 @@ class GPSMenu:
                     count += 1
                     time.sleep(10)
                     continue
-                control.set_time(info['utc'].isoformat())
+                control.set_time(info['utc'].isoformat(), from_gps=True)
                 control.set_location(info['location']['lat'], info['location']['long'], info['location']['elevation'],
-                                     'GPS')
+                                     'GPS', from_gps=True)
                 m = InfoMenu('Time/Location Set')
                 m.run_loop()
                 TimeSiderealInfo().run_loop()

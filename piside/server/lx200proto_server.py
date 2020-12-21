@@ -1,6 +1,5 @@
 import socket
 import traceback
-import datetime
 import re
 import uuid
 import threading
@@ -8,12 +7,13 @@ import control
 import pendulum
 import settings
 import typing
+import sys
 
 ourport = 10002
 kill = False
 lx200Clients = {}
 utctz = pendulum.timezone('UTC')
-localtime_utc_offset = 0.0
+set_utc_offset = pendulum.from_timestamp(0, pendulum.now().timezone).offset_hours
 localtime_daylight_savings = False
 manual_slew_map = {'w': 'left', 'e': 'right', 'n': 'up', 's': 'down'}
 slew_speed_map = {'S': 'fastest', 'M': 'faster', 'C': 'slower', 'G': 'slowest'}
@@ -193,7 +193,7 @@ class LX200Client:
                 buffer = ""
 
     def process(self, cmd):
-        global localtime_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
+        global set_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
         # print('process', cmd)
         control.set_alive(self.client_id)
         if cmd == ':Aa#':  # Start automatic alignment sequence
@@ -214,10 +214,12 @@ class LX200Client:
             elif target['alt'] and target['az']:
                 control.set_sync(alt=target['alt'], dec=target['az'], frame='altaz')
                 self.write(b'M31 EX GAL MAG 3.5 SZ178.0\'#')
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         elif cmd[1] == 'G':
             if cmd == ':Ga#':  # Get Local Telescope Time in 12 Hour Format
                 # self.write(b'HH:MM:SS#')
-                self.write(pendulum.now(tz=localtime_utc_offset).strftime('%I:%M:%S#').encode())
+                self.write(pendulum.now(tz=set_utc_offset).strftime('%I:%M:%S#').encode())
             elif cmd == ':GA#':  # Get Telescope Altitude
                 # self.write(b'sDD*MM\'SS#')
                 self.write(dec_format(control.last_status['alt']))
@@ -225,7 +227,7 @@ class LX200Client:
                 self.write(b's10.1#')
             elif cmd == ':GC#':  # Get current date PRIORITY DONE
                 # self.write(b'MM/DD/YY#')
-                self.write(pendulum.now(tz=localtime_utc_offset).strftime('%m/%d/%y#').encode())
+                self.write(pendulum.now(tz=set_utc_offset).strftime('%m/%d/%y#').encode())
             elif cmd == ':Gc#':  # Telescope clock format
                 self.write(b'24#')
             elif cmd == ':GD#':  # Telescope Declination PRIORITY DONE
@@ -242,7 +244,7 @@ class LX200Client:
                 self.write(b's10.1#')
             elif cmd == ':GG#':  # utc offset time PRIORITY DONE
                 # self.write(b'sHH.H#')
-                self.write(("s%02.1f#" % (localtime_utc_offset,)).encode())
+                self.write(("s%02.1f#" % (set_utc_offset,)).encode())
             elif cmd == ':Gg#':  # currente site longitude PRIORITY DONE
                 # TODO: dec says east should be negative, is that true?
                 # self.write(b'sDDD*MM#')
@@ -258,7 +260,7 @@ class LX200Client:
                 self.write(b'+90*')
             elif cmd == ':GL#':  # time 24 hour format PRIORITY DONE
                 # self.write(b'HH:MM:SS#')
-                self.write(datetime.datetime.now().strftime('%H:%M:%S#').encode())
+                self.write(pendulum.now(tz=set_utc_offset).strftime('%H:%M:%S#').encode())
             elif cmd == ':Gm#':  # distance to meridian
                 self.write(b'sDD*MM\'SS#')
             elif cmd == ':Gl#':  # search Large size limit
@@ -312,6 +314,8 @@ class LX200Client:
             elif cmd == ':GZ#':  # Get telescope azimuth
                 # self.write(b'DDD*MM\'SS#')
                 self.write(az_format(control.last_status['az']).encode())
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         elif cmd[1] == 'h':
             # if cmd == ':hN#':  # autostar sleep scope
             if cmd == ':hP#':  # slew to park position
@@ -326,6 +330,9 @@ class LX200Client:
             elif cmd[2] == 'I':
                 # m = self.re_autostar_settime_cmd.match(cmd)  # Autostar settime
                 self.write(b'1')
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
+
         # :H#'  toggle 24 and 12 hour time format
         # :I#  # stop and restart scope -- kstars unpark
         elif cmd == ':I#':
@@ -346,6 +353,8 @@ class LX200Client:
             elif cmd[2] == 's':
                 # m = self.re_select_s_libary_cmd.match(cmd)
                 self.write(b'2')
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
             # :LSNNNN#
         elif cmd[1] == 'M':
             if cmd == '#MA#':  # Slew to target alt az
@@ -380,6 +389,8 @@ class LX200Client:
                     slew_intervals[cmd[2]].cancel()
                 control.set_alive(self.client_id)
                 control.manual_control(manual_slew_map[cmd[2]], slew_speed, self.client_id)
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         elif cmd == ':P#':
             self.write(b'LOW PRECISION')
         elif cmd[1] == 'Q':
@@ -402,6 +413,8 @@ class LX200Client:
                     slew_intervals[cmd[2]].cancel()
                     slew_intervals[cmd[2]] = None
                 control.manual_control(manual_slew_map[cmd[2]], None, self.client_id)
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         # rotators :r+# :r-# :rn# :rh# :rC# :rc# :rq#
         elif cmd[1] == 'R':
             # slew rate
@@ -415,6 +428,8 @@ class LX200Client:
                 # m = self.re_dec_rate_deg_cmd.match(cmd)
                 # dps = m.group(1)
                 pass
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
             # set guide rate :RgSS.S#
         # Telescope set commands
         elif cmd[1] == 'S':
@@ -446,13 +461,11 @@ class LX200Client:
                 self.write(b'1')
             elif cmd[2] == 'C':
                 m = self.re_set_handbox_date.match(cmd)
-                month = m.group(1)
-                day = m.group(2)
-                year = m.group(3)  # YY
+                month = int(m.group(1))
+                day = int(m.group(2))
+                year = int('20' + m.group(3))  # YY
 
-                # Get current time, try to set date time
-                dstr = "20%s-%s-%s" % (year, month, day)
-                dstr += 'T' + pendulum.now(tz=localtime_utc_offset).isoformat().split('T')[1]
+                dstr = pendulum.now(tz=set_utc_offset).set(year=year, month=month, day=day).isoformat()
                 r = control.set_time(dstr)
                 if r[0]:
                     self.write(b'1Updating Planetary Data#                       #')
@@ -510,12 +523,10 @@ class LX200Client:
                 sign = m.group(1)  # + or -
                 hours = m.group(2)
                 offset = float(hours) * (-1.0 if sign == '-' else 1.0)
-                dstr = pendulum.now(tz=localtime_utc_offset)
-                offset_adjust = offset - localtime_utc_offset
-                dt = datetime.timedelta(minutes=offset_adjust * 60.0)
-                localtime_utc_offset = offset
-                r = control.set_time((pendulum.now() + dt).isoformat())
+                dstr = pendulum.now(tz=set_utc_offset).set(tz=offset).isoformat()
+                r = control.set_time(dstr)
                 if r[0]:
+                    set_utc_offset = offset
                     self.write(b'1')
                 else:
                     self.write(b'0')
@@ -531,14 +542,12 @@ class LX200Client:
                 self.write(b'0')
             elif cmd[2] == 'L':  # PRIORITY DONE
                 m = self.re_set_local_time.match(cmd)
-                hour = m.group(1)
-                minute = m.group(2)
-                second = m.group(3)
+                hour = int(m.group(1))
+                minute = int(m.group(2))
+                second = int(m.group(3))
                 # print('Trying to set time')
 
-                t = "%s:%s:%s" % (hour, minute, second)
-                dstr2 = pendulum.now(tz=localtime_utc_offset).isoformat().split('T')
-                dstr = dstr2[0] + 'T' + t + '.' + dstr2[1].split('.')[1]
+                dstr = pendulum.now(tz=set_utc_offset).set(hour=hour, minute=minute, second=second).isoformat()
                 r = control.set_time(dstr)
                 if r[0]:
                     self.write(b'1')
@@ -625,6 +634,8 @@ class LX200Client:
                 deg = m.group(1)
                 minutes = m.group(2)
                 self.write(b'1')
+            else:
+                print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         # inc dec tracking :T+# :T-#, set lunar tracking :TL# custom tracking :TM#, sidereal tracking :TS#
         # toggle between high low precision positions :U#
         elif cmd[1:3] == 'VD':
@@ -635,6 +646,8 @@ class LX200Client:
             site = m.group(1)  # 1 through 4
         elif cmd in [':??#', ':?+#', ':?-#']:
             self.write(b'HelpText#')
+        else:
+            print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
 
     def write(self, data):
         self.socket.send(data)
@@ -675,7 +688,7 @@ def main():
     except KeyboardInterrupt:
         print('Keyboard quiting')
         kill = True
-    else:
+    except:
         traceback.print_exc()
 
     oursocket.shutdown(socket.SHUT_RDWR)
