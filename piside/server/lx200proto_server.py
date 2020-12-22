@@ -522,8 +522,10 @@ class LX200Client:
                 m = self.re_set_site_hours_add_utc.match(cmd)
                 sign = m.group(1)  # + or -
                 hours = m.group(2)
-                offset = float(hours) * (-1.0 if sign == '-' else 1.0)
-                dstr = pendulum.now(tz=set_utc_offset).set(tz=offset).isoformat()
+                # They give us hours added to localtime to get UTC, so neg is positive for offset
+                offset = float(hours) * (1.0 if sign == '-' else -1.0)
+                doffset = set_utc_offset - offset
+                dstr = pendulum.now().add(hours=doffset).isoformat()
                 r = control.set_time(dstr)
                 if r[0]:
                     set_utc_offset = offset

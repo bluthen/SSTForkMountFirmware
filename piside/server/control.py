@@ -46,6 +46,7 @@ DEFAULT_PARK = {'az': 180, 'alt': 0}
 slew_lock = threading.RLock()
 set_last_slew_lock = threading.RLock()
 manual_lock = threading.RLock()
+time_location_lock = threading.RLock()
 status_interval = None
 inited = False
 slewing = False
@@ -70,6 +71,19 @@ last_slew: typing.Dict[str, typing.Union[None, TETE, ICRS, AltAz]] = {'tete': No
 pointing_logger = settings.get_logger('pointing')
 
 calibration_log = []
+
+
+def synchronized(lock):
+    """ Synchronization decorator. """
+    def wrap(f):
+        def newFunction(*args, **kw):
+            lock.acquire()
+            try:
+                return f(*args, **kw)
+            finally:
+                lock.release()
+        return newFunction
+    return wrap
 
 
 def set_last_slew(coord):
@@ -574,7 +588,6 @@ def send_status():
         status['started_parked'] = settings.runtime_settings['started_parked']
         st = skyconv.get_sidereal_time().hms
         status['sidereal_time'] = '%02d:%02d:%02d' % (int(st.h), int(st.m), int(st.s))
-        status['time_been_set'] = settings.runtime_settings['time_been_set']
         status['synced'] = settings.runtime_settings['sync_info'] is not None
         status['cpustats'] = get_cpustats()
         if not handpad_server.handpad_server:  # If server has not started yet
@@ -709,8 +722,6 @@ def init():
     send_status()
     status_interval = SimpleInterval(send_status, 1)
     SimpleInterval(alive_check, 3)
-    ntpthread = threading.Thread(target=ntp_syncer)
-    ntpthread.start()
     time.sleep(0.5)
 
 
@@ -906,25 +917,7 @@ def park_scope():
     slew(coord, parking=True)
 
 
-def ntp_syncer():
-    # If ntp changes the time after init, we'll sync to last alt,az position
-    # Detect this by having a jump in time
-    alt = last_status['alt']
-    az = last_status['az']
-    ntpstat = subprocess.run(['/usr/bin/ntpstat'])
-    if ntpstat.returncode == 0:
-        return
-    now = datetime.datetime.now()
-    lastnow = datetime.datetime.now()
-    while (now - lastnow).total_seconds() < 3600:
-        alt = last_status['alt']
-        az = last_status['az']
-        lastnow = now
-        time.sleep(1)
-        now = datetime.datetime.now()
-    set_sync(alt=alt, az=az)
-
-
+@synchronized(time_location_lock)
 def set_time(iso_timestr, from_gps=False):
     """
     Will not overwrite if higher priority has previously set. Priorities: 1) GPS 2) NTP 3) Everything else
@@ -939,7 +932,6 @@ def set_time(iso_timestr, from_gps=False):
     s = datetime.datetime.now()
     d = pendulum.parse(iso_timestr)
     if settings.is_simulation():
-        settings.runtime_settings['time_been_set'] = True
         return True, 'Date Set'
     ntpstat = subprocess.run(['/usr/bin/ntpstat'])
     if from_gps or ntpstat.returncode != 0:
@@ -951,15 +943,14 @@ def set_time(iso_timestr, from_gps=False):
         daterun = subprocess.run(['/usr/bin/sudo', '/bin/date', '-s', time_s])
         set_sync(alt=alt, az=az)
         if daterun.returncode == 0:
-            settings.runtime_settings['time_been_set'] = True
             settings.runtime_settings['time_from_gps'] = from_gps
             return True, 'Date Set'
         else:
             return False, 'Failed to set date'
-    settings.runtime_settings['time_been_set'] = True
     return True, 'NTP Set'
 
 
+@synchronized(time_location_lock)
 def set_location(lat, long, elevation, name, from_gps=False):
     """
     Set the mount earth location. Will not overwrite if previously set with higher priority.
