@@ -84,7 +84,7 @@ const doLocationSearch = _.debounce(function () {
 let statusUpdateIntervalStarted = false;
 let settingsUpdateIntervalStarted = false;
 const STATUS_DELAY = 1000;
-const SETTINGS_UPDATE_DELAY=15000;
+const SETTINGS_UPDATE_DELAY = 15000;
 
 const dirMap = {north: 'up', south: 'down', east: 'right', west: 'left'};
 const oppositeMap = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'};
@@ -217,7 +217,12 @@ const APIHelp = {
                 state.snack_bar_error = true;
             }
         });
-
+        observe(state.status, 'last_target', () => {
+            if (state.status.slewing) {
+                state.goto.slewingdialog.frame = state.status.last_target.frame;
+                state.goto.slewingdialog.target = state.status.last_target;
+            }
+        });
     },
 
     getAltitudeData: function (wanted_coord) {
@@ -320,7 +325,6 @@ const APIHelp = {
     },
 
 
-
     park() {
         state.goto.slewing = true;
         state.goto.slewingdialog.frame = 'park';
@@ -346,7 +350,6 @@ const APIHelp = {
             state.snack_bar_error = true;
             throw e;
         });
-        ;
     },
     fetchSettings() {
         state.advancedSettings.fetching = true;
@@ -504,6 +507,10 @@ const APIHelp = {
                 state.snack_bar = t;
                 state.snack_bar_error = false;
             });
+        }).catch((e) => {
+            state.snack_bar = e.message;
+            state.snack_bar_error = true;
+            throw e;
         });
     },
     delLocationPreset(index) {
@@ -722,7 +729,7 @@ const APIHelp = {
         }
     },
     exportSettings() {
-        location.href='/api/settings_dl';
+        location.href = '/api/settings_dl';
     }
 
 };

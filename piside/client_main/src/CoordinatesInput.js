@@ -28,9 +28,9 @@ class CoordinatesInput extends React.Component {
     }
 
     onCoordChange(e, coord, sub) {
-
         let v = e.currentTarget.value;
         //console.log('======='+v);
+        //console.log(e);
         const l = v.length;
         let first = '';
         const negativeAllowed = sub.min < 0;
@@ -50,7 +50,10 @@ class CoordinatesInput extends React.Component {
         if (v * 10 > sub.max || v * 10 < sub.min || l === maxDigits) {
             sub.nextRef.current.focus();
         }
-        if (v > sub.max || v < sub.min) {
+        if (v === 0 && negativeAllowed && first === '-') {
+            state.goto.coordinates[coord][sub.key] = '-';
+            state.goto.coordinates[coord + '_error'][sub.key] = 'invalid value';
+        } else if (v > sub.max || v < sub.min) {
             state.goto.coordinates[coord + '_error'][sub.key] = 'invalid value';
         } else {
             state.goto.coordinates[coord + '_error'][sub.key] = null;
@@ -119,7 +122,7 @@ class CoordinatesInput extends React.Component {
             <Grid item xs={2}>
                 <TextField value={v1 === null ? '' : v1} error={!!v1_error} label={v1_error} onChange={(e) => {
                     this.onCoordChange(e, coord, subs[0]);
-                }} type="number" inputProps={{min: subs[0].min, max: subs[0].max, step: 1}} InputProps={{
+                }} type="text" inputProps={{min: subs[0].min, max: subs[0].max, step: 1}} InputProps={{
                     endAdornment: <InputAdornment position="end">{subs[0].adornment}</InputAdornment>,
                 }} inputRef={subs[0].ref} onFocus={(e) => {
                     this.onSubFocus(e, subs[0].ref)
@@ -128,7 +131,7 @@ class CoordinatesInput extends React.Component {
             <Grid item xs={2}>
                 <TextField value={v2 === null ? '' : v2} error={!!v2_error} label={v2_error} onChange={(e) => {
                     this.onCoordChange(e, coord, subs[1]);
-                }} type="number" inputProps={{min: subs[0].min, max: subs[1].max, step: 1}} InputProps={{
+                }} type="text" inputProps={{min: subs[0].min, max: subs[1].max, step: 1}} InputProps={{
                     endAdornment: <InputAdornment position="end">{subs[1].adornment}</InputAdornment>,
                 }} inputRef={subs[1].ref} onFocus={(e) => {
                     this.onSubFocus(e, subs[1].ref)
@@ -137,7 +140,7 @@ class CoordinatesInput extends React.Component {
             <Grid item xs={2}>
                 <TextField value={v3 === null ? '' : v3} error={!!v3_error} label={v3_error} onChange={(e) => {
                     this.onCoordChange(e, coord, subs[2]);
-                }} type="number" inputProps={{min: subs[2].min, max: subs[2].max, step: 1}} InputProps={{
+                }} type="text" inputProps={{min: subs[2].min, max: subs[2].max, step: 1}} InputProps={{
                     endAdornment: <InputAdornment position="end">{subs[2].adornment}</InputAdornment>,
                 }} inputRef={subs[2].ref} onFocus={(e) => {
                     this.onSubFocus(e, subs[2].ref)

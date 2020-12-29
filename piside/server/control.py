@@ -9,6 +9,7 @@ import traceback
 import sys
 import os
 import psutil
+import random
 
 # from sstutil import ProfileTimer as PT
 
@@ -56,6 +57,7 @@ park_sync = False
 
 cancel_slew = False
 last_status: typing.Optional[dict] = None
+last_target = {'ra': None, 'dec': None, 'ha': None, 'alt': None, 'az': None, 'frame': None, 'parking': False}
 
 ra_encoder_error = None
 dec_encoder_error = None
@@ -75,6 +77,7 @@ calibration_log = []
 
 def synchronized(lock):
     """ Synchronization decorator. """
+
     def wrap(f):
         def newFunction(*args, **kw):
             lock.acquire()
@@ -82,7 +85,9 @@ def synchronized(lock):
                 return f(*args, **kw)
             finally:
                 lock.release()
+
         return newFunction
+
     return wrap
 
 
@@ -182,15 +187,15 @@ def slew(coord, parking=False):
     thread.start()
 
 
-def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enough=0):
+def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enough=1):
     steps = False
     if type(wanted_skycoord) is dict and 'ha' in wanted_skycoord:
         need_step_position = {'ha': wanted_skycoord['ha'], 'dec': wanted_skycoord['dec']}
-        close_enough = 0
+        # close_enough = 1
         steps = True
     elif wanted_skycoord.name in ['hadec', 'altaz']:
         need_step_position = skyconv.to_steps(wanted_skycoord)
-        close_enough = 0
+        # close_enough = 1
         steps = True
     else:
         need_step_position = skyconv.to_steps(wanted_skycoord)
@@ -199,11 +204,14 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
     while not cancel_slew:
         if close_timer is not None and (time.time() - close_timer) > 10.0:
             # For some reason we are never getting there
+            print('WARNING: close_time slew giving up', file=sys.stderr)
             break
         count += 1
         if not steps and count != 1 and not parking:
             need_step_position = skyconv.to_steps(wanted_skycoord)
         status = calc_status(stepper.get_status())
+        if settings.is_simulation():
+            time.sleep(0.2+random.random()/10.0)
 
         if axis == 'ra':
             delta = need_step_position['ha'] - status['rep']
@@ -232,16 +240,24 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             # Settling
             start = datetime.datetime.now()
             status = calc_status(stepper.get_status())
+            if settings.is_simulation():
+                time.sleep(0.2+random.random()/10.0)
+            status_end = datetime.datetime.now()
             target = status[status_pos_key] + delta
             if axis == 'ra':
                 stepper.set_speed_ra(settle_speed)
             else:
                 stepper.set_speed_dec(settle_speed)
-            while abs(status[status_pos_key] - target) < close_enough:
-                status = calc_status(stepper.get_status())
-                time.sleep(0.1)
-                if axis == 'ra' and not parking and settings.runtime_settings['tracking']:
-                    target += (datetime.datetime.now() - start).total_seconds() * settings.settings['ra_track_rate']
+            t = abs(delta / settle_speed) - 2 * ((status_end - start).total_seconds())
+            if t > 0:
+                time.sleep(t)
+            # while abs(status[status_pos_key] - target) > close_enough:
+            #    status = calc_status(stepper.get_status())
+            #    if settings.is_simulation():
+            #        time.sleep(0.2+random.random()/10.0)
+            #    time.sleep(0.1)
+            #    if axis == 'ra' and not parking and not steps and settings.runtime_settings['tracking']:
+            #        target += (datetime.datetime.now() - start).total_seconds() * settings.settings['ra_track_rate']
         else:
             if axis == 'ra':
                 if not parking and settings.runtime_settings['tracking']:
@@ -616,8 +632,8 @@ def send_status():
                         altaz = skyconv.to_altaz(icrs, obstime=obstime)
                     else:
                         altaz = last_slew['altaz']
-                        icrs = skyconv.to_icrs(altaz)
-                        tete = skyconv.to_tete(icrs, obstime=obstime)
+                        tete = skyconv.to_tete(altaz, obstime=obstime, overwrite_time=True)
+                        icrs = skyconv.to_icrs(tete)
                         hadec = skyconv.to_hadec(icrs, obstime=obstime)
             status['ra'] = tete.ra.deg
             status['dec'] = tete.dec.deg
@@ -631,6 +647,7 @@ def send_status():
             # print('earth_location', settings.runtime_settings['earth_location'])
             status['alt'] = altaz.alt.deg
             status['az'] = altaz.az.deg
+            status['last_target'] = last_target
             below_horizon = below_horizon_limit(altaz, tete)
             if below_horizon and settings.runtime_settings['tracking']:
                 cancel_slew = True
@@ -1043,7 +1060,12 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
     :type frame: str
     :return:
     """
+    global last_target
+    target = locals()
+    if parking:
+        target['frame'] = 'parking'
     if ra_steps is not None and dec_steps is not None:
+        last_target = target
         slew({'ha': ra_steps, 'dec': dec_steps})
         return
     elif alt is not None and az is not None:
@@ -1069,6 +1091,7 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
             calibration_log.append({
                 'slewfrom': TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, **frame_args),
                 'slewto': coord})
+        last_target = target
         slew(coord, parking)
 
 

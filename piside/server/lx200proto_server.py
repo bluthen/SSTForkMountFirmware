@@ -24,6 +24,34 @@ slew_intervals = {'n': None, 's': None, 'e': None,
 slewing_time_buffer = False
 extra_logging = False
 
+use_holders = True
+datetime_holder = {'year': None, 'month': None, 'day': None, 'hour': None, 'minute': None, 'second': None,
+                   'offset': None}  # type: typing.Dict[str, typing.Union[None, int, float]]
+location_holder = {'lat': None, 'lon': None}  # type: typing.Dict[str, typing.Union[None, float]]
+
+
+def set_time(year=None, month=None, day=None, hour=None, minute=None, second=None, offset=None):
+    args = locals()
+    for key in args.keys():
+        if args[key]:
+            datetime_holder[key] = args[key]
+    if None not in datetime_holder.values():
+        dh = datetime_holder
+        dstr = pendulum.datetime(year=dh['year'], month=dh['month'], day=dh['day'], hour=dh['hour'],
+                                 minute=dh['minute'], second=dh['second'], tz=dh['offset']).isoformat()
+        return control.set_time(dstr)
+    else:
+        return True, 'Waiting'
+
+
+def set_location(lat=None, lon=None):
+    args = locals()
+    for key in args.keys():
+        if args[key]:
+            location_holder[key] = args[key]
+    if None not in location_holder.values():
+        control.set_location(location_holder['lat'], location_holder['lon'], 1000.0, 'site1')
+
 
 def slew_commanded_delay_done():
     global slewing_time_buffer
@@ -465,8 +493,11 @@ class LX200Client:
                 day = int(m.group(2))
                 year = int('20' + m.group(3))  # YY
 
-                dstr = pendulum.now(tz=set_utc_offset).set(year=year, month=month, day=day).isoformat()
-                r = control.set_time(dstr)
+                if not use_holders:
+                    dstr = pendulum.now(tz=set_utc_offset).set(year=year, month=month, day=day).isoformat()
+                    r = control.set_time(dstr)
+                else:
+                    r = set_time(year=year, month=month, day=day)
                 if r[0]:
                     self.write(b'1Updating Planetary Data#                       #')
                 else:
@@ -513,7 +544,10 @@ class LX200Client:
                     lon = -lon
                 # print('LX200: Set Long', lon)
                 try:
-                    control.set_location(settings.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
+                    if not use_holders:
+                        control.set_location(settings.runtime_settings['earth_location'].lat.deg, lon, 1000.0, 'site1')
+                    else:
+                        set_location(lon=lon)
                     self.write(b'1')
                 except Exception:
                     traceback.print_exc()
@@ -525,8 +559,11 @@ class LX200Client:
                 # They give us hours added to localtime to get UTC, so neg is positive for offset
                 offset = float(hours) * (1.0 if sign == '-' else -1.0)
                 doffset = set_utc_offset - offset
-                dstr = pendulum.now().add(hours=doffset).isoformat()
-                r = control.set_time(dstr)
+                if not use_holders:
+                    dstr = pendulum.now().add(hours=doffset).isoformat()
+                    r = control.set_time(dstr)
+                else:
+                    r = set_time(offset=offset)
                 if r[0]:
                     set_utc_offset = offset
                     self.write(b'1')
@@ -549,8 +586,11 @@ class LX200Client:
                 second = int(m.group(3))
                 # print('Trying to set time')
 
-                dstr = pendulum.now(tz=set_utc_offset).set(hour=hour, minute=minute, second=second).isoformat()
-                r = control.set_time(dstr)
+                if not use_holders:
+                    dstr = pendulum.now(tz=set_utc_offset).set(hour=hour, minute=minute, second=second).isoformat()
+                    r = control.set_time(dstr)
+                else:
+                    r = set_time(hour=hour, minute=minute, second=second)
                 if r[0]:
                     self.write(b'1')
                 else:
@@ -613,9 +653,12 @@ class LX200Client:
                 try:
                     lat = dec_to_deg(sign, float(deg), float(minute), float(seconds))
                     # print('Set lat:', lat)
-                    control.set_location(lat,
-                                         settings.runtime_settings['earth_location'].lon.deg,
-                                         1000.0, 'site1')
+                    if not use_holders:
+                        control.set_location(lat,
+                                             settings.runtime_settings['earth_location'].lon.deg,
+                                             1000.0, 'site1')
+                    else:
+                        set_location(lat=lat)
                     self.write(b'1')
                 except Exception:
                     traceback.print_exc()

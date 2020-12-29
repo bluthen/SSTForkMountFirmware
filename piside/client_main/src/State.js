@@ -47,9 +47,9 @@ const state = observable({
         tete_dec: null,
         tete_ra: null,
         time: null,
-        time_been_set: false,
         tracking: true,
         handpad: false,
+        last_target: {ra: null, dec: null, ha: null, alt: null, az: null, frame: null, parking: false},
         cpustats: {tempc: null, tempf: null, load_percent: null, memory_percent_usage: null}
     },
     goto: {
