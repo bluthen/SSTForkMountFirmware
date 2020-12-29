@@ -32,10 +32,11 @@ import skyconv
 import settings
 import motion
 import typing
+import simple_pid
 
-version = "0.0.35"
+version = "0.0.36"
 version_short = "0.0"
-version_date_str = "Dec 21 2020"
+version_date_str = "Dec 29 2020"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
@@ -204,14 +205,15 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
     while not cancel_slew:
         if close_timer is not None and (time.time() - close_timer) > 10.0:
             # For some reason we are never getting there
-            print('WARNING: close_time slew giving up', file=sys.stderr)
+            # print('WARNING: close_time slew giving up', file=sys.stderr)
             break
         count += 1
         if not steps and count != 1 and not parking:
             need_step_position = skyconv.to_steps(wanted_skycoord)
+            if settings.is_simulation():
+                time.sleep(0.2 + random.random() / 10.0)
+        loop_start = datetime.datetime.now()
         status = calc_status(stepper.get_status())
-        if settings.is_simulation():
-            time.sleep(0.2+random.random()/10.0)
 
         if axis == 'ra':
             delta = need_step_position['ha'] - status['rep']
@@ -237,20 +239,59 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             settle_thresh = 10 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE
 
         if abs(delta) < settle_thresh:
-            # Settling
-            start = datetime.datetime.now()
-            status = calc_status(stepper.get_status())
-            if settings.is_simulation():
-                time.sleep(0.2+random.random()/10.0)
-            status_end = datetime.datetime.now()
-            target = status[status_pos_key] + delta
+            print('Settle Threshold', axis)
             if axis == 'ra':
                 stepper.set_speed_ra(settle_speed)
             else:
                 stepper.set_speed_dec(settle_speed)
-            t = abs(delta / settle_speed) - 2 * ((status_end - start).total_seconds())
-            if t > 0:
-                time.sleep(t)
+            if axis == 'ra':
+                sp = need_step_position['ha']
+            else:
+                sp = need_step_position['dec']
+            pid = simple_pid.PID(0.5, 0.1, 0.1, setpoint=sp)
+            pid.output_limits = (-abs(settle_speed), abs(settle_speed))
+            pid.sample_time = 0.1
+            pid.auto_mode = False
+            pid.set_auto_mode(True, last_output=settle_speed)
+            error = delta
+            last_output = -9999999999
+            while abs(error) > close_enough:
+                status = calc_status(stepper.get_status())
+                if axis == 'ra':
+                    pv = status['rep']
+                else:
+                    pv = status['dep']
+                if not steps and axis == 'ra' and not parking:
+                    new_sp = sp + ((datetime.datetime.now() - loop_start).total_seconds() + 0.1) * \
+                             settings.settings['ra_track_rate']
+                    pid.setpoint = new_sp
+                else:
+                    new_sp = sp
+                output = pid(pv)
+                if output != last_output:
+                    last_output = output
+                    # print('pid output:', axis, output)
+                    if axis == 'ra':
+                        stepper.set_speed_ra(output)
+                    else:
+                        stepper.set_speed_dec(output)
+                error = new_sp - pv
+
+            # Settling
+            # For settling we use pid controller.
+            # start = datetime.datetime.now()
+            # status = calc_status(stepper.get_status())
+            # if settings.is_simulation():
+            #    time.sleep(0.2+random.random()/10.0)
+            # status_end = datetime.datetime.now()
+            # target = status[status_pos_key] + delta
+            # if axis == 'ra':
+            #    stepper.set_speed_ra(settle_speed)
+            # else:
+            #    stepper.set_speed_dec(settle_speed)
+            # t = abs(delta / settle_speed) - 2 * ((status_end - start).total_seconds())
+            # if t > 0:
+            #    time.sleep(t)
             # while abs(status[status_pos_key] - target) > close_enough:
             #    status = calc_status(stepper.get_status())
             #    if settings.is_simulation():
@@ -311,8 +352,9 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
 def move_to_coord_threadf(wanted_skycoord, parking=False):
     global cancel_slew, slewing
 
-    ha_close_enough = 2.5 * settings.settings['ra_track_rate']
-    dec_close_enough = 3.0
+    ha_close_enough = settings.settings['ra_track_rate']
+    #dec_close_enough = 3.0
+    dec_close_enough = settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE
 
     try:
         slew_lock.acquire()

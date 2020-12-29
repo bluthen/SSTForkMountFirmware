@@ -155,10 +155,22 @@ wpa_key_mgmt=WPA-PSK"""
         stemp[0].write('\n' + hostapd_security % (password,))
     root_file_close(stemp)
     # Make hostname the ssid also
-    # TODO: Change /ssteq/etc/hosts
     stemp = root_file_open('/ssteq/etc/hostname')
     stemp[0].truncate(0)
     stemp[0].write(ssid + '\n')
+    root_file_close(stemp)
+    # TODO: Change /ssteq/etc/hosts
+    stemp = root_file_open('/ssteq/etc/hosts')
+    etc_hosts = """
+127.0.0.1       localhost
+::1             localhost ip6-localhost ip6-loopback
+ff02::1         ip6-allnodes
+ff02::2         ip6-allrouters
+
+127.0.1.1       %s    
+    """ % (ssid,)
+    stemp[0].truncate(0)
+    stemp[0].write(etc_hosts + '\n')
     root_file_close(stemp)
     if not settings.is_simulation():
         subprocess.run(['sudo', '/bin/hostname', ssid])

@@ -86,10 +86,22 @@ class SlewingDialog extends React.Component {
             title = 'Parking';
         }
 
+        let frameLabel = 'J2000'
+        if (state.goto.slewingdialog.frame === 'tete') {
+            frameLabel = 'JNow'
+        } else if(state.goto.slewingdialog.frame === 'hadec') {
+            frameLabel = 'HA/Dec'
+        } else if(state.goto.slewingdialog.frame === 'altaz' || state.goto.slewingdialog.frame === 'parking') {
+            frameLabel = 'Alt/Az'
+        }
+
         return <Dialog open maxwidth="xs">
             <DialogTitle>{title}</DialogTitle>
             <DialogContent>
                 <Grid container>
+                    <Grid item xs={12}>
+                        Frame: {frameLabel}
+                    </Grid>
                     <Grid item xs={12}>
                         {this.current} {arrow} {this.target}
                     </Grid>
