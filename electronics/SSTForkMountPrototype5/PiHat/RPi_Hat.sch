@@ -5,8 +5,8 @@ $Descr USLetter 11000 8500
 encoding utf-8
 Sheet 1 2
 Title "SSTEQ25"
-Date "2020-12-18"
-Rev "0.1.1"
+Date "2021-01-04"
+Rev "0.1.2"
 Comp "StarSync Trackers"
 Comment1 ""
 Comment2 ""
@@ -363,7 +363,7 @@ F 3 "" H 9600 1550 50  0001 C CNN
 	-1   0    0    1   
 $EndComp
 Text Notes 750  4150 0    60   ~ 0
-TP1 at ~0.18V with current stepper motors.\nAlso cut APWR jumper
+TP1 at ~0.18V with current stepper motors.
 Wire Wire Line
 	8700 1150 8700 1200
 Wire Wire Line
@@ -740,10 +740,6 @@ Wire Notes Line
 	500  3900 3650 3900
 Wire Notes Line
 	5800 500  5800 3850
-Wire Wire Line
-	2300 4450 2650 4450
-Wire Wire Line
-	2200 4750 2750 4750
 NoConn ~ 2200 6200
 NoConn ~ 2200 6300
 NoConn ~ 2200 6400
@@ -884,4 +880,10 @@ F 3 "" H 8600 2050 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	8600 2000 8600 2050
+Wire Wire Line
+	2300 4450 2650 4450
+Wire Wire Line
+	2200 4750 2750 4750
+Text Notes 2450 5600 0    60   ~ 0
+Add 100uF/25V through hole on \nVMOT and GND on each driver.
 $EndSCHEMATC
