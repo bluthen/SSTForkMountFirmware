@@ -933,7 +933,7 @@ def clear_sync():
     global park_sync
     if settings.runtime_settings['tracking']:
         frame_args = skyconv.get_frame_init_args('tete')
-        scord = TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg ** frame_args)
+        scord = TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, ** frame_args)
     else:
         frame_args = skyconv.get_frame_init_args('altaz')
         scord = AltAz(alt=last_status['alt'] * u.deg, az=last_status['az'] * u.deg, **frame_args)
@@ -1129,7 +1129,7 @@ def set_slew(ra=None, dec=None, alt=None, az=None, ra_steps=None, dec_steps=None
         raise Exception('Slew position is below horizon or in keep-out area.')
     else:
         if settings.runtime_settings['calibration_logging']:
-            frame_args = skyconv.get_frame_init_args('tete', obstime=last_status['obstime'])
+            frame_args = skyconv.get_frame_init_args('tete', obstime=AstroTime(last_status['time']))
             calibration_log.append({
                 'slewfrom': TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, **frame_args),
                 'slewto': coord})
@@ -1153,7 +1153,7 @@ def set_park_position_here():
     Sets current position to park position.
     """
     if settings.runtime_settings['tracking']:
-        frame_args = skyconv.get_frame_init_args('tete', obstime=last_status['obstime'])
+        frame_args = skyconv.get_frame_init_args('tete', obstime=AstroTime(last_status['time']))
         coord = TETE(ra=last_status['ra'] * u.deg, dec=last_status['dec'] * u.deg, **frame_args)
         altaz = skyconv.to_altaz(coord)
         settings.settings['park_position'] = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
