@@ -1,8 +1,8 @@
-unzip 2020-05-27-raspios-buster-lite-armhf.zip
-sudo dd if=2020-05-27-raspios-buster-lite-armhf.img of=/dev/sdd bs=4M
+unzip 2021-01-11-raspios-buster-armhf-lite.zip 
+sudo dd if=2021-01-11-raspios-buster-armhf-lite.img of=/dev/sde bs=4M
 sync
-e2fsck -f /dev/sdd2
-fdisk /dev/sdd
+e2fsck -f /dev/sde2
+fdisk /dev/sde
   p
   d
   2
@@ -19,11 +19,11 @@ fdisk /dev/sdd
   <partition 2's end>+1
   <enter>
   w
-mount /dev/sdd1 /someplace
+mount /dev/sde1 /someplace
 touch /someplace/ssh; sync
-umount /dev/sdd1
-resize2fs /dev/sdd2
-mkfs.ext4 /dev/sdd3
+umount /dev/sde1
+resize2fs /dev/sde2
+mkfs.ext4 /dev/sde3
 sync
 
 
@@ -34,14 +34,13 @@ sudo apt update --fix-missing && sudo apt upgrade -y
 sudo reboot
 
 sudo raspi-config
-	update
-    boot options -> desktop/cli -> console
+        system options ->    boot options -> desktop/cli -> console
+        system options -> network -> no wait on boot
 	localization -> change locale -> only enable (C&en_US ones, default en_US.UTF-8)
 	localization -> change timezone -> US -> Central
-	localization -> change wifi country -> US
 	interfacing options -> ssh -> yes 
 	interfacing options -> serial -> no -> yes
-	network -> interfaces names -> no 
+        advanced->network -> interfaces names -> no 
 
 sudo reboot
 
@@ -65,19 +64,19 @@ ln -s /ssteq/piside/client_main/dist /ssteq/piside/client_main/dist/static
 
 # in server folder as pi user
 export WORKON_HOME=/ssteq/piside/python_venvs
-pipenv install
+pipenv sync 
 
 # Change password
 passwd
 
-#Copy setup
+#Copy setup scp -r setup pi@addr:/ssteq/
 # udev teensy files for controller
 sudo cp 49-teensy.rules /etc/udev/rules.d
 
 
 
 
-#Edit dnsmasq
+#Edit /etc/dnsmasq.conf
 bogus-priv
 interface=wlan0
 dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
@@ -147,10 +146,12 @@ chmod a+x /root/dnsmasq.eth0.sh
 
 copy index data to /usr/share/astrometry
 
-raspi-config
-   Advanced->Overlay FS -> Yes -> Yes write protect
+rfkill unblock 0
 
-After reboot:
-mount -o remount,rw /boot
-Add to cmdline.txt
-net.ifnames=0
+raspi-config
+   performance->Overlay FS -> Yes -> Yes write protect
+
+#After reboot: dont need anymore
+#mount -o remount,rw /boot
+#Add to cmdline.txt
+#net.ifnames=0

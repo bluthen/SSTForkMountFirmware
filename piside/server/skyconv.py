@@ -317,7 +317,14 @@ def _hadec_to_steps(hadec_coord):
     sync_info = settings.runtime_settings['sync_info']
     ha_steps_per_degree = settings.settings['ra_ticks_per_degree']
     dec_steps_per_degree = settings.settings['dec_ticks_per_degree']
-    hadec_coord = model_real_stepper.transform_point(hadec_coord)
+    if model_real_stepper.frame() == 'altaz':
+        altaz_coord = to_altaz(hadec_coord)
+        altaz_coord = model_real_stepper.transform_point(altaz_coord)
+        frame_args = get_frame_init_args('altaz', frame_copy=hadec_coord)
+        altaz_coord = AltAz(alt=altaz_coord.alt, az=altaz_coord.az, **frame_args)
+        hadec_coord = to_hadec(altaz_coord)
+    elif model_real_stepper.frame() == 'hadec':
+        hadec_coord = model_real_stepper.transform_point(hadec_coord)
     # TODO: Do we neeed something like ra_deg_d? Or stop it from twisting even with tracking?
     #  How does this affect the model?
     # d_ha = ha_dec_coord.ra.deg - sync_info['coord'].ha.deg

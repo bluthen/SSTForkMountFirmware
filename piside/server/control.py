@@ -34,9 +34,9 @@ import motion
 import typing
 import simple_pid
 
-version = "0.0.36"
+version = "0.0.37"
 version_short = "0.0"
-version_date_str = "Dec 29 2020"
+version_date_str = "Apr 26 2021"
 
 SIDEREAL_RATE = 0.004178074568511751  # 15.041"/s
 AXIS_RA = 1
