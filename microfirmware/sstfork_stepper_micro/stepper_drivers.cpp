@@ -34,6 +34,12 @@ static const int DEC_STEPPER_MS1 = 20;
 static const int DEC_STEPPER_MS2 = 19;
 static const int DEC_STEPPER_MS3 = 18;
 
+//types for STEPPER_DRIVER_TYPE
+static const int A4988_DRIVER = 0;
+static const int TB67S249FTG_DRIVER = 1;
+
+static const int STEPPER_DRIVER_TYPE = TB67S249FTG_DRIVER;
+
 /* local functions */
 
 static int ra_mode_direction = 9999;
@@ -82,14 +88,26 @@ static void ra_set_step_direction(boolean forward) {
 
 void ra_set_step_resolution(boolean full) {
   if(full) {
-    digitalWrite(RA_STEPPER_MS1, LOW);
-    digitalWrite(RA_STEPPER_MS2, LOW);
-    digitalWrite(RA_STEPPER_MS3, LOW);
+    if (STEPPER_DRIVER_TYPE == A4988_DRIVER) {
+      digitalWrite(RA_STEPPER_MS1, LOW);
+      digitalWrite(RA_STEPPER_MS2, LOW);
+      digitalWrite(RA_STEPPER_MS3, LOW);
+    } else {
+      digitalWrite(RA_STEPPER_MS1, LOW);
+      digitalWrite(RA_STEPPER_MS2, LOW);
+      digitalWrite(RA_STEPPER_MS3, HIGH);      
+    }
     ra_mode_steps = MODE_FULL;
   } else {
-    digitalWrite(RA_STEPPER_MS1, HIGH);
-    digitalWrite(RA_STEPPER_MS2, HIGH);
-    digitalWrite(RA_STEPPER_MS3, HIGH);
+    if (STEPPER_DRIVER_TYPE == A4988_DRIVER) {
+      digitalWrite(RA_STEPPER_MS1, HIGH);
+      digitalWrite(RA_STEPPER_MS2, HIGH);
+      digitalWrite(RA_STEPPER_MS3, HIGH);
+    } else {
+      digitalWrite(RA_STEPPER_MS1, HIGH);
+      digitalWrite(RA_STEPPER_MS2, HIGH);
+      digitalWrite(RA_STEPPER_MS3, LOW);      
+    }
     ra_mode_steps = MODE_SIXTEEN;
   }  
 }
@@ -166,14 +184,26 @@ void dec_set_step_direction(boolean forward) {
 
 void dec_set_step_resolution(boolean full) {
   if(full) {
-    digitalWrite(DEC_STEPPER_MS1, LOW);
-    digitalWrite(DEC_STEPPER_MS2, LOW);
-    digitalWrite(DEC_STEPPER_MS3, LOW);
+    if (STEPPER_DRIVER_TYPE == A4988_DRIVER) {
+      digitalWrite(DEC_STEPPER_MS1, LOW);
+      digitalWrite(DEC_STEPPER_MS2, LOW);
+      digitalWrite(DEC_STEPPER_MS3, LOW);
+    } else {
+      digitalWrite(DEC_STEPPER_MS1, LOW);
+      digitalWrite(DEC_STEPPER_MS2, LOW);
+      digitalWrite(DEC_STEPPER_MS3, HIGH);      
+    }
     dec_mode_steps = MODE_FULL;
   } else {
-    digitalWrite(DEC_STEPPER_MS1, HIGH);
-    digitalWrite(DEC_STEPPER_MS2, HIGH);
-    digitalWrite(DEC_STEPPER_MS3, HIGH);
+    if (STEPPER_DRIVER_TYPE == A4988_DRIVER) {
+      digitalWrite(DEC_STEPPER_MS1, HIGH);
+      digitalWrite(DEC_STEPPER_MS2, HIGH);
+      digitalWrite(DEC_STEPPER_MS3, HIGH);
+    } else {
+      digitalWrite(DEC_STEPPER_MS1, HIGH);
+      digitalWrite(DEC_STEPPER_MS2, HIGH);
+      digitalWrite(DEC_STEPPER_MS3, LOW);      
+    }
     dec_mode_steps = MODE_SIXTEEN;
   }    
 }
