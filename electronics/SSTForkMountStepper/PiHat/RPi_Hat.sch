@@ -5,8 +5,8 @@ $Descr USLetter 11000 8500
 encoding utf-8
 Sheet 1 2
 Title "SSTEQ25"
-Date "2021-01-04"
-Rev "0.1.2"
+Date "2021-05-25"
+Rev "0.2.0"
 Comp "StarSync Trackers"
 Comment1 ""
 Comment2 ""
@@ -191,9 +191,7 @@ Wire Wire Line
 	7300 1600 7300 1750
 Wire Wire Line
 	7400 1600 7400 1750
-Text GLabel 7450 4250 0    60   Input ~ 0
-AG_RA+X
-Text GLabel 7450 4100 0    60   Input ~ 0
+Text GLabel 7450 4700 0    60   Input ~ 0
 AG_RA-X
 Text GLabel 7450 3050 0    60   Input ~ 0
 RPI_TX
@@ -207,14 +205,10 @@ Wire Wire Line
 	7450 4100 7600 4100
 Wire Wire Line
 	7450 4250 7600 4250
-Text GLabel 9700 4250 2    60   Input ~ 0
+Text GLabel 9700 4550 2    60   Input ~ 0
 AG_DEC-Y
-Text GLabel 9700 4400 2    60   Input ~ 0
+Text GLabel 9700 4700 2    60   Input ~ 0
 AG_DEC+Y
-Wire Wire Line
-	9600 4250 9700 4250
-Wire Wire Line
-	9600 4400 9700 4400
 $Comp
 L RPi_Hat-rescue:+3V3 #PWR08
 U 1 1 5B03015C
@@ -258,7 +252,7 @@ Wire Wire Line
 	9600 3650 9700 3650
 Wire Wire Line
 	9600 3800 9700 3800
-Text GLabel 7500 3800 0    60   Output ~ 0
+Text GLabel 7450 4100 0    60   Output ~ 0
 RA_MS2
 Text GLabel 7500 3950 0    60   Output ~ 0
 RA_MS1
@@ -281,9 +275,9 @@ Wire Wire Line
 	7500 2900 7600 2900
 Text GLabel 9750 3500 2    60   Output ~ 0
 DEC_DIR
-Text GLabel 7450 3500 0    60   Output ~ 0
+Text GLabel 7450 4400 0    60   Output ~ 0
 RA_STEP
-Text GLabel 7450 3650 0    60   Output ~ 0
+Text GLabel 7450 4250 0    60   Output ~ 0
 RA_MS3
 Wire Wire Line
 	7450 3500 7600 3500
@@ -300,10 +294,9 @@ NoConn ~ 8500 5400
 NoConn ~ 8650 5400
 NoConn ~ 8800 5400
 NoConn ~ 8950 5400
-NoConn ~ 9600 4700
 NoConn ~ 9600 4850
 NoConn ~ 9600 3350
-Text GLabel 7450 3350 0    60   Output ~ 0
+Text GLabel 7450 4550 0    60   Output ~ 0
 RA_DIR
 Wire Wire Line
 	7450 3350 7600 3350
@@ -363,7 +356,7 @@ F 3 "" H 9600 1550 50  0001 C CNN
 	-1   0    0    1   
 $EndComp
 Text Notes 750  4150 0    60   ~ 0
-TP1 at ~0.18V with current stepper motors.
+TP1 at V=I/1.25 where I is desired current
 Wire Wire Line
 	8700 1150 8700 1200
 Wire Wire Line
@@ -379,8 +372,8 @@ L Device:CP C1
 U 1 1 5C839DA8
 P 2500 5950
 F 0 "C1" H 2618 5996 50  0000 L CNN
-F 1 "100u/25V" H 2618 5905 50  0000 L CNN
-F 2 "Capacitors_SMD:CP_Elec_8x5.4" H 2538 5800 50  0001 C CNN
+F 1 "100u/35V" H 2618 5905 50  0000 L CNN
+F 2 "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm" H 2538 5800 50  0001 C CNN
 F 3 "~" H 2500 5950 50  0001 C CNN
 	1    2500 5950
 	1    0    0    -1  
@@ -443,32 +436,6 @@ $EndComp
 Wire Wire Line
 	2500 5800 2600 5800
 Connection ~ 2500 5800
-$Comp
-L power:+3.3V #PWR0105
-U 1 1 5C859613
-P 2350 5250
-F 0 "#PWR0105" H 2350 5100 50  0001 C CNN
-F 1 "+3.3V" V 2365 5378 50  0000 L CNN
-F 2 "" H 2350 5250 50  0001 C CNN
-F 3 "" H 2350 5250 50  0001 C CNN
-	1    2350 5250
-	0    1    1    0   
-$EndComp
-$Comp
-L power:+3.3V #PWR0106
-U 1 1 5C85967D
-P 2300 6600
-F 0 "#PWR0106" H 2300 6450 50  0001 C CNN
-F 1 "+3.3V" V 2315 6728 50  0000 L CNN
-F 2 "" H 2300 6600 50  0001 C CNN
-F 3 "" H 2300 6600 50  0001 C CNN
-	1    2300 6600
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	2200 6600 2300 6600
-Wire Wire Line
-	2200 5250 2350 5250
 $Comp
 L power:GND #PWR0107
 U 1 1 5C864B8D
@@ -537,13 +504,13 @@ F 3 "" H 5400 6200 60  0001 C CNN
 	1    5400 6200
 	1    0    0    -1  
 $EndComp
-Text GLabel 7450 4400 0    60   Input ~ 0
+Text GLabel 7500 3800 0    60   Input ~ 0
 RA_ENC_A
-Text GLabel 7450 4550 0    60   Input ~ 0
+Text GLabel 7450 3500 0    60   Input ~ 0
 RA_ENC_B
-Text GLabel 7450 4700 0    60   Input ~ 0
+Text GLabel 7450 3350 0    60   Input ~ 0
 DEC_ENC_A
-Text GLabel 7450 4850 0    60   Input ~ 0
+Text GLabel 7450 3650 0    60   Input ~ 0
 DEC_ENC_B
 Wire Wire Line
 	7450 4400 7600 4400
@@ -554,7 +521,6 @@ Wire Wire Line
 Wire Wire Line
 	7450 4850 7600 4850
 NoConn ~ 9400 1400
-NoConn ~ 9600 4550
 Text GLabel 4600 6050 0    60   Output ~ 0
 RA_ENC_A
 Text GLabel 4600 6250 0    60   Output ~ 0
@@ -684,10 +650,6 @@ F 3 "" H 6200 6250 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	6100 6250 6200 6250
-Wire Wire Line
-	1200 5050 1200 5150
-Wire Wire Line
-	1200 6400 1200 6500
 NoConn ~ 1200 6000
 NoConn ~ 1200 4650
 Text GLabel 3650 7400 2    60   Output ~ 0
@@ -748,28 +710,6 @@ NoConn ~ 2200 4850
 NoConn ~ 2200 4950
 NoConn ~ 2200 5050
 NoConn ~ 2200 5150
-$Comp
-L SST_kicad_sym:pololu_a4988 U4
-U 1 1 5CD03C9A
-P 1700 5000
-F 0 "U4" H 1700 5597 60  0000 C CNN
-F 1 "pololu_a4988" H 1700 5491 60  0000 C CNN
-F 2 "custom_footprints:pololu_a4988" H 1700 5000 60  0001 C CNN
-F 3 "" H 1700 5000 60  0001 C CNN
-	1    1700 5000
-	1    0    0    -1  
-$EndComp
-$Comp
-L SST_kicad_sym:pololu_a4988 U5
-U 1 1 5CD03DBB
-P 1700 6350
-F 0 "U5" H 1700 6947 60  0000 C CNN
-F 1 "pololu_a4988" H 1700 6841 60  0000 C CNN
-F 2 "custom_footprints:pololu_a4988" H 1700 6350 60  0001 C CNN
-F 3 "" H 1700 6350 60  0001 C CNN
-	1    1700 6350
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	8250 1700 8400 1700
 $Comp
@@ -881,9 +821,84 @@ $EndComp
 Wire Wire Line
 	8600 2000 8600 2050
 Wire Wire Line
-	2300 4450 2650 4450
+	2300 4450 2500 4450
 Wire Wire Line
-	2200 4750 2750 4750
-Text Notes 2450 5600 0    60   ~ 0
-Add 100uF/25V through hole on \nVMOT and GND on each driver.
+	2200 4750 2500 4750
+$Comp
+L Device:CP C2
+U 1 1 60A41C66
+P 2500 4600
+F 0 "C2" H 2618 4646 50  0000 L CNN
+F 1 "100u/35V" H 2618 4555 50  0000 L CNN
+F 2 "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm" H 2538 4450 50  0001 C CNN
+F 3 "~" H 2500 4600 50  0001 C CNN
+	1    2500 4600
+	1    0    0    -1  
+$EndComp
+Connection ~ 2500 4450
+Wire Wire Line
+	2500 4450 2650 4450
+Connection ~ 2500 4750
+Wire Wire Line
+	2500 4750 2750 4750
+$Comp
+L SST_kicad_sym:TB67S249-FTG U4
+U 1 1 60A50185
+P 1700 5000
+F 0 "U4" H 1700 5597 60  0000 C CNN
+F 1 "TB67S249-FTG" H 1700 5491 60  0000 C CNN
+F 2 "custom_footprints:pololu_a4988" H 1700 5000 60  0001 C CNN
+F 3 "" H 1700 5000 60  0001 C CNN
+	1    1700 5000
+	1    0    0    -1  
+$EndComp
+$Comp
+L SST_kicad_sym:TB67S249-FTG U5
+U 1 1 60A50E6B
+P 1700 6350
+F 0 "U5" H 1700 6947 60  0000 C CNN
+F 1 "TB67S249-FTG" H 1700 6841 60  0000 C CNN
+F 2 "custom_footprints:pololu_a4988" H 1700 6350 60  0001 C CNN
+F 3 "" H 1700 6350 60  0001 C CNN
+	1    1700 6350
+	1    0    0    -1  
+$EndComp
+NoConn ~ 1200 5050
+NoConn ~ 1200 6400
+$Comp
+L power:GND #PWR0105
+U 1 1 60A7A7AD
+P 1100 5150
+F 0 "#PWR0105" H 1100 4900 50  0001 C CNN
+F 1 "GND" V 1105 5022 50  0000 R CNN
+F 2 "" H 1100 5150 50  0001 C CNN
+F 3 "" H 1100 5150 50  0001 C CNN
+	1    1100 5150
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR0106
+U 1 1 60A7B129
+P 1050 6500
+F 0 "#PWR0106" H 1050 6250 50  0001 C CNN
+F 1 "GND" V 1055 6372 50  0000 R CNN
+F 2 "" H 1050 6500 50  0001 C CNN
+F 3 "" H 1050 6500 50  0001 C CNN
+	1    1050 6500
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	1100 5150 1200 5150
+Wire Wire Line
+	1050 6500 1200 6500
+NoConn ~ 2200 6600
+NoConn ~ 2200 5250
+Text GLabel 7450 4850 0    60   Input ~ 0
+AG_RA+X
+NoConn ~ 9600 4250
+NoConn ~ 9600 4400
+Wire Wire Line
+	9600 4550 9700 4550
+Wire Wire Line
+	9600 4700 9700 4700
 $EndSCHEMATC

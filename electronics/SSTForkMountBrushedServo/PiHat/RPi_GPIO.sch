@@ -1,37 +1,5 @@
-EESchema Schematic File Version 2
-LIBS:RPi_Hat-rescue
-LIBS:power
-LIBS:device
-LIBS:transistors
-LIBS:conn
-LIBS:linear
-LIBS:regul
-LIBS:74xx
-LIBS:cmos4000
-LIBS:adc-dac
-LIBS:memory
-LIBS:xilinx
-LIBS:microcontrollers
-LIBS:dsp
-LIBS:microchip
-LIBS:analog_switches
-LIBS:motorola
-LIBS:texas
-LIBS:intel
-LIBS:audio
-LIBS:interface
-LIBS:digital-audio
-LIBS:philips
-LIBS:display
-LIBS:cypress
-LIBS:siliconi
-LIBS:opto
-LIBS:atmel
-LIBS:contrib
-LIBS:valves
-LIBS:isadore_custom_components
-LIBS:RPi_Hat-cache
-EELAYER 25 0
+EESchema Schematic File Version 4
+EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -46,7 +14,7 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L RPi_GPIO J2
+L RPi_Hat-rescue:RPi_GPIO J2
 U 1 1 5516AE26
 P 7500 2700
 AR Path="/5516AE26" Ref="J2"  Part="1" 
@@ -69,7 +37,7 @@ Wire Wire Line
 Wire Wire Line
 	9200 3100 9300 3100
 $Comp
-L +5V #PWR023
+L RPi_Hat-rescue:+5V #PWR023
 U 1 1 5B0302F7
 P 9300 2700
 F 0 "#PWR023" H 9300 2550 50  0001 C CNN
@@ -80,14 +48,14 @@ F 3 "" H 9300 2700 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	9200 2700 9300 2700
+	9200 2700 9250 2700
 Wire Wire Line
 	9200 2800 9250 2800
 Wire Wire Line
 	9250 2800 9250 2700
 Connection ~ 9250 2700
 $Comp
-L GND #PWR024
+L RPi_Hat-rescue:GND #PWR024
 U 1 1 5B030319
 P 9300 4300
 F 0 "#PWR024" H 9300 4050 50  0001 C CNN
@@ -98,7 +66,7 @@ F 3 "" H 9300 4300 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L GND #PWR025
+L RPi_Hat-rescue:GND #PWR025
 U 1 1 5B03032F
 P 9350 2850
 F 0 "#PWR025" H 9350 2600 50  0001 C CNN
@@ -109,7 +77,7 @@ F 3 "" H 9350 2850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L GND #PWR026
+L RPi_Hat-rescue:GND #PWR026
 U 1 1 5B030345
 P 9300 3300
 F 0 "#PWR026" H 9300 3050 50  0001 C CNN
@@ -120,7 +88,7 @@ F 3 "" H 9300 3300 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L GND #PWR027
+L RPi_Hat-rescue:GND #PWR027
 U 1 1 5B03035B
 P 9300 3600
 F 0 "#PWR027" H 9300 3350 50  0001 C CNN
@@ -131,7 +99,7 @@ F 3 "" H 9300 3600 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L GND #PWR028
+L RPi_Hat-rescue:GND #PWR028
 U 1 1 5B030391
 P 7200 3900
 F 0 "#PWR028" H 7200 3650 50  0001 C CNN
@@ -142,7 +110,7 @@ F 3 "" H 7200 3900 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L GND #PWR029
+L RPi_Hat-rescue:GND #PWR029
 U 1 1 5B0303A7
 P 7200 4600
 F 0 "#PWR029" H 7200 4350 50  0001 C CNN
@@ -153,7 +121,7 @@ F 3 "" H 7200 4600 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L GND #PWR030
+L RPi_Hat-rescue:GND #PWR030
 U 1 1 5B0303BD
 P 7200 3100
 F 0 "#PWR030" H 7200 2850 50  0001 C CNN
@@ -210,4 +178,6 @@ NoConn ~ 7300 3000
 NoConn ~ 7300 2900
 NoConn ~ 7300 2800
 NoConn ~ 7300 2700
+Wire Wire Line
+	9250 2700 9300 2700
 $EndSCHEMATC
