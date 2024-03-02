@@ -86,7 +86,7 @@ void SerialCommand::readSerial() {
 
       char *command = strtok_r(buffer, delim, &last);   // Search for command at start of buffer
       if (command != NULL) {
-        boolean matched = false;
+        bool matched = false;
         for (int i = 0; i < commandCount; i++) {
           #ifdef SERIALCOMMAND_DEBUG
             WSERIAL.print("Comparing [");

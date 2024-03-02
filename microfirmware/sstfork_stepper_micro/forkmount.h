@@ -2,21 +2,18 @@
 #define __FORKMOUNT_H
 
 #include <stdint.h>
+#include "stepper.h"
 
-extern volatile float configvars_ra_max_tps;
-extern volatile float configvars_ra_guide_rate;
-extern volatile float configvars_dec_max_tps;
-extern volatile float configvars_dec_guide_rate;
-extern volatile float configvars_ra_accel_tpss;
-extern volatile float configvars_dec_accel_tpss;
-extern volatile boolean configvars_debug_enabled;
-extern volatile boolean configvars_autoguide_enabled;
-extern volatile int configvars_ra_direction;
-extern volatile int configvars_dec_direction;
-extern volatile int configvars_dec_disable;
-extern volatile int configvars_ra_disable;
+extern bool sst_debug;
 
-extern const char* fork_firmware_version;
+extern const char *fork_firmware_version;
+extern Stepper *raStepper;
+extern Stepper *decStepper;
+extern bool ra_autoguiding;
+extern bool dec_autoguiding;
+
+extern float prevRASpeed;
+extern float prevDECSpeed;
 
 
 

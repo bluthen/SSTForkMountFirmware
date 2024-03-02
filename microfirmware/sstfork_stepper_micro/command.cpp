@@ -1,22 +1,18 @@
 #include <pgmspace.h>
 
 #include "SerialCommand.h"
-#include "forkmount.h"
 #include "command.h"
-#include "stepper_drivers.h"
-
+#include "forkmount.h"
+#include "stepper.h"
 
 static SerialCommand cmd;
 
-void print_prompt() {
-  WSERIAL.print("$ ");
-}
+void print_prompt() { WSERIAL.print("$ "); }
 
 void command_set_var() {
-  char* argName;
-  char* argVal;
+  char *argName;
+  char *argVal;
   float value;
-  int oldv;
 
   argName = cmd.next();
   argVal = cmd.next();
@@ -34,36 +30,34 @@ void command_set_var() {
   }
   value = atof(argVal);
 
-  if(strcmp(argName, "ra_max_tps") == 0) {
-    configvars_ra_max_tps = value;
-  } else if(strcmp(argName, "ra_guide_rate") == 0) {
-    configvars_ra_guide_rate = value;
-  } else if(strcmp(argName, "ra_direction") == 0) {
-    oldv = configvars_ra_direction;
-    configvars_ra_direction = (int)value;
-    if (oldv != configvars_ra_direction) {
-      directionUpdated();
+  if (strcmp(argName, "ra_max_tps") == 0) {
+    raStepper->setMaxSpeed(value);
+  } else if (strcmp(argName, "ra_guide_rate") == 0) {
+    raStepper->setGuideRate(value);
+  } else if (strcmp(argName, "ra_direction") == 0) {
+    raStepper->setInvertedStepping(((int)value) == -1);
+  } else if (strcmp(argName, "dec_max_tps") == 0) {
+    decStepper->setMaxSpeed(value);
+  } else if (strcmp(argName, "dec_guide_rate") == 0) {
+    decStepper->setGuideRate(value);
+  } else if (strcmp(argName, "dec_direction") == 0) {
+    decStepper->setInvertedStepping(((int)value) == -1);
+  } else if (strcmp(argName, "dec_disable") == 0) {
+    if ((int)value) {
+      decStepper->enable(false);
+    } else {
+      decStepper->enable(true);
     }
-  } else if(strcmp(argName, "dec_max_tps") == 0) {
-    configvars_dec_max_tps = value;
-  } else if(strcmp(argName, "dec_guide_rate") == 0) {
-    configvars_dec_guide_rate = value;
-  } else if(strcmp(argName, "dec_direction") == 0) {
-    oldv = configvars_dec_direction;
-    configvars_dec_direction = (int)value;
-    if (oldv != configvars_dec_direction) {
-      directionUpdated();
+  } else if (strcmp(argName, "ra_disable") == 0) {
+    if((int)value) {
+      raStepper->enable(false);
+    } else {
+      raStepper->enable(true);
     }
-  } else if(strcmp(argName, "dec_disable") == 0) {
-    configvars_dec_disable = (int)value;
-  } else if(strcmp(argName, "ra_disable") == 0) {
-    configvars_ra_disable = (int)value;
-  } else if(strcmp(argName, "ra_accel_tpss") == 0) {
-    configvars_ra_accel_tpss = value;
-    stepperSnapshot();
-  } else if(strcmp(argName, "dec_accel_tpss") == 0) {
-    configvars_dec_accel_tpss = value;
-    stepperSnapshot();
+  } else if (strcmp(argName, "ra_accel_tpss") == 0) {
+    raStepper->setMaxAccel(value);
+  } else if (strcmp(argName, "dec_accel_tpss") == 0) {
+    decStepper->setMaxAccel(value);
   } else {
     WSERIAL.print("ERROR: Invalid variable name '");
     WSERIAL.print(argName);
@@ -72,117 +66,95 @@ void command_set_var() {
   print_prompt();
 }
 
-
 void command_qs() {
-  long raPos, decPos, raEnc, decEnc, raTip, decTip, raltpe, decltpe;
-  //TODO: Maybe make binary status so we don't get close to tracking tick interval?
+  long raPos, decPos;
+  stepper_encoder_t raEnc, decEnc;
+  // TODO: Maybe make binary status so we don't get close to tracking tick
+  // interval?
   WSERIAL.print("rs:");
-  WSERIAL.println(getRASpeed());
+  WSERIAL.println(raStepper->getSpeed());
   WSERIAL.print("ds:");
-  WSERIAL.println(getDECSpeed());
-  raPos = getRAPosition();
-  decPos = getDECPosition();
-  raEnc = getRAEncoder();
-  decEnc = getDECEncoder();
-  raltpe = getRALastTicksPerEncoder();
-  decltpe = getDECLastTicksPerEncoder();
-  if (getLastRAEncoder() != raEnc) {
-    raTip = 0;
-  } else {
-    raTip = getRATicksInPulse();
-  }
-  if (getLastDECEncoder() != decEnc) {
-    decTip = 0;
-  } else {
-    decTip = getDECTicksInPulse();
-  }
+  WSERIAL.println(decStepper->getSpeed());
+  raPos = raStepper->getPosition();
+  decPos = decStepper->getPosition();
+  raStepper->getEncoder(raEnc);
+  decStepper->getEncoder(decEnc);
   WSERIAL.print("rp:");
   WSERIAL.println(raPos);
   WSERIAL.print("dp:");
   WSERIAL.println(decPos);
   WSERIAL.print("re:");
-  WSERIAL.println(raEnc);
+  WSERIAL.println(raEnc.value);
   WSERIAL.print("de:");
-  WSERIAL.println(decEnc);
+  WSERIAL.println(decEnc.value);
   WSERIAL.print("ri:");
-  WSERIAL.println(raTip);
+  WSERIAL.println(raEnc.steps_in_pulse);
   WSERIAL.print("di:");
-  WSERIAL.println(decTip);
+  WSERIAL.println(decEnc.steps_in_pulse);
   WSERIAL.print("rl:");
-  WSERIAL.println(raltpe);
+  WSERIAL.println(raEnc.prev_steps_in_pulse);
   WSERIAL.print("dl:");
-  WSERIAL.println(decltpe);
-  print_prompt();  
+  WSERIAL.println(decEnc.prev_steps_in_pulse);
+  print_prompt();
 }
 
 void command_status() {
-  long raPos, decPos, raEnc, decEnc, raTip, decTip;
+  long raPos, decPos;
+  stepper_encoder_t raEnc, decEnc;
   WSERIAL.print("ra_max_tps=");
-  WSERIAL.println(configvars_ra_max_tps);
+  WSERIAL.println(raStepper->getMaxSpeed());
   WSERIAL.print("ra_guide_rate=");
-  WSERIAL.println(configvars_ra_guide_rate);
+  WSERIAL.println(raStepper->getGuideRate());
   WSERIAL.print("ra_direction=");
-  WSERIAL.println(configvars_ra_direction);
+  WSERIAL.println(raStepper->getInvertedStepping() ? -1 : 1);
   WSERIAL.print("ra_disable=");
-  WSERIAL.println(configvars_ra_disable);
+  WSERIAL.println(raStepper->enabled() ? 0 : 1);
   WSERIAL.print("ra_accel_tpss=");
-  WSERIAL.println(configvars_ra_accel_tpss);
+  WSERIAL.println(raStepper->getMaxAccel());
   WSERIAL.print("dec_max_tps=");
-  WSERIAL.println(configvars_dec_max_tps);
+  WSERIAL.println(decStepper->getMaxSpeed());
   WSERIAL.print("dec_guide_rate=");
-  WSERIAL.println(configvars_dec_guide_rate);
+  WSERIAL.println(decStepper->getGuideRate());
   WSERIAL.print("dec_direction=");
-  WSERIAL.println(configvars_dec_direction);
+  WSERIAL.println(decStepper->getInvertedStepping() ? -1 : 1);
   WSERIAL.print("dec_disable=");
-  WSERIAL.println(configvars_dec_disable);
+  WSERIAL.println(decStepper->enabled() ? 0 : 1);
   WSERIAL.print("dec_accel_tpss=");
-  WSERIAL.println(configvars_dec_accel_tpss);
+  WSERIAL.println(decStepper->getMaxAccel());
   WSERIAL.print("debug:");
-  WSERIAL.println(configvars_debug_enabled);
+  WSERIAL.println(sst_debug);
   WSERIAL.print("autoguide:");
-  WSERIAL.println(configvars_autoguide_enabled);
+  WSERIAL.println(!raStepper->guidingDisabled());
   WSERIAL.print("ra_speed:");
-  WSERIAL.println(getRASpeed());
+  WSERIAL.println(raStepper->getSpeed());
   WSERIAL.print("dec_speed:");
-  WSERIAL.println(getDECSpeed());
+  WSERIAL.println(decStepper->getSpeed());
+
+  raPos = raStepper->getPosition();
+  decPos = decStepper->getPosition();
+  raStepper->getEncoder(raEnc);
+  decStepper->getEncoder(decEnc);
   WSERIAL.print("ra_tpe:");
-  WSERIAL.println(getRALastTicksPerEncoder());
+  WSERIAL.println(raEnc.prev_steps_in_pulse);
   WSERIAL.print("dec_tpe:");
-  WSERIAL.println(getDECLastTicksPerEncoder());
-
-
-  raPos = getRAPosition();
-  decPos = getDECPosition();
-  raEnc = getRAEncoder();
-  decEnc = getDECEncoder();
-  if (getLastRAEncoder() != raEnc) {
-    raTip = 0;
-  } else {
-    raTip = getRATicksInPulse();
-  }
-  if (getLastDECEncoder() != decEnc) {
-    decTip = 0;
-  } else {
-    decTip = getDECTicksInPulse();
-  }
-  
+  WSERIAL.println(decEnc.prev_steps_in_pulse);
   WSERIAL.print("ra_pos:");
   WSERIAL.println(raPos);
   WSERIAL.print("dec_pos:");
   WSERIAL.println(decPos);
   WSERIAL.print("ra_enc:");
-  WSERIAL.println(raEnc);
+  WSERIAL.println(raEnc.value);
   WSERIAL.print("dec_enc:");
-  WSERIAL.println(decEnc);
+  WSERIAL.println(decEnc.value);
   WSERIAL.print("ra_tip:");
-  WSERIAL.println(raTip);
+  WSERIAL.println(raEnc.steps_in_pulse);
   WSERIAL.print("dec_tip:");
-  WSERIAL.println(decTip);  
+  WSERIAL.println(decEnc.steps_in_pulse);
   print_prompt();
 }
 
 void command_ra_set_speed() {
-  char* argVal;
+  char *argVal;
   float value;
 
   argVal = cmd.next();
@@ -193,14 +165,14 @@ void command_ra_set_speed() {
     return;
   }
   value = atof(argVal);
-  setRASpeed(value);
+  raStepper->setSpeed(value);
   WSERIAL.print("ra_speed:");
-  WSERIAL.println(getRASpeed());  
+  WSERIAL.println(raStepper->getSpeed());
   print_prompt();
 }
 
 void command_dec_set_speed() {
-  char* argVal;
+  char *argVal;
   float value;
 
   argVal = cmd.next();
@@ -211,20 +183,21 @@ void command_dec_set_speed() {
     return;
   }
   value = atof(argVal);
-  setDECSpeed(value);
+  decStepper->setSpeed(value);
   WSERIAL.print("dec_speed:");
-  WSERIAL.println(getDECSpeed());
+  WSERIAL.println(decStepper->getSpeed());
   print_prompt();
 }
 
-
-void command_help(const char* cmd) {
+void command_help(const char *cmd) {
   WSERIAL.println("Commands:");
   WSERIAL.println("  set_var [variable_name] [value] Sets variable");
   WSERIAL.println("  ra_set_speed [tps]           Moves RA to tick position");
   WSERIAL.println("  dec_set_speed [tps]          Moves DEC to tick position");
-  WSERIAL.println("  autoguide_disable            Disables Autoguiding port input");
-  WSERIAL.println("  autoguide_enable             Enables Autoguiding prot input");
+  WSERIAL.println(
+      "  autoguide_disable            Disables Autoguiding port input");
+  WSERIAL.println(
+      "  autoguide_enable             Enables Autoguiding prot input");
   WSERIAL.println("  status                       Shows status/variable info");
   WSERIAL.println("  qs                           Shows speed/position info");
   WSERIAL.println("  help                         This help info");
@@ -232,25 +205,16 @@ void command_help(const char* cmd) {
 }
 
 void command_autoguide_disable() {
-  configvars_autoguide_enabled = false;
-  if (ra_autoguiding) {
-    setRASpeed(prevRASpeed);
-    ra_autoguiding = false;
-    prevRASpeed = 0.0;
-  }
-  if (dec_autoguiding) {
-    setDECSpeed(prevDECSpeed);
-    dec_autoguiding = false;
-    prevDECSpeed = 0.0;
-  }
+  raStepper->disableGuiding(true);
+  decStepper->disableGuiding(true);
   print_prompt();
 }
 
 void command_autoguide_enable() {
-  configvars_autoguide_enabled = true;
+  raStepper->disableGuiding(false);
+  decStepper->disableGuiding(false);
   print_prompt();
 }
-
 
 void command_init(void) {
   WSERIAL.begin(115200);
@@ -265,6 +229,4 @@ void command_init(void) {
   print_prompt();
 }
 
-void command_read_serial() {
-  cmd.readSerial();
-}
+void command_read_serial() { cmd.readSerial(); }
