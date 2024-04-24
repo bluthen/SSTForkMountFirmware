@@ -1,24 +1,19 @@
 #include "stepper.h"
 #include <digitalWriteFast.h>
 
-
 static int timerCounter = 0;
-static const int MICROSTEPS_IN_SINGLESTEP = 16;
-
+static const int MICROSTEPS_IN_SINGLESTEP = 32;
+static const float CURRENT_TO_RMS = 0.7071;  // 1/sqrt(2) see page 74 of datasheet
+// GLOBALSCALER/256  *  (CS + 1)/32  *  V_FS/R_SENSE  *  1/sqrt(2)
 
 template<typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
 }
 
-
-Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _ms1_pin,
-                 const int _ms2_pin, const int _ms3_pin, uint8_t enc_chan,
-                 uint16_t enc_apin, uint16_t enc_bpin) {
+Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _cs_pin,
+                 uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin) {
   dir_pin = _dir_pin;
   step_pin = _step_pin;
-  ms1_pin = _ms1_pin;
-  ms2_pin = _ms2_pin;
-  ms3_pin = _ms3_pin;
   if (enc_apin != enc_bpin) {
     enc = new QuadEncoder(enc_chan, enc_apin, enc_bpin);
     enc->setInitConfig();
@@ -26,9 +21,14 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _ms1_pin,
   }
   pinModeFast(dir_pin, OUTPUT);
   pinModeFast(step_pin, OUTPUT);
-  pinModeFast(ms1_pin, OUTPUT);
-  pinModeFast(ms2_pin, OUTPUT);
-  pinModeFast(ms3_pin, OUTPUT);
+  driver = new TMC5160Stepper(_cs_pin);
+  driver->begin();
+  driver->intpol(true);
+  driver->en_pwm_mode(false);
+  driver->pwm_autograd(true);
+  driver->pwm_autoscale(true);
+  driver->en_pwm_mode(true);
+  this->setCurrents();
   if (timerCounter == 0) {
     stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT1);
   } else if (timerCounter == 1) {
@@ -48,8 +48,7 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _ms1_pin,
   delay(50);
   stepTimer->begin([this] {
     this->step();
-  },
-                   200ms, false);
+  }, 200ms, false);
   timerCounter++;
 }
 
@@ -58,11 +57,7 @@ void Stepper::setSpeed(float speed) {
 }
 
 float Stepper::getSpeed() {
-  float ret;
-  cli();
-  ret = v0;
-  sei();
-  return ret;
+  return v0;
 }
 
 long Stepper::getPosition() {
@@ -90,7 +85,6 @@ bool Stepper::getInvertedStepping() {
   return inv_direction;
 }
 
-
 void Stepper::setSingleStepThreshold(long steps_per_sec) {
   micro_threshold_v = steps_per_sec;
 }
@@ -99,19 +93,13 @@ long Stepper::getSingleStepThreshold() {
   return micro_threshold_v;
 }
 
-
-
-
 void Stepper::enableEncoder(bool enabled) {
   enc_enabled = true;
 }
 
-
 bool Stepper::encoderEnabled() {
   return enc_enabled;
 }
-
-
 
 void Stepper::setRealSpeed(float speed) {
   if (fabs(speed) < 0.05) {
@@ -124,7 +112,7 @@ void Stepper::setRealSpeed(float speed) {
   // Only bother changing frequency if speed different is more than 1 step per
   // 1000 seconds.
   if (fabs(v0 - speed) > 0.001) {
-    if (speed > micro_threshold_v) {
+    if (fabs(speed) > micro_threshold_v) {
       setStepResolution(true);
       sp = 500000000 / (speed * MICROSTEPS_IN_SINGLESTEP);  // us
     } else {
@@ -139,6 +127,7 @@ void Stepper::setRealSpeed(float speed) {
     stepper_stopped = false;
     stepTimer->start();
   }
+  setCurrents();
 }
 
 void Stepper::setStepDirection(bool forward) {
@@ -166,18 +155,14 @@ void Stepper::setStepResolution(bool _single_step) {
     single_step = true;
     cli();
     // Single step on TB67S249FTG_DRIVER
-    digitalWriteFast(ms1_pin, LOW);
-    digitalWriteFast(ms2_pin, LOW);
-    digitalWriteFast(ms3_pin, HIGH);
+    driver->microsteps(0);
     // At full step every step is 16 microsteps
     stepResolution = MICROSTEPS_IN_SINGLESTEP;
     sei();
   } else if (!_single_step && single_step) {
     single_step = false;
     cli();
-    digitalWriteFast(ms1_pin, HIGH);
-    digitalWriteFast(ms2_pin, HIGH);
-    digitalWriteFast(ms3_pin, LOW);
+    driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
     // Every micro step is 1 microsteps
     stepResolution = 1;
     sei();
@@ -220,7 +205,6 @@ float Stepper::getMaxAccel() {
   return accell_tpss;
 }
 
-
 void Stepper::setMaxSpeed(float _max_tps) {
   max_v0 = _max_tps;
 }
@@ -232,7 +216,6 @@ float Stepper::getMaxSpeed() {
 bool Stepper::enabled() {
   return stepper_enabled;
 }
-
 
 void Stepper::enable(bool _enable) {
   stepper_enabled = _enable;
@@ -246,7 +229,6 @@ long Stepper::getGuideRate() {
   return guide_rate;
 }
 
-
 void Stepper::guide(int direction) {
   guiding = direction;
 }
@@ -259,6 +241,55 @@ bool Stepper::guidingDisabled() {
   return !guiding_enabled;
 }
 
+void Stepper::setRunCurrent(float _run_current) {
+  run_current = _run_current;
+  setCurrents();
+}
+
+void Stepper::setMedCurrent(float _med_current) {
+  med_current = _med_current;
+  setCurrents();
+}
+
+void Stepper::setMedCurrentThreshold(float _med_current_threshold) {
+  med_current_threshold = _med_current_threshold;
+  setCurrents();
+}
+
+void Stepper::setHoldCurrent(float _hold_current) {
+  hold_current = _hold_current;
+  setCurrents();
+}
+
+float Stepper::getRunCurrent() {
+  return run_current;
+}
+
+float Stepper::getMedCurrent() {
+  return med_current;
+}
+
+float Stepper::getMedCurrentThreshold() {
+  return med_current_threshold;
+}
+
+float Stepper::getHoldCurrent() {
+  return hold_current;
+}
+
+void Stepper::setCurrents() {
+  if (current_real != run_current && fabs(v0) >= med_current_threshold) {
+    current_real = run_current;
+    cli();
+    driver->rms_current(current_real * CURRENT_TO_RMS, hold_current / current_real);
+    sei();
+  } else if (current_real != med_current && fabs(v0) < med_current_threshold) {
+    current_real = med_current;
+    cli();
+    driver->rms_current(current_real * CURRENT_TO_RMS, hold_current / current_real);
+    sei();
+  }
+}
 
 void Stepper::update() {
   float new_speed;

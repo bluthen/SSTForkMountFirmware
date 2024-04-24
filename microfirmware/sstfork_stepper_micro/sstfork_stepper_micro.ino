@@ -20,15 +20,15 @@ static const int DEC_ENC_B_PIN = 4;
 
 static const int RA_STEPPER_DIR_PIN = 10;
 static const int RA_STEPPER_STEP_PIN = 9;
-static const int RA_STEPPER_MS1 = 6;
-static const int RA_STEPPER_MS2 = 7;
-static const int RA_STEPPER_MS3 = 8;
+static const int RA_STEPPER_CS = 18;
 
-static const int DEC_STEPPER_DIR_PIN = 22;
+static const int DEC_STEPPER_DIR_PIN = 19;
 static const int DEC_STEPPER_STEP_PIN = 21;
-static const int DEC_STEPPER_MS1 = 20;
-static const int DEC_STEPPER_MS2 = 19;
-static const int DEC_STEPPER_MS3 = 18;
+static const int DEC_STEPPER_CS = 22;
+
+static const int STEPPERS_MOSI = 11;
+static const int STEPPERS_MISO = 12;
+static const int STEPPERS_SCK = 13;
 
 const static int AUTOGUIDE_DEC_NEGY_PIN = 15;
 const static int AUTOGUIDE_DEC_POSY_PIN = 14;
@@ -70,14 +70,13 @@ void configVarsInit() {
  */
 void setup() {
   Serial.begin(115200);
+  SPI.begin();
 
-  configVarsInit();
   raStepper = new Stepper(RA_STEPPER_DIR_PIN, RA_STEPPER_STEP_PIN,
-                          RA_STEPPER_MS1, RA_STEPPER_MS2, RA_STEPPER_MS3, 1,
-                          RA_ENC_A_PIN, RA_ENC_B_PIN);
+                          RA_STEPPER_CS, 1, RA_ENC_A_PIN, RA_ENC_B_PIN);
   decStepper = new Stepper(DEC_STEPPER_DIR_PIN, DEC_STEPPER_STEP_PIN,
-                           DEC_STEPPER_MS1, DEC_STEPPER_MS2, DEC_STEPPER_MS3, 2,
-                           DEC_ENC_A_PIN, DEC_ENC_B_PIN);
+                           DEC_STEPPER_CS, 2, DEC_ENC_A_PIN, DEC_ENC_B_PIN);
+  configVarsInit();
   raStepper->setSpeed(0.0);
   decStepper->setSpeed(0.0);
   autoguide_init();

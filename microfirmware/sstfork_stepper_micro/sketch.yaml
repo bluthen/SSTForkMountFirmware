@@ -1,0 +1,9 @@
+profiles:
+  teensy4:
+    notes: Placeholder
+    fqbn: teensy:avr:teensy40
+    platforms:
+      - platform: teensy:avr (1.59.0)
+        platform_index_url: https://www.pjrc.com/teensy/package_teensy_index.json
+    libraries:
+      - TMCStepper (0.7.3)

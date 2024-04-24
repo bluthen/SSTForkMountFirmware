@@ -4,6 +4,7 @@
 
 #include <QuadEncoder.h>
 #include "TeensyTimerTool.h"
+#include <TMCStepper.h>
 
 
 struct stepper_encoder_t {
@@ -14,9 +15,8 @@ struct stepper_encoder_t {
 
 class Stepper {
 public:
-  Stepper(const int dir_pin, const int step_pin, const int ms1_pin,
-          const int ms2_pin, const int ms3_pin, uint8_t enc_chan,
-          uint16_t enc_apin, uint16_t enc_bpin);
+  Stepper(const int _dir_pin, const int _step_pin, const int _cs_pin,
+                 uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin);
   /**
    * Set final desired speed after acceleration in steps per second.
    * @param speed - steps per second
@@ -44,8 +44,17 @@ public:
   void disableGuiding(bool disable);
   bool guidingDisabled();
 
-  bool enabled();
+  void setRunCurrent(float _run_current);
+  void setMedCurrent(float _med_current);
+  void setMedCurrentThreshold(float _med_current_threshold);
+  void setHoldCurrent(float _hold_current);
 
+  float getRunCurrent();
+  float getMedCurrent();
+  float getMedCurrentThreshold();
+  float getHoldCurrent();
+
+  bool enabled();
   void enable(bool _enabled);
   void update();
 
@@ -57,6 +66,7 @@ private:
   void setStepResolution(bool _single_step);
   void setStepDirection(bool);
   void setRealSpeed(float speed);
+  void setCurrents();
   void step();
   float v0 = 0;
   float max_v0 = 0;
@@ -75,11 +85,13 @@ private:
 
   bool stepper_enabled = true;
   float accell_tpss;
+  float current_real = -1;
+  float run_current = 0.7;
+  float med_current = 0.7;
+  float med_current_threshold = 0;
+  float hold_current = 0.7;
   int step_pin;
   int dir_pin;
-  int ms1_pin;
-  int ms2_pin;
-  int ms3_pin;
   float sp_speed = 0;
   bool stepper_stopped = true;
   long micro_threshold_v = -1;
@@ -87,6 +99,7 @@ private:
   QuadEncoder *enc = NULL;
   TeensyTimerTool::PeriodicTimer *stepTimer = NULL;
   elapsedMicros timer;
+  TMC5160Stepper *driver = NULL;
 };
 
 #endif

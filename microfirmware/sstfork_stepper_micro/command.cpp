@@ -7,7 +7,9 @@
 
 static SerialCommand cmd;
 
-void print_prompt() { WSERIAL.print("$ "); }
+void print_prompt() {
+  WSERIAL.print("$ ");
+}
 
 void command_set_var() {
   char *argName;
@@ -49,7 +51,7 @@ void command_set_var() {
       decStepper->enable(true);
     }
   } else if (strcmp(argName, "ra_disable") == 0) {
-    if((int)value) {
+    if ((int)value) {
       raStepper->enable(false);
     } else {
       raStepper->enable(true);
@@ -58,6 +60,24 @@ void command_set_var() {
     raStepper->setMaxAccel(value);
   } else if (strcmp(argName, "dec_accel_tpss") == 0) {
     decStepper->setMaxAccel(value);
+  } else if (strcmp(argName, "ra_run_current") == 0) {
+    raStepper->setRunCurrent(value);
+  } else if (strcmp(argName, "ra_med_current") == 0) {
+    raStepper->setMedCurrent(value);
+  } else if (strcmp(argName, "ra_med_threshold") == 0) {
+    raStepper->setMedCurrent(value);
+  } else if (strcmp(argName, "ra_med_current_threshold") == 0) {
+    raStepper->setMedCurrentThreshold(value);
+  } else if (strcmp(argName, "ra_hold_current") == 0) {
+    raStepper->setHoldCurrent(value);
+  } else if (strcmp(argName, "dec_run_current") == 0) {
+    decStepper->setRunCurrent(value);
+  } else if (strcmp(argName, "dec_med_current") == 0) {
+    decStepper->setMedCurrent(value);
+  } else if (strcmp(argName, "dec_med_current_threshold") == 0) {
+    decStepper->setMedCurrentThreshold(value);
+  } else if (strcmp(argName, "dec_hold_current") == 0) {
+    decStepper->setHoldCurrent(value);
   } else {
     WSERIAL.print("ERROR: Invalid variable name '");
     WSERIAL.print(argName);
@@ -121,6 +141,25 @@ void command_status() {
   WSERIAL.println(decStepper->enabled() ? 0 : 1);
   WSERIAL.print("dec_accel_tpss=");
   WSERIAL.println(decStepper->getMaxAccel());
+
+  WSERIAL.print("ra_run_current=");
+  WSERIAL.println(raStepper->getRunCurrent());
+  WSERIAL.print("ra_med_current=");
+  WSERIAL.println(raStepper->getMedCurrent());
+  WSERIAL.print("ra_med_current_threshold=");
+  WSERIAL.println(raStepper->getMedCurrentThreshold());
+  WSERIAL.print("ra_hold_current=");
+  WSERIAL.println(raStepper->getHoldCurrent());
+
+  WSERIAL.print("dec_run_current=");
+  WSERIAL.println(decStepper->getRunCurrent());
+  WSERIAL.print("dec_med_current=");
+  WSERIAL.println(decStepper->getMedCurrent());
+  WSERIAL.print("dec_med_current_threshold=");
+  WSERIAL.println(decStepper->getMedCurrentThreshold());
+  WSERIAL.print("dec_hold_current=");
+  WSERIAL.println(decStepper->getHoldCurrent());
+
   WSERIAL.print("debug:");
   WSERIAL.println(sst_debug);
   WSERIAL.print("autoguide:");
@@ -195,9 +234,9 @@ void command_help(const char *cmd) {
   WSERIAL.println("  ra_set_speed [tps]           Moves RA to tick position");
   WSERIAL.println("  dec_set_speed [tps]          Moves DEC to tick position");
   WSERIAL.println(
-      "  autoguide_disable            Disables Autoguiding port input");
+    "  autoguide_disable            Disables Autoguiding port input");
   WSERIAL.println(
-      "  autoguide_enable             Enables Autoguiding prot input");
+    "  autoguide_enable             Enables Autoguiding prot input");
   WSERIAL.println("  status                       Shows status/variable info");
   WSERIAL.println("  qs                           Shows speed/position info");
   WSERIAL.println("  help                         This help info");
@@ -229,4 +268,6 @@ void command_init(void) {
   print_prompt();
 }
 
-void command_read_serial() { cmd.readSerial(); }
+void command_read_serial() {
+  cmd.readSerial();
+}
