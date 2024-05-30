@@ -22,36 +22,54 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "SerialCommand.h"
-#include "command.h"
 
 /**
  * Constructor makes sure some things are set.
  */
+/*
 SerialCommand::SerialCommand()
   : commandList(NULL),
     commandCount(0),
     defaultHandler(NULL),
-    term('\r'),           // default terminator for commands, newline character
+    term('\n'),           // default terminator for commands, newline character
     last(NULL)
 {
+  _serial_port = &Serial;
   strcpy(delim, " "); // strtok_r needs a null-terminated string
   clearBuffer();
 }
+*/
+
+/**
+ * Constructor makes sure some things are set.
+ */
+SerialCommand::SerialCommand(Stream *serial_port)
+  : commandCount(0),
+    defaultHandler(NULL),
+    term('\r'),           // default terminator for commands, newline character
+    last(NULL)
+{
+  _serial_port = serial_port;
+  strcpy(delim, " "); // strtok_r needs a null-terminated string
+  clearBuffer();
+}
+
+// default constructor uses Serial by for the port
+SerialCommand::SerialCommand() : SerialCommand(&Serial) {};
 
 /**
  * Adds a "command" and a handler function to the list of available commands.
  * This is used for matching a found token in the buffer, and gives the pointer
  * to the handler function to deal with it.
  */
-void SerialCommand::addCommand(const char *command, void (*function)()) {
+void SerialCommand::addCommand(const char *command, std::function<void()> function) {
   #ifdef SERIALCOMMAND_DEBUG
-    WSERIAL.print("Adding command (");
-    WSERIAL.print(commandCount);
-    WSERIAL.print("): ");
-    WSERIAL.println(command);
+    _serial_port->print("Adding command (");
+    _serial_port->print(commandCount);
+    _serial_port->print("): ");
+    _serial_port->println(command);
   #endif
-
-  commandList = (SerialCommandCallback *) realloc(commandList, (commandCount + 1) * sizeof(SerialCommandCallback));
+  commandList.push_back(SerialCommandCallback());
   strncpy(commandList[commandCount].command, command, SERIALCOMMAND_MAXCOMMANDLENGTH);
   commandList[commandCount].function = function;
   commandCount++;
@@ -61,7 +79,7 @@ void SerialCommand::addCommand(const char *command, void (*function)()) {
  * This sets up a handler to be called in the event that the receveived command string
  * isn't in the list of commands.
  */
-void SerialCommand::setDefaultHandler(void (*function)(const char *)) {
+void SerialCommand::setDefaultHandler(std::function<void(const char*)> function) {
   defaultHandler = function;
 }
 
@@ -72,45 +90,46 @@ void SerialCommand::setDefaultHandler(void (*function)(const char *)) {
  * buffer for a prefix command, and calls handlers setup by addCommand() member
  */
 void SerialCommand::readSerial() {
-  while (WSERIAL.available() > 0) {
-    char inChar = WSERIAL.read();   // Read single available character, there may be more waiting
+  while (_serial_port->available() > 0) {
+    char inChar = _serial_port->read();   // Read single available character, there may be more waiting
     #ifdef SERIALCOMMAND_DEBUG
-      WSERIAL.print(inChar);   // Echo back to serial stream
+      _serial_port->print(inChar);   // Echo back to serial stream
     #endif
 
     if (inChar == term) {     // Check for the terminator (default '\r') meaning end of command
       #ifdef SERIALCOMMAND_DEBUG
-        WSERIAL.print("Received: ");
-        WSERIAL.println(buffer);
+        _serial_port->print("Received: ");
+        _serial_port->println(buffer);
       #endif
 
       char *command = strtok_r(buffer, delim, &last);   // Search for command at start of buffer
       if (command != NULL) {
-        bool matched = false;
+        boolean matched = false;
         for (int i = 0; i < commandCount; i++) {
           #ifdef SERIALCOMMAND_DEBUG
-            WSERIAL.print("Comparing [");
-            WSERIAL.print(command);
-            WSERIAL.print("] to [");
-            WSERIAL.print(commandList[i].command);
-            WSERIAL.println("]");
+            _serial_port->print("Comparing [");
+            _serial_port->print(command);
+            _serial_port->print("] to [");
+            _serial_port->print(commandList[i].command);
+            _serial_port->println("]");
           #endif
 
           // Compare the found command against the list of known commands for a match
+          _serial_port->println(commandList[i].command);
           if (strncmp(command, commandList[i].command, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
             #ifdef SERIALCOMMAND_DEBUG
-              WSERIAL.print("Matched Command: ");
-              WSERIAL.println(command);
+              _serial_port->print("Matched Command: ");
+              _serial_port->println(command);
             #endif
 
             // Execute the stored handler function for the command
-            (*commandList[i].function)();
+            (commandList[i].function)();
             matched = true;
             break;
           }
         }
         if (!matched && (defaultHandler != NULL)) {
-          (*defaultHandler)(command);
+          (defaultHandler)(command);
         }
       }
       clearBuffer();
@@ -121,7 +140,7 @@ void SerialCommand::readSerial() {
         buffer[bufPos] = '\0';      // Null terminate
       } else {
         #ifdef SERIALCOMMAND_DEBUG
-          WSERIAL.println("Line buffer is full - increase SERIALCOMMAND_BUFFER");
+          _serial_port->println("Line buffer is full - increase SERIALCOMMAND_BUFFER");
         #endif
       }
     }

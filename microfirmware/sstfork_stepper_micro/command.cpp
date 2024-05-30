@@ -5,28 +5,41 @@
 #include "forkmount.h"
 #include "stepper.h"
 
-static SerialCommand cmd;
-
-void print_prompt() {
-  WSERIAL.print("$ ");
+Command::Command(Stream* _port) {
+  port = _port;
+  cmd = new SerialCommand(port);
+  cmd->addCommand("set_var", [this] () -> void { this->command_set_var();});
+  cmd->addCommand("ra_set_speed", [this] () { this->command_ra_set_speed(); } );
+  cmd->addCommand("dec_set_speed", [this] () { this->command_dec_set_speed(); } );
+  cmd->addCommand("autoguide_disable", [this] () { this->command_autoguide_disable(); });
+  cmd->addCommand("autoguide_enable", [this] () { this->command_autoguide_enable(); });
+  cmd->addCommand("status", [this] () { this->command_status(); });
+  cmd->addCommand("qs", [this] () { this->command_qs(); });
+  cmd->setDefaultHandler([this] (const char *cmd) -> void { this->command_help(cmd); });
+  print_prompt();
 }
 
-void command_set_var() {
+
+void Command::print_prompt() {
+  port->print("$ ");
+}
+
+void Command::command_set_var() {
   char *argName;
   char *argVal;
   float value;
 
-  argName = cmd.next();
-  argVal = cmd.next();
+  argName = cmd->next();
+  argVal = cmd->next();
 
   if (argName == NULL) {
-    WSERIAL.println("ERROR: Missing [variable_name] argument.");
+    port->println("ERROR: Missing [variable_name] argument.");
     print_prompt();
     return;
   }
 
   if (argVal == NULL) {
-    WSERIAL.println("ERROR: Missing [value] argument.");
+    port->println("ERROR: Missing [value] argument.");
     print_prompt();
     return;
   }
@@ -79,195 +92,182 @@ void command_set_var() {
   } else if (strcmp(argName, "dec_hold_current") == 0) {
     decStepper->setHoldCurrent(value);
   } else {
-    WSERIAL.print("ERROR: Invalid variable name '");
-    WSERIAL.print(argName);
-    WSERIAL.println("'");
+    port->print("ERROR: Invalid variable name '");
+    port->print(argName);
+    port->println("'");
   }
   print_prompt();
 }
 
-void command_qs() {
+void Command::command_qs() {
   long raPos, decPos;
   stepper_encoder_t raEnc, decEnc;
   // TODO: Maybe make binary status so we don't get close to tracking tick
   // interval?
-  WSERIAL.print("rs:");
-  WSERIAL.println(raStepper->getSpeed());
-  WSERIAL.print("ds:");
-  WSERIAL.println(decStepper->getSpeed());
+  port->print("rs:");
+  port->println(raStepper->getSpeed());
+  port->print("ds:");
+  port->println(decStepper->getSpeed());
   raPos = raStepper->getPosition();
   decPos = decStepper->getPosition();
   raStepper->getEncoder(raEnc);
   decStepper->getEncoder(decEnc);
-  WSERIAL.print("rp:");
-  WSERIAL.println(raPos);
-  WSERIAL.print("dp:");
-  WSERIAL.println(decPos);
-  WSERIAL.print("re:");
-  WSERIAL.println(raEnc.value);
-  WSERIAL.print("de:");
-  WSERIAL.println(decEnc.value);
-  WSERIAL.print("ri:");
-  WSERIAL.println(raEnc.steps_in_pulse);
-  WSERIAL.print("di:");
-  WSERIAL.println(decEnc.steps_in_pulse);
-  WSERIAL.print("rl:");
-  WSERIAL.println(raEnc.prev_steps_in_pulse);
-  WSERIAL.print("dl:");
-  WSERIAL.println(decEnc.prev_steps_in_pulse);
+  port->print("rp:");
+  port->println(raPos);
+  port->print("dp:");
+  port->println(decPos);
+  port->print("re:");
+  port->println(raEnc.value);
+  port->print("de:");
+  port->println(decEnc.value);
+  port->print("ri:");
+  port->println(raEnc.steps_in_pulse);
+  port->print("di:");
+  port->println(decEnc.steps_in_pulse);
+  port->print("rl:");
+  port->println(raEnc.prev_steps_in_pulse);
+  port->print("dl:");
+  port->println(decEnc.prev_steps_in_pulse);
   print_prompt();
 }
 
-void command_status() {
+void Command::command_status() {
   long raPos, decPos;
   stepper_encoder_t raEnc, decEnc;
-  WSERIAL.print("ra_max_tps=");
-  WSERIAL.println(raStepper->getMaxSpeed());
-  WSERIAL.print("ra_guide_rate=");
-  WSERIAL.println(raStepper->getGuideRate());
-  WSERIAL.print("ra_direction=");
-  WSERIAL.println(raStepper->getInvertedStepping() ? -1 : 1);
-  WSERIAL.print("ra_disable=");
-  WSERIAL.println(raStepper->enabled() ? 0 : 1);
-  WSERIAL.print("ra_accel_tpss=");
-  WSERIAL.println(raStepper->getMaxAccel());
-  WSERIAL.print("dec_max_tps=");
-  WSERIAL.println(decStepper->getMaxSpeed());
-  WSERIAL.print("dec_guide_rate=");
-  WSERIAL.println(decStepper->getGuideRate());
-  WSERIAL.print("dec_direction=");
-  WSERIAL.println(decStepper->getInvertedStepping() ? -1 : 1);
-  WSERIAL.print("dec_disable=");
-  WSERIAL.println(decStepper->enabled() ? 0 : 1);
-  WSERIAL.print("dec_accel_tpss=");
-  WSERIAL.println(decStepper->getMaxAccel());
+  port->print("ra_max_tps=");
+  port->println(raStepper->getMaxSpeed());
+  port->print("ra_guide_rate=");
+  port->println(raStepper->getGuideRate());
+  port->print("ra_direction=");
+  port->println(raStepper->getInvertedStepping() ? -1 : 1);
+  port->print("ra_disable=");
+  port->println(raStepper->enabled() ? 0 : 1);
+  port->print("ra_accel_tpss=");
+  port->println(raStepper->getMaxAccel());
+  port->print("dec_max_tps=");
+  port->println(decStepper->getMaxSpeed());
+  port->print("dec_guide_rate=");
+  port->println(decStepper->getGuideRate());
+  port->print("dec_direction=");
+  port->println(decStepper->getInvertedStepping() ? -1 : 1);
+  port->print("dec_disable=");
+  port->println(decStepper->enabled() ? 0 : 1);
+  port->print("dec_accel_tpss=");
+  port->println(decStepper->getMaxAccel());
 
-  WSERIAL.print("ra_run_current=");
-  WSERIAL.println(raStepper->getRunCurrent());
-  WSERIAL.print("ra_med_current=");
-  WSERIAL.println(raStepper->getMedCurrent());
-  WSERIAL.print("ra_med_current_threshold=");
-  WSERIAL.println(raStepper->getMedCurrentThreshold());
-  WSERIAL.print("ra_hold_current=");
-  WSERIAL.println(raStepper->getHoldCurrent());
+  port->print("ra_run_current=");
+  port->println(raStepper->getRunCurrent());
+  port->print("ra_med_current=");
+  port->println(raStepper->getMedCurrent());
+  port->print("ra_med_current_threshold=");
+  port->println(raStepper->getMedCurrentThreshold());
+  port->print("ra_hold_current=");
+  port->println(raStepper->getHoldCurrent());
 
-  WSERIAL.print("dec_run_current=");
-  WSERIAL.println(decStepper->getRunCurrent());
-  WSERIAL.print("dec_med_current=");
-  WSERIAL.println(decStepper->getMedCurrent());
-  WSERIAL.print("dec_med_current_threshold=");
-  WSERIAL.println(decStepper->getMedCurrentThreshold());
-  WSERIAL.print("dec_hold_current=");
-  WSERIAL.println(decStepper->getHoldCurrent());
+  port->print("dec_run_current=");
+  port->println(decStepper->getRunCurrent());
+  port->print("dec_med_current=");
+  port->println(decStepper->getMedCurrent());
+  port->print("dec_med_current_threshold=");
+  port->println(decStepper->getMedCurrentThreshold());
+  port->print("dec_hold_current=");
+  port->println(decStepper->getHoldCurrent());
 
-  WSERIAL.print("debug:");
-  WSERIAL.println(sst_debug);
-  WSERIAL.print("autoguide:");
-  WSERIAL.println(!raStepper->guidingDisabled());
-  WSERIAL.print("ra_speed:");
-  WSERIAL.println(raStepper->getSpeed());
-  WSERIAL.print("dec_speed:");
-  WSERIAL.println(decStepper->getSpeed());
+  port->print("debug:");
+  port->println(sst_debug);
+  port->print("autoguide:");
+  port->println(!raStepper->guidingDisabled());
+  port->print("ra_speed:");
+  port->println(raStepper->getSpeed());
+  port->print("dec_speed:");
+  port->println(decStepper->getSpeed());
 
   raPos = raStepper->getPosition();
   decPos = decStepper->getPosition();
   raStepper->getEncoder(raEnc);
   decStepper->getEncoder(decEnc);
-  WSERIAL.print("ra_tpe:");
-  WSERIAL.println(raEnc.prev_steps_in_pulse);
-  WSERIAL.print("dec_tpe:");
-  WSERIAL.println(decEnc.prev_steps_in_pulse);
-  WSERIAL.print("ra_pos:");
-  WSERIAL.println(raPos);
-  WSERIAL.print("dec_pos:");
-  WSERIAL.println(decPos);
-  WSERIAL.print("ra_enc:");
-  WSERIAL.println(raEnc.value);
-  WSERIAL.print("dec_enc:");
-  WSERIAL.println(decEnc.value);
-  WSERIAL.print("ra_tip:");
-  WSERIAL.println(raEnc.steps_in_pulse);
-  WSERIAL.print("dec_tip:");
-  WSERIAL.println(decEnc.steps_in_pulse);
+  port->print("ra_tpe:");
+  port->println(raEnc.prev_steps_in_pulse);
+  port->print("dec_tpe:");
+  port->println(decEnc.prev_steps_in_pulse);
+  port->print("ra_pos:");
+  port->println(raPos);
+  port->print("dec_pos:");
+  port->println(decPos);
+  port->print("ra_enc:");
+  port->println(raEnc.value);
+  port->print("dec_enc:");
+  port->println(decEnc.value);
+  port->print("ra_tip:");
+  port->println(raEnc.steps_in_pulse);
+  port->print("dec_tip:");
+  port->println(decEnc.steps_in_pulse);
   print_prompt();
 }
 
-void command_ra_set_speed() {
+void Command::command_ra_set_speed() {
   char *argVal;
   float value;
 
-  argVal = cmd.next();
+  argVal = cmd->next();
 
   if (argVal == NULL) {
-    WSERIAL.println("ERROR: Missing [value] argument.");
+    port->println("ERROR: Missing [value] argument.");
     print_prompt();
     return;
   }
   value = atof(argVal);
   raStepper->setSpeed(value);
-  WSERIAL.print("ra_speed:");
-  WSERIAL.println(raStepper->getSpeed());
+  port->print("ra_speed:");
+  port->println(raStepper->getSpeed());
   print_prompt();
 }
 
-void command_dec_set_speed() {
+void Command::command_dec_set_speed() {
   char *argVal;
   float value;
 
-  argVal = cmd.next();
+  argVal = cmd->next();
 
   if (argVal == NULL) {
-    WSERIAL.println("ERROR: Missing [value] argument.");
+    port->println("ERROR: Missing [value] argument.");
     print_prompt();
     return;
   }
   value = atof(argVal);
   decStepper->setSpeed(value);
-  WSERIAL.print("dec_speed:");
-  WSERIAL.println(decStepper->getSpeed());
+  port->print("dec_speed:");
+  port->println(decStepper->getSpeed());
   print_prompt();
 }
 
-void command_help(const char *cmd) {
-  WSERIAL.println("Commands:");
-  WSERIAL.println("  set_var [variable_name] [value] Sets variable");
-  WSERIAL.println("  ra_set_speed [tps]           Moves RA to tick position");
-  WSERIAL.println("  dec_set_speed [tps]          Moves DEC to tick position");
-  WSERIAL.println(
+void Command::command_help(const char *cmd) {
+  port->println("Commands:");
+  port->println("  set_var [variable_name] [value] Sets variable");
+  port->println("  ra_set_speed [tps]           Moves RA to tick position");
+  port->println("  dec_set_speed [tps]          Moves DEC to tick position");
+  port->println(
     "  autoguide_disable            Disables Autoguiding port input");
-  WSERIAL.println(
+  port->println(
     "  autoguide_enable             Enables Autoguiding prot input");
-  WSERIAL.println("  status                       Shows status/variable info");
-  WSERIAL.println("  qs                           Shows speed/position info");
-  WSERIAL.println("  help                         This help info");
+  port->println("  status                       Shows status/variable info");
+  port->println("  qs                           Shows speed/position info");
+  port->println("  help                         This help info");
   print_prompt();
 }
 
-void command_autoguide_disable() {
+void Command::command_autoguide_disable() {
   raStepper->disableGuiding(true);
   decStepper->disableGuiding(true);
   print_prompt();
 }
 
-void command_autoguide_enable() {
+void Command::command_autoguide_enable() {
   raStepper->disableGuiding(false);
   decStepper->disableGuiding(false);
   print_prompt();
 }
 
-void command_init(void) {
-  WSERIAL.begin(115200);
-  cmd.addCommand("set_var", command_set_var);
-  cmd.addCommand("ra_set_speed", command_ra_set_speed);
-  cmd.addCommand("dec_set_speed", command_dec_set_speed);
-  cmd.addCommand("autoguide_disable", command_autoguide_disable);
-  cmd.addCommand("autoguide_enable", command_autoguide_enable);
-  cmd.addCommand("status", command_status);
-  cmd.addCommand("qs", command_qs);
-  cmd.setDefaultHandler(command_help);
-  print_prompt();
-}
-
-void command_read_serial() {
-  cmd.readSerial();
+void Command::read() {
+  cmd->readSerial();
 }

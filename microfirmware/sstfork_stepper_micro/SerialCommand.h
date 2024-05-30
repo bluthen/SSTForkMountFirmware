@@ -23,7 +23,7 @@
  */
 #ifndef SerialCommand_h
 #define SerialCommand_h
-//#define SERIALCOMMAND_DEBUG
+
 #if defined(WIRING) && WIRING >= 100
   #include <Wiring.h>
 #elif defined(ARDUINO) && ARDUINO >= 100
@@ -34,19 +34,20 @@
 #include <string.h>
 
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
-#define SERIALCOMMAND_BUFFER 50
+#define SERIALCOMMAND_BUFFER 32
 // Maximum length of a command excluding the terminating null
-#define SERIALCOMMAND_MAXCOMMANDLENGTH 17
+#define SERIALCOMMAND_MAXCOMMANDLENGTH 8
 
 // Uncomment the next line to run the library in debug mode (verbose messages)
-//#define SERIALCOMMAND_DEBUG
+// #define SERIALCOMMAND_DEBUG
 
 
 class SerialCommand {
   public:
     SerialCommand();      // Constructor
-    void addCommand(const char *command, void(*function)());  // Add a command to the processing dictionary.
-    void setDefaultHandler(void (*function)(const char *));   // A handler to call when no valid command received.
+    SerialCommand(Stream *serial_port);      // Constructor
+    void addCommand(const char *command, std::function<void()> function);  // Add a command to the processing dictionary.
+    void setDefaultHandler(std::function<void(const char*)> function);   // A handler to call when no valid command received.
 
     void readSerial();    // Main entry point.
     void clearBuffer();   // Clears the input buffer.
@@ -56,13 +57,14 @@ class SerialCommand {
     // Command/handler dictionary
     struct SerialCommandCallback {
       char command[SERIALCOMMAND_MAXCOMMANDLENGTH + 1];
-      void (*function)();
-    };                                    // Data structure to hold Command/Handler function key-value pairs
-    SerialCommandCallback *commandList;   // Actual definition for command/handler array
+      std::function<void()> function;
+    }; 
+    // Data structure to hold Command/Handler function key-value pairs
+    std::vector<SerialCommandCallback> commandList;
     byte commandCount;
 
     // Pointer to the default handler function
-    void (*defaultHandler)(const char *);
+    std::function<void(const char*)> defaultHandler;
 
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     char term;     // Character that signals end of command (default '\n')
@@ -70,6 +72,7 @@ class SerialCommand {
     char buffer[SERIALCOMMAND_BUFFER + 1]; // Buffer of stored characters while waiting for terminator character
     byte bufPos;                        // Current position in the buffer
     char *last;                         // State variable used by strtok_r during processing
+    Stream *_serial_port;
 };
 
 #endif //SerialCommand_h

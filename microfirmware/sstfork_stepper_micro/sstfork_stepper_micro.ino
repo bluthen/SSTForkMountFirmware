@@ -1,6 +1,4 @@
-#define THROW_ERROR_IF_NOT_FAST
 #include <Wire.h>
-#include <digitalWriteFast.h>
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -18,17 +16,19 @@ static const int RA_ENC_B_PIN = 3;
 static const int DEC_ENC_A_PIN = 2;
 static const int DEC_ENC_B_PIN = 4;
 
-static const int RA_STEPPER_DIR_PIN = 10;
-static const int RA_STEPPER_STEP_PIN = 9;
-static const int RA_STEPPER_CS = 18;
+static const int RA_DIR_PIN = 7;
+static const int RA_STEP_PIN = 8;
+static const int RA_CS_PIN = 10;
+static const int RA_MISO_PIN = 9;
+static const int RA_SCK_PIN = 11;
+static const int RA_MOSI_PIN = 12;
 
-static const int DEC_STEPPER_DIR_PIN = 19;
-static const int DEC_STEPPER_STEP_PIN = 21;
-static const int DEC_STEPPER_CS = 22;
-
-static const int STEPPERS_MOSI = 11;
-static const int STEPPERS_MISO = 12;
-static const int STEPPERS_SCK = 13;
+static const int DEC_DIR_PIN = 14;
+static const int DEC_STEP_PIN = 15;
+static const int DEC_CS_PIN = 17;
+static const int DEC_MISO_PIN = 16;
+static const int DEC_SCK_PIN = 18;
+static const int DEC_MOSI_PIN = 19;
 
 const static int AUTOGUIDE_DEC_NEGY_PIN = 15;
 const static int AUTOGUIDE_DEC_POSY_PIN = 14;
@@ -37,31 +37,18 @@ const static int AUTOGUIDE_RA_POSX_PIN = 12;
 
 bool sst_debug = false;
 
-void autoguide_init() {
-  pinModeFast(AUTOGUIDE_DEC_NEGY_PIN, INPUT);
-  digitalWriteFast(AUTOGUIDE_DEC_NEGY_PIN, HIGH);
-  pinModeFast(AUTOGUIDE_DEC_POSY_PIN, INPUT);
-  digitalWriteFast(AUTOGUIDE_DEC_POSY_PIN, HIGH);
-  pinModeFast(AUTOGUIDE_RA_NEGX_PIN, INPUT);
-  digitalWriteFast(AUTOGUIDE_RA_NEGX_PIN, HIGH);
-  pinModeFast(AUTOGUIDE_RA_POSX_PIN, INPUT);
-  digitalWriteFast(AUTOGUIDE_RA_POSX_PIN, HIGH);
-}
+static Command* piCommand;
+static Command* usbCommand;
 
-void configVarsInit() {
-  // Some dumb initial values
-  raStepper->setMaxSpeed(12000);
-  raStepper->setGuideRate(20);
-  decStepper->setMaxSpeed(12000);
-  decStepper->setGuideRate(6);
-  raStepper->setMaxAccel(10000);
-  decStepper->setMaxAccel(10000);
-  raStepper->disableGuiding(false);
-  decStepper->disableGuiding(false);
-  raStepper->setInvertedStepping(false);
-  decStepper->setInvertedStepping(false);
-  raStepper->enable(true);
-  decStepper->enable(true);
+void autoguide_init() {
+  pinMode(AUTOGUIDE_DEC_NEGY_PIN, INPUT);
+  digitalWrite(AUTOGUIDE_DEC_NEGY_PIN, HIGH);
+  pinMode(AUTOGUIDE_DEC_POSY_PIN, INPUT);
+  digitalWrite(AUTOGUIDE_DEC_POSY_PIN, HIGH);
+  pinMode(AUTOGUIDE_RA_NEGX_PIN, INPUT);
+  digitalWrite(AUTOGUIDE_RA_NEGX_PIN, HIGH);
+  pinMode(AUTOGUIDE_RA_POSX_PIN, INPUT);
+  digitalWrite(AUTOGUIDE_RA_POSX_PIN, HIGH);
 }
 
 /**
@@ -69,18 +56,29 @@ void configVarsInit() {
  * tracker.
  */
 void setup() {
-  Serial.begin(115200);
-  SPI.begin();
+  pinMode(DEC_CS_PIN, OUTPUT);
+  digitalWrite(DEC_CS_PIN, HIGH);
+  pinMode(RA_CS_PIN, OUTPUT);
+  digitalWrite(RA_CS_PIN, HIGH);
 
-  raStepper = new Stepper(RA_STEPPER_DIR_PIN, RA_STEPPER_STEP_PIN,
-                          RA_STEPPER_CS, 1, RA_ENC_A_PIN, RA_ENC_B_PIN);
-  decStepper = new Stepper(DEC_STEPPER_DIR_PIN, DEC_STEPPER_STEP_PIN,
-                           DEC_STEPPER_CS, 2, DEC_ENC_A_PIN, DEC_ENC_B_PIN);
-  configVarsInit();
+  Serial.begin(115200);
+  usbCommand = new Command(&Serial);
+  Serial1.begin(115200);
+  piCommand = new Command(&Serial1);
+
+  delay(1000);
+  Serial.println("Begin");
+  //SPI.begin();
+
+  raStepper = new Stepper(RA_DIR_PIN, RA_STEP_PIN,
+                          RA_CS_PIN, RA_MISO_PIN, RA_MOSI_PIN, RA_SCK_PIN, 
+                          1, RA_ENC_A_PIN, RA_ENC_B_PIN);
+  decStepper = new Stepper(DEC_DIR_PIN, DEC_STEP_PIN,
+                           DEC_CS_PIN, DEC_MISO_PIN, DEC_MOSI_PIN, DEC_SCK_PIN, 
+                           2, DEC_ENC_A_PIN, DEC_ENC_B_PIN);
   raStepper->setSpeed(0.0);
   decStepper->setSpeed(0.0);
   autoguide_init();
-  command_init();
   Serial.print(F("StarSync Tracker Fork Mount "));
   Serial.println(sstversion);
 }
@@ -173,7 +171,8 @@ void autoguide_run() {
 void loop() {
   // Serial.println("Loop");
   autoguide_run();
-  command_read_serial();
+  piCommand->read();
+  usbCommand->read();
   raStepper->update();
   decStepper->update();
 }

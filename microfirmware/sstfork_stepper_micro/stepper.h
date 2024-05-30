@@ -7,6 +7,7 @@
 #include <TMCStepper.h>
 
 
+
 struct stepper_encoder_t {
   long value;
   long steps_in_pulse;
@@ -15,8 +16,9 @@ struct stepper_encoder_t {
 
 class Stepper {
 public:
-  Stepper(const int _dir_pin, const int _step_pin, const int _cs_pin,
-                 uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin);
+  Stepper(const int _dir_pin, const int _step_pin, 
+          const int _cs_pin, const int _miso_pin, const int _mosi_pin, const int _sck_pin,
+          uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin);
   /**
    * Set final desired speed after acceleration in steps per second.
    * @param speed - steps per second
@@ -68,8 +70,9 @@ private:
   void setRealSpeed(float speed);
   void setCurrents();
   void step();
+  int id = -1;
   float v0 = 0;
-  float max_v0 = 0;
+  float max_v0 = 35000;
   volatile long x0 = 0;
   volatile bool mode_forward = true;
   volatile long last_encoder = 0;
@@ -79,26 +82,27 @@ private:
   volatile bool inv_direction = false;
   volatile bool enc_enabled = false;
 
-  long guide_rate = 0;
+  long guide_rate = 22;
   int guiding = 0;
-  bool guiding_enabled = true;
+  bool guiding_enabled = false;
 
   bool stepper_enabled = true;
-  float accell_tpss;
+  float accell_tpss=1000.0;
   float current_real = -1;
-  float run_current = 0.7;
-  float med_current = 0.7;
+  float run_current = 0.4;
+  float med_current = 0.4;
   float med_current_threshold = 0;
-  float hold_current = 0.7;
+  float hold_current = 0.25;
   int step_pin;
   int dir_pin;
   float sp_speed = 0;
   bool stepper_stopped = true;
-  long micro_threshold_v = -1;
+  long micro_threshold_v = 0;
   bool single_step = false;
   QuadEncoder *enc = NULL;
   TeensyTimerTool::PeriodicTimer *stepTimer = NULL;
   elapsedMicros timer;
+  elapsedMicros ptimer;
   TMC5160Stepper *driver = NULL;
 };
 

@@ -1,5 +1,4 @@
 #include "stepper.h"
-#include <digitalWriteFast.h>
 
 static int timerCounter = 0;
 static const int MICROSTEPS_IN_SINGLESTEP = 32;
@@ -10,8 +9,10 @@ template<typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
 }
 
-Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _cs_pin,
+Stepper::Stepper(const int _dir_pin, const int _step_pin, 
+                 const int _cs_pin, const int _miso_pin, const int _mosi_pin, const int _sck_pin,
                  uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin) {
+  id = timerCounter;
   dir_pin = _dir_pin;
   step_pin = _step_pin;
   if (enc_apin != enc_bpin) {
@@ -19,16 +20,34 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _cs_pin,
     enc->setInitConfig();
     enc->init();
   }
-  pinModeFast(dir_pin, OUTPUT);
-  pinModeFast(step_pin, OUTPUT);
-  driver = new TMC5160Stepper(_cs_pin);
+  pinMode(dir_pin, OUTPUT);
+  pinMode(step_pin, OUTPUT);
+  //driver = new TMC5160Stepper(_cs_pin);
+  //driver = new TMC5160Stepper(_cs_pin, 0.075f);
+  driver = new TMC5160Stepper(_cs_pin, _mosi_pin, _miso_pin, _sck_pin);
+  //driver = new TMC5160Stepper(_cs_pin);
+  driver->setSPISpeed(1000);
   driver->begin();
+  delay(1000);
+  while(driver->test_connection() != 0) {
+    Serial.print("WARN: Trying driver ");
+    Serial.print(id);
+    Serial.println(" connection again.");
+    delay(1000);
+  }
+  driver->pwm_autoscale(true);
   driver->intpol(true);
-  driver->en_pwm_mode(false);
+  driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
+  single_step = false;
+
+  driver->en_pwm_mode(true);
+
+
+  this->setCurrents();
   driver->pwm_autograd(true);
   driver->pwm_autoscale(true);
-  driver->en_pwm_mode(true);
-  this->setCurrents();
+  driver->en_pwm_mode(false);
+
   if (timerCounter == 0) {
     stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT1);
   } else if (timerCounter == 1) {
@@ -49,11 +68,17 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin, const int _cs_pin,
   stepTimer->begin([this] {
     this->step();
   }, 200ms, false);
+
+  while(driver->microsteps() != MICROSTEPS_IN_SINGLESTEP) {
+    driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
+  }
   timerCounter++;
+  //Serial.println("Inc");
 }
 
 void Stepper::setSpeed(float speed) {
   sp_speed = speed;
+  timer = 0;
 }
 
 float Stepper::getSpeed() {
@@ -108,71 +133,89 @@ void Stepper::setRealSpeed(float speed) {
     v0 = 0;
     return;
   }
-  float sp;
+  float sp, dv;
+  if (speed > 0) {
+    setStepDirection(true);
+  } else {
+    setStepDirection(false);
+  }
+  dv = fabs(v0-speed);
   // Only bother changing frequency if speed different is more than 1 step per
   // 1000 seconds.
-  if (fabs(v0 - speed) > 0.001) {
-    if (fabs(speed) > micro_threshold_v) {
+  if (dv > 0.001) {
+    if (micro_threshold_v > 0 && fabs(speed) > micro_threshold_v) {
       setStepResolution(true);
-      sp = 500000000 / (speed * MICROSTEPS_IN_SINGLESTEP);  // us
+      sp = 1000000.0 / (2.0 * fabs(speed)/MICROSTEPS_IN_SINGLESTEP);  // us
     } else {
       setStepResolution(false);
-      sp = 500000000 / speed;  // us
+      sp = 1000000.0 / (2.0*fabs(speed));  // us
     }
     // Must be 0.5 * desired period because square wave on and off.
     stepTimer->setPeriod(sp);
     v0 = speed;
+    setCurrents();
+//    Serial.print("setPeriod: ");
+//    Serial.print(id);
+//    Serial.print(" ");
+//    Serial.print(dv);
+//    Serial.print(" ");
+//    Serial.print(speed);
+//    Serial.print(" ");
+//    Serial.println(sp);
   }
   if (stepper_stopped) {
     stepper_stopped = false;
     stepTimer->start();
   }
-  setCurrents();
 }
 
 void Stepper::setStepDirection(bool forward) {
-  cli();
   if (forward) {
     if (!inv_direction) {
-      digitalWriteFast(dir_pin, HIGH);
+      digitalWrite(dir_pin, HIGH);
     } else {
-      digitalWriteFast(dir_pin, LOW);
+      digitalWrite(dir_pin, LOW);
     }
     mode_forward = true;
   } else {
     if (!inv_direction) {
-      digitalWriteFast(dir_pin, LOW);
+      digitalWrite(dir_pin, LOW);
     } else {
-      digitalWriteFast(dir_pin, HIGH);
+      digitalWrite(dir_pin, HIGH);
     }
-    mode_forward = true;
+    mode_forward = false;
   }
-  sei();
 }
 
 void Stepper::setStepResolution(bool _single_step) {
   if (_single_step && !single_step) {
     single_step = true;
-    cli();
+    Serial.print("setStepsResolution");
+    Serial.println(0);
     // Single step on TB67S249FTG_DRIVER
-    driver->microsteps(0);
-    // At full step every step is 16 microsteps
+    while(driver->microsteps() != 0) {
+      driver->microsteps(0);
+    }
+
+    // At full step every step is X microsteps
     stepResolution = MICROSTEPS_IN_SINGLESTEP;
-    sei();
   } else if (!_single_step && single_step) {
     single_step = false;
-    cli();
-    driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
+    Serial.print("setStepsResolution");
+    Serial.println(MICROSTEPS_IN_SINGLESTEP);
+    while(driver->microsteps() != MICROSTEPS_IN_SINGLESTEP) {
+      driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
+    }
     // Every micro step is 1 microsteps
     stepResolution = 1;
-    sei();
   }
 }
 
 void Stepper::step() {
-  bool on = !digitalReadFast(step_pin);
-  digitalWriteFast(step_pin, on);
+  bool on = !digitalRead(step_pin);
+  digitalWrite(step_pin, on);
   if (on) {
+    //Serial.println("step");
     if (mode_forward) {
       x0 += stepResolution;
     } else {
@@ -280,27 +323,20 @@ float Stepper::getHoldCurrent() {
 void Stepper::setCurrents() {
   if (current_real != run_current && fabs(v0) >= med_current_threshold) {
     current_real = run_current;
-    cli();
-    driver->rms_current(current_real * CURRENT_TO_RMS, hold_current / current_real);
-    sei();
+    driver->rms_current((uint16_t)((current_real * CURRENT_TO_RMS)*1000.0), hold_current / current_real);
   } else if (current_real != med_current && fabs(v0) < med_current_threshold) {
     current_real = med_current;
-    cli();
-    driver->rms_current(current_real * CURRENT_TO_RMS, hold_current / current_real);
-    sei();
+    driver->rms_current((uint16_t)((current_real * CURRENT_TO_RMS)*1000.0), hold_current / current_real);
   }
 }
 
 void Stepper::update() {
+  if (timer < 30000) {
+    return;
+  }
   float new_speed;
-  long t = timer / 1000000.0;
+  float t = timer / 1000000.0;
   float sp = sp_speed;
-  //  long should_position;
-  //  long delta_x;
-  //  cli();
-  //  delta_x = x0;
-  //  sei();
-  //  motion_func(accell, v0, delta_x, t, sp_speed, should_position, new_speed);
   if (guiding_enabled && guiding != 0) {
     sp += guiding * guide_rate;
   }
@@ -309,7 +345,7 @@ void Stepper::update() {
     setRealSpeed(0);
   } else {
     if (fabs(new_speed) > max_v0) {
-      setRealSpeed(copysignf(new_speed, max_v0));
+      setRealSpeed(copysignf(max_v0, new_speed));
     } else {
       setRealSpeed(new_speed);
     }
