@@ -1,6 +1,5 @@
 #include "stepper.h"
 
-static int timerCounter = 0;
 static const int MICROSTEPS_IN_SINGLESTEP = 32;
 static const float CURRENT_TO_RMS = 0.7071;  // 1/sqrt(2) see page 74 of datasheet
 // GLOBALSCALER/256  *  (CS + 1)/32  *  V_FS/R_SENSE  *  1/sqrt(2)
@@ -11,8 +10,8 @@ template<typename T> int sgn(T val) {
 
 Stepper::Stepper(const int _dir_pin, const int _step_pin, 
                  const int _cs_pin, const int _miso_pin, const int _mosi_pin, const int _sck_pin,
-                 uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin) {
-  id = timerCounter;
+                 uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin, uint8_t timer) {
+  id = timer;
   dir_pin = _dir_pin;
   step_pin = _step_pin;
   if (enc_apin != enc_bpin) {
@@ -29,28 +28,34 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   driver->setSPISpeed(1000);
   driver->begin();
   delay(1000);
-  while(driver->test_connection() != 0) {
-    Serial.print("WARN: Trying driver ");
+  this->test_connection();
+  
+  if (Serial) {
+    Serial.print("GSTAT ");
     Serial.print(id);
-    Serial.println(" connection again.");
-    delay(1000);
+    Serial.print(" - ");
+    Serial.println(driver->GSTAT());
+    Serial.print("GCONF ");
+    Serial.print(id);
+    Serial.print(" - ");
+    Serial.println(driver->GCONF());
   }
-  driver->pwm_autoscale(true);
+  //driver->pwm_autoscale(true);
+  driver->en_pwm_mode(false);
   driver->intpol(true);
   driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
   single_step = false;
 
-  driver->en_pwm_mode(true);
 
 
   this->setCurrents();
-  driver->pwm_autograd(true);
-  driver->pwm_autoscale(true);
-  driver->en_pwm_mode(false);
+//  driver->pwm_autograd(true);
+//  driver->pwm_autoscale(true);
+//  driver->en_pwm_mode(false);
 
-  if (timerCounter == 0) {
+  if (id == 0) {
     stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT1);
-  } else if (timerCounter == 1) {
+  } else if (id == 1) {
     stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT2);
   } else {
     stepTimer = new TeensyTimerTool::PeriodicTimer();
@@ -72,8 +77,38 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   while(driver->microsteps() != MICROSTEPS_IN_SINGLESTEP) {
     driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
   }
-  timerCounter++;
-  //Serial.println("Inc");
+  if (Serial) {
+    Serial.print("GSTAT ");
+    Serial.print(id);
+    Serial.print(" - ");
+    Serial.println(driver->GSTAT());
+    Serial.print("GCONF ");
+    Serial.print(id);
+    Serial.print(" - ");
+    Serial.println(driver->GCONF());
+  }
+
+  this->test_connection();
+  // this->setSpeed(10000);
+}
+
+uint8_t Stepper::test_connection() {
+  uint8_t tcv = driver->test_connection();
+  while(tcv != 0) {
+    if (Serial) {
+      Serial.print("WARN: Test connection failed ");
+      Serial.print(id);
+      Serial.print(", ");
+      Serial.println(tcv);
+    }
+    delay(1000);
+    tcv = driver->test_connection();
+  } 
+  if (Serial) {
+    Serial.print("Test Connection Good ");
+    Serial.println(id);
+  }
+  return tcv;
 }
 
 void Stepper::setSpeed(float speed) {
@@ -154,14 +189,6 @@ void Stepper::setRealSpeed(float speed) {
     stepTimer->setPeriod(sp);
     v0 = speed;
     setCurrents();
-//    Serial.print("setPeriod: ");
-//    Serial.print(id);
-//    Serial.print(" ");
-//    Serial.print(dv);
-//    Serial.print(" ");
-//    Serial.print(speed);
-//    Serial.print(" ");
-//    Serial.println(sp);
   }
   if (stepper_stopped) {
     stepper_stopped = false;
@@ -190,9 +217,6 @@ void Stepper::setStepDirection(bool forward) {
 void Stepper::setStepResolution(bool _single_step) {
   if (_single_step && !single_step) {
     single_step = true;
-    Serial.print("setStepsResolution");
-    Serial.println(0);
-    // Single step on TB67S249FTG_DRIVER
     while(driver->microsteps() != 0) {
       driver->microsteps(0);
     }
@@ -201,8 +225,6 @@ void Stepper::setStepResolution(bool _single_step) {
     stepResolution = MICROSTEPS_IN_SINGLESTEP;
   } else if (!_single_step && single_step) {
     single_step = false;
-    Serial.print("setStepsResolution");
-    Serial.println(MICROSTEPS_IN_SINGLESTEP);
     while(driver->microsteps() != MICROSTEPS_IN_SINGLESTEP) {
       driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
     }
@@ -215,7 +237,6 @@ void Stepper::step() {
   bool on = !digitalRead(step_pin);
   digitalWrite(step_pin, on);
   if (on) {
-    //Serial.println("step");
     if (mode_forward) {
       x0 += stepResolution;
     } else {
@@ -322,11 +343,27 @@ float Stepper::getHoldCurrent() {
 
 void Stepper::setCurrents() {
   if (current_real != run_current && fabs(v0) >= med_current_threshold) {
+    if (Serial) {
+      Serial.print("C: ");
+      Serial.println(driver->rms_current());
+    }
     current_real = run_current;
     driver->rms_current((uint16_t)((current_real * CURRENT_TO_RMS)*1000.0), hold_current / current_real);
+    if (Serial) {
+      Serial.print("C: ");
+      Serial.println(driver->rms_current());
+    }
   } else if (current_real != med_current && fabs(v0) < med_current_threshold) {
+    if (Serial) {
+      Serial.print("C: ");
+      Serial.println(driver->rms_current());
+    }
     current_real = med_current;
     driver->rms_current((uint16_t)((current_real * CURRENT_TO_RMS)*1000.0), hold_current / current_real);
+    if (Serial) {
+      Serial.print("C: ");
+      Serial.println(driver->rms_current());
+    }
   }
 }
 

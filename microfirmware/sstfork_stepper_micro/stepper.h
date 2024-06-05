@@ -18,7 +18,7 @@ class Stepper {
 public:
   Stepper(const int _dir_pin, const int _step_pin, 
           const int _cs_pin, const int _miso_pin, const int _mosi_pin, const int _sck_pin,
-          uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin);
+          uint8_t enc_chan, uint16_t enc_apin, uint16_t enc_bpin, uint8_t timer);
   /**
    * Set final desired speed after acceleration in steps per second.
    * @param speed - steps per second
@@ -56,6 +56,8 @@ public:
   float getMedCurrentThreshold();
   float getHoldCurrent();
 
+  uint8_t test_connection();
+
   bool enabled();
   void enable(bool _enabled);
   void update();
@@ -89,10 +91,10 @@ private:
   bool stepper_enabled = true;
   float accell_tpss=1000.0;
   float current_real = -1;
-  float run_current = 0.4;
-  float med_current = 0.4;
+  float run_current = 0.1;
+  float med_current = 0.1;
   float med_current_threshold = 0;
-  float hold_current = 0.25;
+  float hold_current = 0.1;
   int step_pin;
   int dir_pin;
   float sp_speed = 0;

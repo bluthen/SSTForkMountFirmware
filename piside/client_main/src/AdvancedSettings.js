@@ -14,10 +14,10 @@ import APIHelp from './util/APIHelp';
 
 const settings_map = {
     ra_ticks_per_degree: {display: 'RA Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
-    dec_ticks_per_degree: {display: 'DEC Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
+    dec_ticks_per_degree: {display: 'Dec Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
     ra_track_rate: {display: 'RA Stepper Tracking', type: 'number', min: 0, endAdornment: 'Step/s'},
     ra_guide_rate: {display: 'RA Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
-    dec_guide_rate: {display: 'DEC Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
+    dec_guide_rate: {display: 'Dec Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
 
     ra_accel_tpss: {
         display: 'RA Max Acceleration',
@@ -27,13 +27,69 @@ const settings_map = {
         jsonLevel: 'micro'
     },
     dec_accel_tpss: {
-        display: 'DEC Max Acceleration',
+        display: 'Dec Max Acceleration',
         type: 'number',
         min: 0,
         endAdornment: 'Step/s^2',
         jsonLevel: 'micro'
     },
 
+    ra_run_current: {
+        display: 'RA Run Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
+    dec_run_current: {
+        display: 'Dec Run Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
+    ra_med_threshold: {
+        display: 'RA Medium Threshold',
+        type: 'number',
+        min: 0,
+        endAdornment: '<steps/s',
+        jsonLevel: 'micro'
+    },
+    ra_med_current_threshold: {
+        display: 'RA Medium Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
+    dec_med_threshold: {
+        display: 'Dec Medium Threshold',
+        type: 'number',
+        min: 0,
+        endAdornment: 'steps/s',
+        jsonLevel: 'micro'
+    },
+    dec_med_current_threshold: {
+        display: 'Dec Medium Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
+    ra_hold_current: {
+        display: 'RA Hold Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
+    dec_hold_current: {
+        display: 'Dec Hold Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
 
     ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
     ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
@@ -41,20 +97,20 @@ const settings_map = {
     ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
     ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Step/s'},
 
-    dec_slew_fastest: {display: 'DEC Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_faster: {display: 'DEC Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_medium: {display: 'DEC Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_slower: {display: 'DEC Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_slowest: {display: 'DEC Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_fastest: {display: 'Dec Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_faster: {display: 'Dec Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_medium: {display: 'Dec Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_slower: {display: 'Dec Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
+    dec_slew_slowest: {display: 'Dec Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
 
     ra_direction: {display: 'RA Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
-    dec_direction: {display: 'DEC Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
+    dec_direction: {display: 'Dec Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
 
     ra_disable: {display: 'RA Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
-    dec_disable: {display: 'DEC Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
+    dec_disable: {display: 'Dec Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
 
     ra_use_encoder: {display: 'Use Encoders w/RA', type: 'boolean'},
-    dec_use_encoder: {display: 'Use Encoders w/DEC', type: 'boolean'},
+    dec_use_encoder: {display: 'Use Encoders w/Dec', type: 'boolean'},
     limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean'},
 
     ra_encoder_pulse_per_degree: {
@@ -63,7 +119,7 @@ const settings_map = {
         endAdornment: 'pulse/°'
     },
     dec_encoder_pulse_per_degree: {
-        display: 'DEC Encoder Scale',
+        display: 'Dec Encoder Scale',
         type: 'number',
         endAdornment: 'pulse/°'
     }

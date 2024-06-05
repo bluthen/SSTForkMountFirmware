@@ -3,9 +3,6 @@
 
 #include "SerialCommand.h"
 
-//#define WSERIAL Serial1
-// #define WSERIAL Serial
-
 class Command {
 public:
   Command(Stream* _port);

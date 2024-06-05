@@ -37,8 +37,8 @@ const static int AUTOGUIDE_RA_POSX_PIN = 12;
 
 bool sst_debug = false;
 
-static Command* piCommand;
-static Command* usbCommand;
+static Command* piCommand = NULL;
+static Command* usbCommand = NULL;
 
 void autoguide_init() {
   pinMode(AUTOGUIDE_DEC_NEGY_PIN, INPUT);
@@ -61,26 +61,37 @@ void setup() {
   pinMode(RA_CS_PIN, OUTPUT);
   digitalWrite(RA_CS_PIN, HIGH);
 
-  Serial.begin(115200);
-  usbCommand = new Command(&Serial);
+  while (!Serial && millis() < 2000) {
+
+  }
+  if (Serial) {
+    Serial.begin(115200);
+    usbCommand = new Command(&Serial);
+  }
   Serial1.begin(115200);
   piCommand = new Command(&Serial1);
 
   delay(1000);
-  Serial.println("Begin");
+  if (Serial) {
+    Serial.println("Begin");
+  }
   //SPI.begin();
 
   raStepper = new Stepper(RA_DIR_PIN, RA_STEP_PIN,
                           RA_CS_PIN, RA_MISO_PIN, RA_MOSI_PIN, RA_SCK_PIN, 
-                          1, RA_ENC_A_PIN, RA_ENC_B_PIN);
+                          1, RA_ENC_A_PIN, RA_ENC_B_PIN, 0);
   decStepper = new Stepper(DEC_DIR_PIN, DEC_STEP_PIN,
                            DEC_CS_PIN, DEC_MISO_PIN, DEC_MOSI_PIN, DEC_SCK_PIN, 
-                           2, DEC_ENC_A_PIN, DEC_ENC_B_PIN);
-  raStepper->setSpeed(0.0);
-  decStepper->setSpeed(0.0);
+                           2, DEC_ENC_A_PIN, DEC_ENC_B_PIN, 1);
+  //raStepper->setSpeed(0.0);
+  //decStepper->setSpeed(0.0);
   autoguide_init();
-  Serial.print(F("StarSync Tracker Fork Mount "));
-  Serial.println(sstversion);
+  if (Serial && usbCommand != NULL) {
+    Serial.print(F("StarSync Tracker Fork Mount "));
+    Serial.println(sstversion);
+  }
+  Serial1.print(F("StarSync Tracker Fork Mount "));
+  Serial1.println(sstversion);
 }
 
 uint8_t status = 0;
@@ -117,8 +128,8 @@ void autoguide_run() {
 
   if (status != prev_status && (millis() - lastDebounceTime) > debounceDelay) {
     if (sst_debug) {
-      Serial.print("status != prev_status and debounced: ");
-      Serial.println(status);
+      Serial1.print("status != prev_status and debounced: ");
+      Serial1.println(status);
     }
 
     // Low means pressed except for rate switch
@@ -130,18 +141,18 @@ void autoguide_run() {
       raStepper->guide(0);
       decStepper->guide(0);
       if (sst_debug) {
-        Serial.print("no buttons: ");
+        Serial1.print("no buttons: ");
       }
     } else {
       if (!(status & (1 << AG_POSY_MASK))) {
         decStepper->guide(1);
         if (sst_debug) {
-          Serial.print("DEC up ");
+          Serial1.print("DEC up ");
         }
       } else if (!(status & (1 << AG_NEGY_MASK))) {
         decStepper->guide(-1);
         if (sst_debug) {
-          Serial.print("DEC down ");
+          Serial1.print("DEC down ");
         }
       } else {
         decStepper->guide(0);
@@ -150,13 +161,13 @@ void autoguide_run() {
       if (!(status & (1 << AG_POSX_MASK))) {
         raStepper->guide(1);
         if (sst_debug) {
-          Serial.print("RA Right ");
+          Serial1.print("RA Right ");
         }
 
       } else if (!(status & (1 << AG_NEGX_MASK))) {
         raStepper->guide(-1);
         if (sst_debug) {
-          Serial.print("RA Left");
+          Serial1.print("RA Left");
         }
       } else {
         raStepper->guide(0);
@@ -169,10 +180,16 @@ void autoguide_run() {
  * Program loop.
  */
 void loop() {
-  // Serial.println("Loop");
+  // Serial1.println("Loop");
   autoguide_run();
   piCommand->read();
-  usbCommand->read();
+  if (Serial) {
+    if (usbCommand == NULL) {
+      Serial.begin(115200);
+      usbCommand = new Command(&Serial);
+    }
+    usbCommand->read();
+  }
   raStepper->update();
   decStepper->update();
 }
