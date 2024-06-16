@@ -1,20 +1,20 @@
 import React from "react";
 import state from './State';
 import {observer} from "mobx-react"
-import TextField from '@material-ui/core/TextField';
-import Grid from '@material-ui/core/Grid';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import InputLabel from '@material-ui/core/InputLabel';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
-import Button from '@material-ui/core/Button';
-import OpenInNewIcon from '@material-ui/icons/OpenInNew';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
+import InputAdornment from '@mui/material/InputAdornment';
+import InputLabel from '@mui/material/InputLabel';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import APIHelp from './util/APIHelp';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 
 
-import uuidv4 from 'uuid/v4';
+import {v4 as uuidv4} from 'uuid';
 
 const modelMap = ['single', 'buie', 'affine_all'];
 

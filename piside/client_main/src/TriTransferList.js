@@ -1,33 +1,14 @@
 import React from 'react';
-import {makeStyles} from '@material-ui/core/styles';
-import Grid from '@material-ui/core/Grid';
-import List from '@material-ui/core/List';
-import Card from '@material-ui/core/Card';
-import CardHeader from '@material-ui/core/CardHeader';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import Checkbox from '@material-ui/core/Checkbox';
-import Button from '@material-ui/core/Button';
-import Divider from '@material-ui/core/Divider';
-
-const useStyles = makeStyles(theme => ({
-    root: {
-        margin: 'auto',
-    },
-    cardHeader: {
-        padding: theme.spacing(1, 2),
-    },
-    list: {
-        width: 200,
-        height: 230,
-        backgroundColor: theme.palette.background.paper,
-        overflow: 'auto',
-    },
-    button: {
-        margin: theme.spacing(0.5, 0),
-    },
-}));
+import Grid from '@mui/material/Grid';
+import List from '@mui/material/List';
+import Card from '@mui/material/Card';
+import CardHeader from '@mui/material/CardHeader';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 
 function not(a, b) {
     return a.filter(value => b.indexOf(value) === -1);
@@ -42,7 +23,6 @@ function union(a, b) {
 }
 
 export default function TriTransferList(props) {
-    const classes = useStyles();
     const [checked, setChecked] = React.useState([]);
     let left = props.leftList;
     let right = props.rightList;
@@ -111,7 +91,7 @@ export default function TriTransferList(props) {
     const customList = (title, items) => (
         <Card>
             <CardHeader
-                className={classes.cardHeader}
+                sx={{px: 1, py: 2}}
                 avatar={
                     <Checkbox
                         onClick={handleToggleAll(items)}
@@ -125,7 +105,12 @@ export default function TriTransferList(props) {
                 subheader={`${numberOfChecked(items)}/${items.length} selected`}
             />
             <Divider/>
-            <List className={classes.list} dense component="div" role="list">
+            <List sx={{
+                width: 200,
+                height: 230,
+                overflow: 'auto',
+                backgroundColor: 'background.paper'
+            }} dense component="div" role="list">
                 {items.map(value => {
                     const labelId = `transfer-list-all-item-${value}-label`;
 
@@ -149,14 +134,14 @@ export default function TriTransferList(props) {
     );
 
     return (
-        <Grid container spacing={2} justify="center" alignItems="center" className={classes.root}>
+        <Grid container spacing={2} justifyContent="center" alignItems="center">
             <Grid item>{customList(props.leftLabel, left)}</Grid>
             <Grid item>
                 <Grid container direction="column" alignItems="center">
                     <Button
+                        sx={{mx: 0.5, my: 0}}
                         variant="outlined"
                         size="small"
-                        className={classes.button}
                         onClick={handleACheckedRight}
                         disabled={leftChecked.length === 0}
                         aria-label="move selected right"
@@ -164,9 +149,9 @@ export default function TriTransferList(props) {
                         &gt;
                     </Button>
                     <Button
+                        sx={{mx: 0.5, my: 0}}
                         variant="outlined"
                         size="small"
-                        className={classes.button}
                         onClick={handleACheckedLeft}
                         disabled={centerChecked.length === 0}
                         aria-label="move selected left"
@@ -179,9 +164,9 @@ export default function TriTransferList(props) {
             <Grid item>
                 <Grid container direction="column" alignItems="center">
                     <Button
+                        sx={{mx: 0.5, my: 0}}
                         variant="outlined"
                         size="small"
-                        className={classes.button}
                         onClick={handleBCheckedRight}
                         disabled={centerChecked.length === 0}
                         aria-label="move selected right"
@@ -189,9 +174,9 @@ export default function TriTransferList(props) {
                         &gt;
                     </Button>
                     <Button
+                        sx={{mx: 0.5, my: 0}}
                         variant="outlined"
                         size="small"
-                        className={classes.button}
                         onClick={handleBCheckedLeft}
                         disabled={rightChecked.length === 0}
                         aria-label="move selected left"

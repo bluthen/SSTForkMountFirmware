@@ -2,12 +2,12 @@ import state from './State';
 import {observer} from "mobx-react"
 import React from "react";
 import TToggle from './TToggle';
-import Typography from '@material-ui/core/Typography';
-import Grid from '@material-ui/core/Grid';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
 import Formatting from './util/Formatting';
 import APIHelp from './util/APIHelp';
-import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 
 
 const indent = {

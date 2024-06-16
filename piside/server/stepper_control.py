@@ -8,7 +8,9 @@ class StepperControl:
         self.serial_lock = threading.RLock()
         self.__setting_keys = ['ra_max_tps', 'ra_guide_rate', 'ra_direction', 'dec_max_tps', 'dec_guide_rate',
                                'dec_direction', 'dec_disable', 'ra_disable', 'ra_accel_tpss',
-                               'dec_accel_tpss']
+                               'dec_accel_tpss', 'ra_run_current', 'dec_run_current', 'ra_med_current',
+                               'dec_med_current', 'ra_med_current_threshold', 'dec_med_current_threshold',
+                               'ra_hold_current', 'dec_hold_current']
 
     def __read_serial_until_prompt(self):
         s = ""

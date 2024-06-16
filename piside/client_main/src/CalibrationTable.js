@@ -1,22 +1,22 @@
 import React, {forwardRef} from "react";
-import Grid from '@material-ui/core/Grid';
+import Grid from '@mui/material/Grid';
 import APIHelp from './util/APIHelp';
-import uuidv4 from 'uuid/v4';
-import TextField from '@material-ui/core/TextField';
-import InputAdornment from '@material-ui/core/InputAdornment';
+import {v4 as uuidv4} from 'uuid';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
 import state from './State';
-import Button from '@material-ui/core/Button';
+import Button from '@mui/material/Button';
 import {observer} from "mobx-react";
 import {observe} from 'mobx';
 import Formating from './util/Formatting';
-import TableContainer from '@material-ui/core/TableContainer';
-import Table from '@material-ui/core/Table';
-import TableHead from '@material-ui/core/TableHead';
-import TableBody from '@material-ui/core/TableBody';
-import TableRow from '@material-ui/core/TableRow';
-import TableCell from '@material-ui/core/TableCell';
-import Paper from '@material-ui/core/Paper';
-import Checkbox from '@material-ui/core/Checkbox';
+import TableContainer from '@mui/material/TableContainer';
+import Table from '@mui/material/Table';
+import TableHead from '@mui/material/TableHead';
+import TableBody from '@mui/material/TableBody';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
+import Paper from '@mui/material/Paper';
+import Checkbox from '@mui/material/Checkbox';
 
 
 
@@ -280,7 +280,7 @@ class CalibrationTable extends React.Component {
 
 
         return (
-            <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
+            <Grid container spacing={2} justifyContent="center" alignContent="center" alignItems="center">
                 <Grid item xs={12}>
                     <h2>Calibration Info</h2>
                     <TableContainer component={Paper}>
@@ -323,7 +323,7 @@ class CalibrationTable extends React.Component {
                     <Button color="primary" variant="contained" onClick={this.handleSave}>Save</Button>
                 </Grid>
             </Grid>
-        )
+        );
     }
 }
 

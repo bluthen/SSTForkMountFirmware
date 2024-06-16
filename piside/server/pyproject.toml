@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "server"
+version = "0.1.0"
+description = ""
+authors = ["Russell Valentine <russell.valentine@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "3.11.2"
+astropy = "^6.1.0"
+fasteners = "^0.19"
+pendulum = "^3.0.0"
+pyserial = "^3.5"
+scipy = "^1.13.1"
+timezonefinder = "^6.5.0"
+zeroconf = "^0.132.2"
+numpy = "^1.26.4"
+flask = "^3.0.3"
+flask-compress = "^1.15"
+pynmea2 = "^1.19.0"
+ifaddr = "^0.2.0"
+simple-pid = "^2.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

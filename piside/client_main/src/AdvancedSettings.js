@@ -1,14 +1,14 @@
 import React from "react";
 import {observer} from "mobx-react"
 import state from './State';
-import TextField from '@material-ui/core/TextField';
-import Grid from '@material-ui/core/Grid';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
-import Button from '@material-ui/core/Button';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import uuidv4 from 'uuid/v4';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
+import InputAdornment from '@mui/material/InputAdornment';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import {v4 as uuidv4}  from 'uuid';
 import APIHelp from './util/APIHelp';
 
 
@@ -48,32 +48,32 @@ const settings_map = {
         endAdornment: 'mA',
         jsonLevel: 'micro'
     },
-    ra_med_threshold: {
-        display: 'RA Medium Threshold',
-        type: 'number',
-        min: 0,
-        endAdornment: '<steps/s',
-        jsonLevel: 'micro'
-    },
-    ra_med_current_threshold: {
+    ra_med_current: {
         display: 'RA Medium Current',
         type: 'number',
         min: 0,
         endAdornment: 'mA',
         jsonLevel: 'micro'
     },
-    dec_med_threshold: {
-        display: 'Dec Medium Threshold',
+    ra_med_current_threshold: {
+        display: 'RA Medium Threshold',
         type: 'number',
         min: 0,
-        endAdornment: 'steps/s',
+        endAdornment: '<steps/s',
         jsonLevel: 'micro'
     },
-    dec_med_current_threshold: {
+    dec_med_current: {
         display: 'Dec Medium Current',
         type: 'number',
         min: 0,
         endAdornment: 'mA',
+        jsonLevel: 'micro'
+    },
+    dec_med_current_threshold: {
+        display: 'Dec Medium Threshold',
+        type: 'number',
+        min: 0,
+        endAdornment: 'steps/s',
         jsonLevel: 'micro'
     },
     ra_hold_current: {

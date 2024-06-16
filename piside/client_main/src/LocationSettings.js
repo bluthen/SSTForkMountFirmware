@@ -1,42 +1,42 @@
 import React from "react";
 import state from './State';
 import {observer} from "mobx-react"
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
-import Button from '@material-ui/core/Button';
-import Radio from '@material-ui/core/Radio';
-import RadioGroup from '@material-ui/core/RadioGroup';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Grid from '@material-ui/core/Grid';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
-import IconButton from '@material-ui/core/IconButton';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
-import DeleteIcon from '@material-ui/icons/Delete';
-import CheckCircle from '@material-ui/icons/CheckCircle';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Grid from '@mui/material/Grid';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import InputAdornment from '@mui/material/InputAdornment';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import IconButton from '@mui/material/IconButton';
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CheckCircle from '@mui/icons-material/CheckCircle';
 
-import Fab from '@material-ui/core/Fab';
-import AddIcon from '@material-ui/icons/Add';
+import Fab from '@mui/material/Fab';
+import AddIcon from '@mui/icons-material/Add';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import InputLabel from '@material-ui/core/InputLabel';
-import CircularProgress from '@material-ui/core/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import InputLabel from '@mui/material/InputLabel';
+import CircularProgress from '@mui/material/CircularProgress';
 import Formatting from './util/Formatting';
 import APIHelp from './util/APIHelp';
 
 
-import uuidv4 from 'uuid/v4';
+import {v4 as uuidv4} from 'uuid';
 
 const bold = {
     paddingTop: "3x",
@@ -328,7 +328,11 @@ class LocationSettings extends React.Component {
                         Formatting.degLat2Str(preset.lat) + '/' + Formatting.degLong2Str(preset.long) + ' ' + preset.elevation + 'm'
                     }/>
                     <ListItemSecondaryAction>
-                        <IconButton edge="end" aria-label="delete" onClick={this.genHandleDeletePreset(i)}>
+                        <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={this.genHandleDeletePreset(i)}
+                            size="large">
                             <DeleteIcon/>
                         </IconButton>
                     </ListItemSecondaryAction>

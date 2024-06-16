@@ -1,5 +1,5 @@
 import {observable, toJS} from "mobx";
-import uuidv4 from 'uuid/v4';
+import {v4 as uuidv4} from 'uuid';
 
 
 const state = observable({
@@ -127,7 +127,15 @@ const state = observable({
         dec_slew_faster: 0,
         dec_slew_medium: 0,
         dec_slew_slower: 0,
-        dec_slew_slowest: 0
+        dec_slew_slowest: 0,
+        ra_run_current: 0,
+        dec_run_current: 0,
+        ra_med_current: 0,
+        ra_med_current_threshold: 0,
+        dec_med_current: 0,
+        dec_med_current_threshold: 0,
+        ra_hold_current: 0,
+        dec_hold_current: 0
     },
     calibrationLogs: [],
     calibrationTable: {

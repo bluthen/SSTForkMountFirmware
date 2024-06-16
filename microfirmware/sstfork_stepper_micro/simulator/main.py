@@ -19,7 +19,15 @@ configvars = {
     'ra_accel_tpss': 1000,
     'dec_accel_tpss': 1000,
     'dec_disable': 0,
-    'ra_disable': 0
+    'ra_disable': 0,
+    'ra_run_current': 250,
+    'dec_run_current': 250,
+    'ra_med_current': 250,
+    'dec_med_current': 250,
+    'ra_med_current_threshold': 0,
+    'dec_med_current_threshold': 0,
+    'ra_hold_current': 250,
+    'dec_hold_current': 250
 }
 
 
@@ -48,26 +56,11 @@ def command_set_var(args):
 
     value = float(arg_val)
     print('set_var', arg_name, arg_val)
-    if arg_name == "ra_max_tps":
-        configvars['ra_max_tps'] = value
-    elif arg_name == "ra_guide_rate":
-        configvars['ra_guide_rate'] = value
-    elif arg_name == "ra_direction":
-        configvars['ra_direction'] = int(value)
-    elif arg_name == "dec_max_tps":
-        configvars['dec_max_tps'] = value
-    elif arg_name == "dec_guide_rate":
-        configvars['dec_guide_rate'] = value
-    elif arg_name == "dec_direction":
-        configvars['dec_direction'] = int(value)
-    elif arg_name == 'ra_accel_tpss':
-        configvars['ra_accel_tpss'] = value
-    elif arg_name == 'dec_accel_tpss':
-        configvars['dec_accel_tpss'] = value
-    elif arg_name == 'dec_disable':
-        configvars['dec_disable'] = value
-    elif arg_name == 'ra_disable':
-        configvars['ra_disable'] = value
+    if arg_name in configvars:
+        if 'direction' in arg_name:
+            configvars[arg_name] = int(value)
+        else:
+            configvars[arg_name] = value
     else:
         serialcom.write("ERROR: Invalid variable name '".encode())
         serialcom.write(arg_name.encode())
@@ -106,6 +99,8 @@ def command_status(args):
     swrite("%.7f\r" % configvars['ra_guide_rate'])
     swrite("ra_direction=")
     swrite("%d\r" % configvars['ra_direction'])
+    swrite("ra_disable=")
+    swrite("%d\r" % configvars['ra_disable'])
     swrite("ra_accel_tpss=")
     swrite("%.7f\r" % configvars['ra_accel_tpss'])
     swrite("dec_max_tps=")
@@ -113,9 +108,30 @@ def command_status(args):
     swrite("dec_guide_rate=")
     swrite("%.7f\r" % configvars['dec_guide_rate'])
     swrite("dec_direction=")
-    swrite("%.7f\r" % configvars['dec_direction'])
+    swrite("%d\r" % configvars['dec_direction'])
+    swrite("dec_disable=")
+    swrite("%d\r" % configvars['dec_disable'])
     swrite("dec_accel_tpss=")
     swrite("%.7f\r" % configvars['dec_accel_tpss'])
+
+    swrite("ra_run_current=")
+    swrite("%d\r" % configvars['ra_run_current'])
+    swrite("ra_med_current=")
+    swrite("%d\r" % configvars['ra_med_current'])
+    swrite("ra_med_current_threshold=")
+    swrite("%d\r" % configvars['ra_med_current_threshold'])
+    swrite("ra_hold_current=")
+    swrite("%d\r" % configvars['ra_hold_current'])
+
+    swrite("dec_run_current=")
+    swrite("%d\r" % configvars['dec_run_current'])
+    swrite("dec_med_current=")
+    swrite("%d\r" % configvars['dec_med_current'])
+    swrite("dec_med_current_threshold=")
+    swrite("%d\r" % configvars['dec_med_current_threshold'])
+    swrite("ra_hold_current=")
+    swrite("%d\r" % configvars['dec_hold_current'])
+
     swrite("debug:")
     swrite("%d\r" % configvars['debug_enabled'])
     swrite("autoguide:")

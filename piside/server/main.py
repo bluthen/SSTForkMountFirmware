@@ -246,7 +246,9 @@ def settings_put():
             settings_buffer[key] = float(args[key])
     if 'micro' in args:
         keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "dec_disable", "ra_disable",
-                "ra_accel_tpss", "dec_accel_tpss"]
+                "ra_accel_tpss", "dec_accel_tpss", "ra_run_current", "dec_run_current", "ra_med_current",
+                "ra_med_current_threshold", "dec_med_current", "dec_med_current_threshold", "ra_hold_current",
+                "dec_hold_current"]
         for key in keys:
             if key in args['micro']:
                 if 'micro' not in settings_buffer:
@@ -275,7 +277,9 @@ def settings_put():
             settings.settings[key] = settings_buffer[key]
     if 'micro' in settings_buffer:
         keys = ["ra_guide_rate", "ra_direction", "dec_guide_rate", "dec_direction", "dec_disable", "ra_disable",
-                "ra_accel_tpss", "dec_accel_tpss"]
+                "ra_accel_tpss", "dec_accel_tpss", "ra_run_current", "dec_run_current", "ra_med_current",
+                "ra_med_current_threshold", "dec_med_current", "dec_med_current_threshold", "ra_hold_current",
+                "dec_hold_current"]
         for key in keys:
             if key in settings_buffer['micro']:
                 print('=== settings micro ' + key, float(settings_buffer['micro'][key]))

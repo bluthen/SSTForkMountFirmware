@@ -2,10 +2,10 @@ import React from "react";
 import state from './State';
 import {observer} from "mobx-react"
 import PositionInfo from "./PositionInfo";
-import Radio from '@material-ui/core/Radio';
-import RadioGroup from '@material-ui/core/RadioGroup';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Grid from '@material-ui/core/Grid';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Grid from '@mui/material/Grid';
 import ObjectSearch from './ObjectSearch';
 import CoordinatesInput from './CoordinatesInput';
 import DebugStepsInput from './DebugStepsInput';

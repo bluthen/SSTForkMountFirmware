@@ -734,7 +734,15 @@ def micro_update_settings():
                   'dec_disable': settings.settings['micro']['dec_disable'],
                   'ra_disable': settings.settings['micro']['ra_disable'],
                   'ra_accel_tpss': settings.settings['micro']['ra_accel_tpss'],
-                  'dec_accel_tpss': settings.settings['micro']['dec_accel_tpss']}
+                  'dec_accel_tpss': settings.settings['micro']['dec_accel_tpss'],
+                  'ra_run_current': settings.settings['micro']['ra_run_current'],
+                  'dec_run_current': settings.settings['micro']['dec_run_current'],
+                  'ra_med_current': settings.settings['micro']['ra_med_current'],
+                  'ra_med_current_threshold': settings.settings['micro']['ra_med_current_threshold'],
+                  'dec_med_current': settings.settings['micro']['dec_med_current'],
+                  'dec_med_current_threshold': settings.settings['micro']['dec_med_current_threshold'],
+                  'ra_hold_current': settings.settings['micro']['ra_hold_current'],
+                  'dec_hold_current': settings.settings['micro']['dec_hold_current']}
     stepper.update_settings(key_values)
     if settings.runtime_settings['tracking']:
         stepper.set_speed_ra(settings.settings['ra_track_rate'])

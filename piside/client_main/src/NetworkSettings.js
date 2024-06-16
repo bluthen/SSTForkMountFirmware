@@ -1,28 +1,28 @@
 import React from "react";
 import state from './State';
-import Typography from '@material-ui/core/Typography';
-import TextField from '@material-ui/core/TextField';
-import Grid from '@material-ui/core/Grid';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import IconButton from '@material-ui/core/IconButton';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
-import DeleteIcon from '@material-ui/icons/Delete';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import IconButton from '@mui/material/IconButton';
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {observer} from "mobx-react"
 import APIHelp from './util/APIHelp';
-import Button from '@material-ui/core/Button';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import CheckCircle from '@material-ui/icons/CheckCircle';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContentText from '@mui/material/DialogContentText';
+import CheckCircle from '@mui/icons-material/CheckCircle';
 
 
 @observer
@@ -193,8 +193,11 @@ class KnownWifi extends React.Component {
             list.push(
                 <ListItem button key={'known_wifi_' + i}><ListItemText primary={known.ssid} secondary={known.bssid}/>
                     <ListItemSecondaryAction>
-                        <IconButton edge="end" aria-label="delete"
-                                    onClick={this.genHandleDeleteKnown(known.ssid, known.bssid)}>
+                        <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={this.genHandleDeleteKnown(known.ssid, known.bssid)}
+                            size="large">
                             <DeleteIcon/>
                         </IconButton>
                     </ListItemSecondaryAction>

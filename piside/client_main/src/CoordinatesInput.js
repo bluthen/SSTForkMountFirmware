@@ -1,17 +1,17 @@
 import React from "react";
 import state from './State';
 import {observer} from "mobx-react";
-import Typography from '@material-ui/core/Typography';
-import TextField from '@material-ui/core/TextField';
-import Grid from '@material-ui/core/Grid';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
 import TToggle from './TToggle';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import Button from '@material-ui/core/Button';
+import InputAdornment from '@mui/material/InputAdornment';
+import Button from '@mui/material/Button';
 import Formatting from './util/Formatting';
 import CoordDialog from './CoordDialog';
 import CalibrationTable from './CalibrationTable';
-import Select from "@material-ui/core/Select";
-import MenuItem from "@material-ui/core/MenuItem";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 
 @observer
 class CoordinatesInput extends React.Component {
@@ -192,36 +192,38 @@ class CoordinatesInput extends React.Component {
             calibration_table = <Grid item xs={12}><CalibrationTable/></Grid>
         }
 
-        return <Typography component="div">
-            <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
-                <Grid item xs={4}/>
-                <Grid item xs={4}>
-                    <Select value={this.props.coordinateType} onChange={this.props.onTypeChange}>
-                        <MenuItem value="tete">RA/Dec JNow</MenuItem>
-                        <MenuItem value="icrs">RA/Dec J2000</MenuItem>
-                        <MenuItem value="altaz">Alt/Az</MenuItem>
-                        <MenuItem value="hadec">HA/Dec</MenuItem>
-                    </Select>
+        return (
+            <Typography component="div">
+                <Grid container spacing={2} justifyContent="center" alignContent="center" alignItems="center">
+                    <Grid item xs={4}/>
+                    <Grid item xs={4}>
+                        <Select value={this.props.coordinateType} onChange={this.props.onTypeChange}>
+                            <MenuItem value="tete">RA/Dec JNow</MenuItem>
+                            <MenuItem value="icrs">RA/Dec J2000</MenuItem>
+                            <MenuItem value="altaz">Alt/Az</MenuItem>
+                            <MenuItem value="hadec">HA/Dec</MenuItem>
+                        </Select>
+                    </Grid>
+                    <Grid item xs={4}/>
+                    <Grid item xs={2}>
+                    </Grid>
+                    {field1}
+                    <Grid item xs={3}>
+                    </Grid>
+                    <Grid item xs={2}>
+                    </Grid>
+                    {field2}
+                    <Grid item xs={3}>
+                    </Grid>
+                    <Grid item xs={12} style={{textAlign: "center"}}>
+                        <Button variant="contained" color="primary" buttonRef={this.buttonRef}
+                                onClick={this.handleClick}>Slew/Sync</Button>
+                    </Grid>
                 </Grid>
-                <Grid item xs={4}/>
-                <Grid item xs={2}>
-                </Grid>
-                {field1}
-                <Grid item xs={3}>
-                </Grid>
-                <Grid item xs={2}>
-                </Grid>
-                {field2}
-                <Grid item xs={3}>
-                </Grid>
-                <Grid item xs={12} style={{textAlign: "center"}}>
-                    <Button variant="contained" color="primary" buttonRef={this.buttonRef}
-                            onClick={this.handleClick}>Slew/Sync</Button>
-                </Grid>
-            </Grid>
-            {calibration_table}
-            {dialog}
-        </Typography>
+                {calibration_table}
+                {dialog}
+            </Typography>
+        );
     }
 }
 

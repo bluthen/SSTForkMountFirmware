@@ -1,14 +1,14 @@
-import 'typeface-roboto';
+import '@fontsource/roboto';
 import React from "react";
 import {render} from "react-dom";
-import {ThemeProvider} from '@material-ui/core/styles';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import Container from '@material-ui/core/Container';
+import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Container from '@mui/material/Container';
 import state from './State';
 import {observer} from "mobx-react"
-import Paper from '@material-ui/core/Paper';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
+import Paper from '@mui/material/Paper';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import ManualPage from './ManualPage';
 import GotoPage from './GotoPage';
 import SetupPage from './SetupPage';
@@ -22,7 +22,6 @@ import SlewingDialog from './SlewingDialog';
 import SyncingDialog from './SyncingDialog';
 import InfoSnackbar from './InfoSnackbar';
 import {defaultTheme, darkTheme, redTheme} from './Themes';
-import {dark} from "@material-ui/core/styles/createPalette";
 
 const tabMap = ['manual', 'goto', 'setup'];
 
@@ -81,19 +80,23 @@ class App extends React.Component {
             dialog = <SyncingDialog/>;
         }
 
-        return <React.Fragment>
-            <ThemeProvider theme={theme}>
-                <CssBaseline/>
-                <Container>
-                    <Paper square style={{paddingLeft: '3ex', paddingRight: '3ex', height: '100%'}}>
-                        {tabs}
-                        {content}
-                        {dialog}
-                    </Paper>
-                    <InfoSnackbar/>
-                </Container>
-            </ThemeProvider>
-        </React.Fragment>;
+        return (
+            <React.Fragment>
+                <StyledEngineProvider injectFirst>
+                    <ThemeProvider theme={theme}>
+                        <CssBaseline/>
+                        <Container>
+                            <Paper square style={{paddingLeft: '3ex', paddingRight: '3ex', height: '100%'}}>
+                                {tabs}
+                                {content}
+                                {dialog}
+                            </Paper>
+                            <InfoSnackbar/>
+                        </Container>
+                    </ThemeProvider>
+                </StyledEngineProvider>
+            </React.Fragment>
+        );
     }
 }
 

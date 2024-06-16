@@ -1,11 +1,11 @@
 import React from "react";
 import state from './State';
 import {observer} from "mobx-react";
-import Typography from '@material-ui/core/Typography';
-import TextField from '@material-ui/core/TextField';
-import Grid from '@material-ui/core/Grid';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import Button from '@material-ui/core/Button';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
+import InputAdornment from '@mui/material/InputAdornment';
+import Button from '@mui/material/Button';
 import APIHelp from './util/APIHelp';
 
 @observer
@@ -77,24 +77,26 @@ class DebugStepsInput extends React.Component {
         field1 = this.fieldGen('ra', [{ref: this.one}]);
         field2 = this.fieldGen('dec', [{ref: this.two}]);
 
-        return <Typography component="div">
-            <Grid container spacing={2} justify="center" alignContent="center" alignItems="center">
-                <Grid item xs={2}/>
-                <Grid item xs={4}>
-                    RA Steps: {state.status.rep}
+        return (
+            <Typography component="div">
+                <Grid container spacing={2} justifyContent="center" alignContent="center" alignItems="center">
+                    <Grid item xs={2}/>
+                    <Grid item xs={4}>
+                        RA Steps: {state.status.rep}
+                    </Grid>
+                    <Grid item xs={4}>
+                        DEC Steps: {state.status.dep}
+                    </Grid>
+                    <Grid item xs={2}/>
+                    {field1}
+                    {field2}
+                    <Grid item xs={12} style={{textAlign: "center"}}>
+                        <Button variant="contained" color="primary" buttonRef={this.buttonRef} onClick={this.handleClick}>Slew</Button>
+                    </Grid>
                 </Grid>
-                <Grid item xs={4}>
-                    DEC Steps: {state.status.dep}
-                </Grid>
-                <Grid item xs={2}/>
-                {field1}
-                {field2}
-                <Grid item xs={12} style={{textAlign: "center"}}>
-                    <Button variant="contained" color="primary" buttonRef={this.buttonRef} onClick={this.handleClick}>Slew</Button>
-                </Grid>
-            </Grid>
-            {dialog}
-        </Typography>
+                {dialog}
+            </Typography>
+        );
     }
 }
 

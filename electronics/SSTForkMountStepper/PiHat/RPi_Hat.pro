@@ -1,4 +1,4 @@
-update=Fri 18 Dec 2020 08:08:04 PM CST
+update=Mon 21 Jun 2021 06:44:27 PM CDT
 version=1
 last_client=kicad
 [cvpcb]
@@ -9,16 +9,6 @@ version=1
 [eeschema]
 version=1
 LibDir=
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=pdf_export/
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=Pcbnew
-SpiceAjustPassiveValues=0
-LabSize=60
-ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=C:/xesscorp/KiCad/page_layouts/title_block_only.kicad_wks
@@ -255,3 +245,13 @@ uViaDrill=0.127
 dPairWidth=0.254
 dPairGap=0.254
 dPairViaGap=0.25
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=pdf_export/
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=Pcbnew
+SpiceAjustPassiveValues=0
+LabSize=60
+ERC_TestSimilarLabels=1

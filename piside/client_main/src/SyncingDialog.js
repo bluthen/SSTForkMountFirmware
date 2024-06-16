@@ -1,9 +1,9 @@
 import React from "react";
-import Dialog from '@material-ui/core/Dialog';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import LinearProgress from '@material-ui/core/LinearProgress';
-import Grid from '@material-ui/core/Grid';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import LinearProgress from '@mui/material/LinearProgress';
+import Grid from '@mui/material/Grid';
 
 
 class SyncingDialog extends React.Component {

@@ -1,11 +1,11 @@
 import React from "react";
 import {observer} from "mobx-react"
-import CircularProgress from '@material-ui/core/CircularProgress';
+import CircularProgress from '@mui/material/CircularProgress';
 import {Line, LineChart, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer} from 'recharts';
 import Formating from './util/Formatting';
-import Grid from '@material-ui/core/Grid';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
+import Grid from '@mui/material/Grid';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 import TriTransferList from './TriTransferList';
 import state from './State';
 import _ from 'lodash';

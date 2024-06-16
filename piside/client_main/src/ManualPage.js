@@ -1,9 +1,9 @@
 import React from "react";
 import PositionInfo from "./PositionInfo";
-import Slider from '@material-ui/core/Slider';
-import Grid from '@material-ui/core/Grid';
+import Slider from '@mui/material/Slider';
+import Grid from '@mui/material/Grid';
 import DirectionControls from './DirectionControls';
-import Typography from '@material-ui/core/Typography';
+import Typography from '@mui/material/Typography';
 import state from './State';
 import {observer} from "mobx-react"
 
@@ -37,20 +37,22 @@ class ManualPage extends React.Component {
     }
 
     render() {
-        return <React.Fragment>
-            <PositionInfo/>
-            <Typography component="div" style={{paddingBottom: "4ex"}}>
-                <Grid container style={{height: "500px"}} justify="center" alignItems="center">
-                    <Grid item style={{height: "100%", paddingRight: "15%"}} xs={3}>
-                        <Slider value={speedMap.indexOf(state.manual.speed)} orientation="vertical" min={0} max={3} step={1} marks={marks}
-                                onChange={this.handleSliderChange}/>
+        return (
+            <React.Fragment>
+                <PositionInfo/>
+                <Typography component="div" style={{paddingBottom: "4ex"}}>
+                    <Grid container style={{height: "500px"}} justifyContent="center" alignItems="center">
+                        <Grid item style={{height: "100%", paddingRight: "15%"}} xs={3}>
+                            <Slider value={speedMap.indexOf(state.manual.speed)} orientation="vertical" min={0} max={3} step={1} marks={marks}
+                                    onChange={this.handleSliderChange}/>
+                        </Grid>
+                        <Grid item style={{height: "100%"}} xs={9}>
+                            <DirectionControls onDirectionChange={this.handleDirectionChange}/>
+                        </Grid>
                     </Grid>
-                    <Grid item style={{height: "100%"}} xs={9}>
-                        <DirectionControls onDirectionChange={this.handleDirectionChange}/>
-                    </Grid>
-                </Grid>
-            </Typography>
-        </React.Fragment>;
+                </Typography>
+            </React.Fragment>
+        );
     }
 
 }
