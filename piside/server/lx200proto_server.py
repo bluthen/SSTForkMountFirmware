@@ -140,10 +140,10 @@ class LX200Client:
         # self.re_set_bright_limit = re.compile(':Sb([-+])(\\d\\d\\.\\d)#')
         # self.re_set_baud_rate = re.compile(':SB\\d#')
 
-        self.re_set_handbox_date = re.compile(':SC (\\d\\d)/(\\d\\d)/(\\d\\d)#')
+        self.re_set_handbox_date = re.compile(':SC ?(\\d\\d)/(\\d\\d)/(\\d\\d)#')
 
-        self.re_set_target_obj_dec = re.compile(':Sd ([-+])(\\d\\d)[:*](\\d\\d)#')
-        self.re_set_target_obj_dec_hp = re.compile(':Sd ([-+])(\\d\\d)[:*](\\d\\d):(\\d\\d)#')
+        self.re_set_target_obj_dec = re.compile(':Sd ?([-+])(\\d\\d)[:*](\\d\\d)#')
+        self.re_set_target_obj_dec_hp = re.compile(':Sd ?([-+])(\\d\\d)[:*](\\d\\d):(\\d\\d)#')
 
         # self.re_set_selenographic_lat_moon = re.compile(':SEs(\\d\\d)\\*(\\d\\d)#')
         # self.re_set_selenographic_lon_moon = re.compile(':Ses(\\d\\d)\\*(\\d\\d)#')
@@ -154,13 +154,13 @@ class LX200Client:
 
         self.re_set_site_long = re.compile(':Sg(\\d\\d\\d)[:*](\\d\\d)#')
 
-        self.re_set_site_hours_add_utc = re.compile(':SG ([-+])(\\d\\d(\\.\\d)?)#')
+        self.re_set_site_hours_add_utc = re.compile(':SG ?([-+])(\\d?\\d(\\.\\d)?)#')
         self.re_set_dst = re.compile(':SH(\\d)#')
 
         # self.re_set_max_object_elevation = re.compile(':Sh(\\d\\d)#')
         # self.re_set_size_of_smallest_object = re.compile(':Sl(\\d\\d\\d)#')
 
-        self.re_set_local_time = re.compile(':SL (\\d\\d):(\\d\\d):(\\d\\d)#')
+        self.re_set_local_time = re.compile(':SL ?(\\d\\d):(\\d\\d):(\\d\\d)#')
 
         self.re_set_site_name = re.compile(':S([MNOP])(.+)#')
 
@@ -168,8 +168,8 @@ class LX200Client:
 
         # self.re_set_backlash_home_sensor = re.compile(':Sp[BHS].*#')
 
-        self.re_set_target_object_ra = re.compile(':Sr (\\d\\d):(\\d\\d\\.\\d)#')
-        self.re_set_target_object_ra_hp = re.compile(':Sr (\\d\\d):(\\d\\d):(\\d\\d)#')
+        self.re_set_target_object_ra = re.compile(':Sr ?(\\d\\d):(\\d\\d\\.\\d)#')
+        self.re_set_target_object_ra_hp = re.compile(':Sr ?(\\d\\d):(\\d\\d):(\\d\\d)#')
 
         # self.re_set_largest_find = re.compile(':Ss(\\d\\d\\d)#')
 

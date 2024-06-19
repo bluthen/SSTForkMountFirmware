@@ -29,6 +29,10 @@ class SlewingDialog extends React.Component {
 
     @computed
     get target() {
+        console.error(state.goto.slewingdialog.target);
+        if (!state.goto.slewingdialog.target) {
+            return '';
+        }
         if (state.goto.slewingdialog.frame === 'steps') {
             return state.goto.slewingdialog.target.ra_steps + '/' + state.goto.slewingdialog.target.dec_steps;
         }
@@ -44,6 +48,7 @@ class SlewingDialog extends React.Component {
             return Formatting.degDEC2Str(alt) + '/' +
                 Formatting.degDEC2Str(az)
         }
+
         return '';
     }
 
@@ -89,9 +94,9 @@ class SlewingDialog extends React.Component {
         let frameLabel = 'J2000'
         if (state.goto.slewingdialog.frame === 'tete') {
             frameLabel = 'JNow'
-        } else if(state.goto.slewingdialog.frame === 'hadec') {
+        } else if (state.goto.slewingdialog.frame === 'hadec') {
             frameLabel = 'HA/Dec'
-        } else if(state.goto.slewingdialog.frame === 'altaz' || state.goto.slewingdialog.frame === 'parking') {
+        } else if (state.goto.slewingdialog.frame === 'altaz' || state.goto.slewingdialog.frame === 'parking') {
             frameLabel = 'Alt/Az'
         }
 

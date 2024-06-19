@@ -1,7 +1,7 @@
 import '@fontsource/roboto';
 import React from "react";
-import {render} from "react-dom";
-import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
+import {createRoot} from "react-dom/client";
+import {ThemeProvider, StyledEngineProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Container from '@mui/material/Container';
 import state from './State';
@@ -56,15 +56,15 @@ class App extends React.Component {
             content = <GotoPage/>;
         } else if (state.page === 'advancedSettings') {
             content = <AdvancedSettings/>;
-        } else if(state.page === 'setup') { // Setup
+        } else if (state.page === 'setup') { // Setup
             content = <SetupPage/>
-        } else if(state.page === 'locationSettings') {
+        } else if (state.page === 'locationSettings') {
             content = <LocationSettings/>;
-        } else if(state.page === 'networkSettings') {
+        } else if (state.page === 'networkSettings') {
             content = <NetworkSettings/>;
-        } else if(state.page === 'slewLimitsSettings') {
+        } else if (state.page === 'slewLimitsSettings') {
             content = <SlewLimitsSettings/>;
-        } else if(state.page === 'miscellaneousSettings') {
+        } else if (state.page === 'miscellaneousSettings') {
             content = <MiscellaneousSettings/>;
         } else {
             alert(state.page);
@@ -74,9 +74,9 @@ class App extends React.Component {
 
 
         let dialog = null;
-        if(state.goto.slewing || state.status.slewing) {
+        if (state.goto.slewing || state.status.slewing) {
             dialog = <SlewingDialog/>;
-        } else if(state.goto.syncing) {
+        } else if (state.goto.syncing) {
             dialog = <SyncingDialog/>;
         }
 
@@ -104,20 +104,18 @@ function handleHashChange() {
     const hash = location.hash.substring(1);
     if (state.page !== hash) {
         state.page = hash;
-        if(state.page === 'goto' || state.page === 'manual') {
+        if (state.page === 'goto' || state.page === 'manual') {
             state.topTabs = state.page;
         } else {
-            state.topTabs='setup';
+            state.topTabs = 'setup';
         }
     }
 }
 
 window.onhashchange = handleHashChange;
 
-render(
-    <App/>,
-    document.getElementById("root")
-);
+const root = createRoot(document.getElementById('root'));
+root.render(<App/>);
 APIHelp.setTime();
 APIHelp.startStatusUpdateInterval();
 APIHelp.startSettingsUpdateInterval();
