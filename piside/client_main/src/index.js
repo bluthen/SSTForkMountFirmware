@@ -21,12 +21,14 @@ import APIHelp from './util/APIHelp';
 import SlewingDialog from './SlewingDialog';
 import SyncingDialog from './SyncingDialog';
 import InfoSnackbar from './InfoSnackbar';
+import {action as mobxaction} from 'mobx';
 import {defaultTheme, darkTheme, redTheme} from './Themes';
 
 const tabMap = ['manual', 'goto', 'setup'];
 
 @observer
 class App extends React.Component {
+    @mobxaction
     tabChange(event, newValue) {
         state.page = tabMap[newValue];
         state.topTabs = tabMap[newValue];
@@ -100,7 +102,7 @@ class App extends React.Component {
     }
 }
 
-function handleHashChange() {
+const handleHashChange = mobxaction(() => {
     const hash = location.hash.substring(1);
     if (state.page !== hash) {
         state.page = hash;
@@ -110,7 +112,7 @@ function handleHashChange() {
             state.topTabs = 'setup';
         }
     }
-}
+});
 
 window.onhashchange = handleHashChange;
 

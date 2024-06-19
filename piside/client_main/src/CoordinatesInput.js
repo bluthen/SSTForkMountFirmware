@@ -12,6 +12,7 @@ import CoordDialog from './CoordDialog';
 import CalibrationTable from './CalibrationTable';
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
+import {action as mobxaction} from 'mobx';
 
 @observer
 class CoordinatesInput extends React.Component {
@@ -27,6 +28,7 @@ class CoordinatesInput extends React.Component {
         this.buttonRef = React.createRef();
     }
 
+    @mobxaction
     onCoordChange(e, coord, sub) {
         let v = e.currentTarget.value;
         //console.log('======='+v);
@@ -64,6 +66,7 @@ class CoordinatesInput extends React.Component {
         ref.current.select();
     }
 
+    @mobxaction
     goodClick() {
         let ra = null, dec = null, alt = null, az = null, ha = null;
         const frame = state.goto.coordinates.frame;

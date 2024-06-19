@@ -13,6 +13,7 @@ import APIHelp from './util/APIHelp';
 import TToggle from './TToggle';
 import EncoderGraph from './EncoderGraph';
 import UpdateDialog from './UpdateDialog';
+import {action as mobxaction} from 'mobx';
 
 
 @observer
@@ -37,6 +38,7 @@ class MiscellaneousSettings extends React.Component {
         APIHelp.setParkPosition();
     }
 
+    @mobxaction
     handleFirmwareUpdate(e) {
         const file = this.firmwareRef.current.files[0];
         APIHelp.uploadFirmware(file);
@@ -44,6 +46,7 @@ class MiscellaneousSettings extends React.Component {
         state.updateDialog.show = true;
     }
 
+    @mobxaction
     handleSettingImportClicked() {
         const file = this.settingsRef.current.files[0];
         APIHelp.uploadSettings(file);
@@ -61,6 +64,7 @@ class MiscellaneousSettings extends React.Component {
         });
     }
 
+    @mobxaction
     encoderLoggingChanged(e) {
         const enabled = e.target.checked;
         state.misc.encoder_logging = enabled;
@@ -68,6 +72,7 @@ class MiscellaneousSettings extends React.Component {
         APIHelp.toggleLog('encoder', enabled);
     }
 
+    @mobxaction
     calibrationLoggingChanged(e) {
         const enabled = e.target.checked;
         state.misc.calibration_logging = enabled;
@@ -75,6 +80,7 @@ class MiscellaneousSettings extends React.Component {
         APIHelp.toggleLog('calibration', enabled);
     }
 
+    @mobxaction
     debugOptionsChanged(e) {
         const enabled = e.target.checked;
         state.misc.debug_options = enabled;
@@ -91,6 +97,7 @@ class MiscellaneousSettings extends React.Component {
         });
     }
 
+    @mobxaction
     handleThemeChange(e) {
         state.color_scheme = e.target.value;
         APIHelp.saveSettings({'color_scheme': e.target.value});

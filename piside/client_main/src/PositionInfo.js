@@ -8,6 +8,7 @@ import Formatting from './util/Formatting';
 import APIHelp from './util/APIHelp';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import {action as mobxaction} from "mobx";
 
 
 const indent = {
@@ -21,6 +22,7 @@ const bold = {
 
 @observer
 class PositionInfo extends React.Component {
+    @mobxaction
     coordChange(e) {
         state.coordDisplay = e.target.value;
     }

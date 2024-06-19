@@ -17,6 +17,7 @@ import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
+import {action as mobxaction} from 'mobx';
 
 
 
@@ -36,7 +37,7 @@ const component_map = {
     }
 };
 
-function updateValues() {
+const updateValues = mobxaction(() => {
     // newRate = origRate/(percentError + 1);
     state.calibrationTable.ra_ticks_per_degree = state.advancedSettings.ra_ticks_per_degree /
         (state.calibrationTable.correction_factor / 100.0 * state.calibrationTable.mean_percent_ra / 100.0 + 1.0);
@@ -47,9 +48,9 @@ function updateValues() {
         (state.calibrationTable.correction_factor / 100.0 * state.calibrationTable.mean_percent_ra / 100.0 + 1.0);
     state.calibrationTable.dec_encoder_pulse_per_degree = state.advancedSettings.dec_encoder_pulse_per_degree /
         (state.calibrationTable.correction_factor / 100.0 * state.calibrationTable.mean_percent_dec / 100.0 + 1.0);
-}
+});
 
-function updateTableData() {
+const updateTableData = mobxaction(() => {
     const newData = [];
     state.calibrationLogs.forEach((r) => {
         const wantedMoveRA = Formating.deltaDegRA(r.slewfrom.ra, r.slewto.ra);
@@ -80,7 +81,7 @@ function updateTableData() {
         // newRate = origRate/(percentError + 1);
     });
     state.calibrationTable.table_data.replace(newData);
-}
+});
 
 observe(state.calibrationTable, 'correction_factor', updateValues);
 observe(state.calibrationTable, 'mean_percent_ra', updateValues);
@@ -88,7 +89,7 @@ observe(state.calibrationTable, 'mean_percent_dec', updateValues);
 
 
 function makeOnChange(key, setting_map) {
-    return (e) => {
+    return mobxaction((e) => {
         if (setting_map.type === 'number') {
             const v = e.currentTarget.value;
             if ((v !== '' && v !== '-' && v !== '-.') || (settings_map.hasOwnProperty('min') && settings_map.min >= 0)) {
@@ -103,10 +104,10 @@ function makeOnChange(key, setting_map) {
             }
             state.calibrationTable[key] = v;
         }
-    }
+    });
 }
 
-function updateStats() {
+const updateStats = mobxaction(() => {
     let selectedLength = state.calibrationTable.table_select.length;
     if (state.calibrationTable.select_all) {
         selectedLength = state.calibrationTable.table_data.length;
@@ -134,7 +135,7 @@ function updateStats() {
         state.calibrationTable.mean_percent_ra = pRA / selectedLength;
         state.calibrationTable.mean_percent_dec = pDec / selectedLength;
     }
-}
+});
 
 @observer
 class CalibrationTable extends React.Component {
@@ -162,12 +163,12 @@ class CalibrationTable extends React.Component {
         if (this.logInterval) {
             clearInterval(this.logInterval);
         }
-        APIHelp.getLogData('calibration').then(() => {
+        APIHelp.getLogData('calibration').then(mobxaction(() => {
             // Starts with no selection
             state.calibrationTable.table_select.replace([]);
             updateStats();
             updateValues();
-        });
+        }));
         this.logInterval = setInterval(() => {
             APIHelp.getLogData('calibration');
             updateTableData();
@@ -197,14 +198,15 @@ class CalibrationTable extends React.Component {
 
     handleClear() {
         APIHelp.clearLog('calibration').then(()=> {
-            APIHelp.getLogData('calibration').then(() => {
+            APIHelp.getLogData('calibration').then(mobxaction(() => {
                 state.calibrationTable.table_select.replace([]);
                 updateTableData();
                 updateStats();
-            });
+            }));
         });
     }
 
+    @mobxaction
     handleTableSelectionChange(event) {
         if (state.calibrationTable.select_all) {
             state.calibrationTable.select_all = false;
@@ -220,6 +222,7 @@ class CalibrationTable extends React.Component {
         updateStats();
     }
 
+    @mobxaction
     handleSelectAll(event) {
         state.calibrationTable.table_select.replace([]);
         state.calibrationTable.select_all = event.target.checked;

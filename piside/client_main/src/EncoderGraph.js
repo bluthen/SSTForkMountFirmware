@@ -9,6 +9,7 @@ import Checkbox from '@mui/material/Checkbox';
 import TriTransferList from './TriTransferList';
 import state from './State';
 import _ from 'lodash';
+import {action as mobxaction} from 'mobx';
 
 const sides = {'left': ['step_ra', 'enc_ra', 'step_dec', 'enc_dec'], 'right': ['ra_over_raenc', 'dec_over_decenc']};
 
@@ -94,15 +95,18 @@ class EncoderGraph extends React.Component {
         return ret;
     }
 
+    @mobxaction
     handleLeftListChanged(items) {
         console.log('leftlistchanged', items);
         state.encoderGraph.left.replace(items)
     }
 
+    @mobxaction
     handleRightListChanged(items) {
         state.encoderGraph.right.replace(items)
     }
 
+    @mobxaction
     handleCenterListChanged(items) {
         state.encoderGraph.hide.replace(items)
     }

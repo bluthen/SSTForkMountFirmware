@@ -12,6 +12,7 @@ import Formatting from './util/Formatting';
 import {observer} from "mobx-react"
 import {computed} from 'mobx';
 import APIHelp from './util/APIHelp';
+import {action as mobxaction} from 'mobx';
 
 //TODO: Make more generic and merge with ObjectDialog?
 
@@ -23,6 +24,7 @@ class CoordDialog extends React.Component {
         this.handleSyncClick = this.handleSyncClick.bind(this);
     }
 
+    @mobxaction
     handleClose() {
         state.goto.coorddialog.shown = false;
     }

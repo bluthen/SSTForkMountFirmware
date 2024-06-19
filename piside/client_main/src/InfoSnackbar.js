@@ -4,10 +4,12 @@ import Snackbar from '@mui/material/Snackbar';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import {observer} from "mobx-react"
+import {action as mobxaction} from 'mobx';
 
 @observer
 class InfoSnackbar extends React.Component{
 
+    @mobxaction
     handleClose(event, reason) {
         if (reason === 'clickaway') {
             return;

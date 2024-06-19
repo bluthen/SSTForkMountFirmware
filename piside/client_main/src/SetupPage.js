@@ -4,6 +4,7 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import APIHelp from './util/APIHelp';
+import {action as mobxaction} from "mobx";
 
 
 const item={ textAlign: "center", padding: "2ex"};
@@ -11,22 +12,27 @@ const item={ textAlign: "center", padding: "2ex"};
 const park={...item, paddingTop: "6ex"};
 
 class ManualPage extends React.Component {
+    @mobxaction
     advancedSettingsClicked() {
         state.page='advancedSettings';
     }
 
+    @mobxaction
     locationSettingsClicked() {
         state.page='locationSettings';
     }
 
+    @mobxaction
     networkSettingsClicked() {
         state.page='networkSettings';
     }
 
+    @mobxaction
     slewLimitsSettingsClicked() {
         state.page='slewLimitsSettings';
     }
 
+    @mobxaction
     slewMiscSettingsClicked() {
         state.page='miscellaneousSettings';
     }

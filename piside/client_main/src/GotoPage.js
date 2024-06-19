@@ -9,15 +9,18 @@ import Grid from '@mui/material/Grid';
 import ObjectSearch from './ObjectSearch';
 import CoordinatesInput from './CoordinatesInput';
 import DebugStepsInput from './DebugStepsInput';
+import {action as mobxaction} from 'mobx';
 
 
 @observer
 class ManualPage extends React.Component {
 
+    @mobxaction
     gotoOptionChange(event, value) {
         state.goto.option = value;
     }
 
+    @mobxaction
     handleTypeChange(e) {
         state.goto.coordinates.frame = e.target.value;
     }

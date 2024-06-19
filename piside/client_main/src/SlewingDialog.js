@@ -12,6 +12,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Grid from '@mui/material/Grid';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import APIHelp from './util/APIHelp';
+import {action as mobxaction} from "mobx";
 
 @observer
 class SlewingDialog extends React.Component {
@@ -27,6 +28,7 @@ class SlewingDialog extends React.Component {
         return null;
     }
 
+    @mobxaction
     @computed
     get target() {
         console.error(state.goto.slewingdialog.target);

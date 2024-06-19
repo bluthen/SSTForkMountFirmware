@@ -14,6 +14,7 @@ import ObjectDialog from './ObjectDialog';
 import CircularProgress from '@mui/material/CircularProgress';
 import Formatting from './util/Formatting';
 import {v4 as uuidv4} from 'uuid';
+import {action as mobxaction} from 'mobx';
 
 
 @observer
@@ -23,6 +24,7 @@ class ObjectSearch extends React.Component {
         this.uuid = uuidv4();
     }
 
+    @mobxaction
     rowClicked(event, index) {
         const result = state.goto.object_search.results[index];
         state.goto.objectdialog.all_frames = null;
@@ -46,10 +48,12 @@ class ObjectSearch extends React.Component {
         state.goto.objectdialog.shown = true;
     }
 
+    @mobxaction
     onSearchChanged(e) {
         state.goto.object_search.search_txt = e.currentTarget.value;
     }
 
+    @mobxaction
     onCoordToggle(e, value) {
         if (value) {
             state.goto.object_search.coord_display = 'altaz';
@@ -59,7 +63,7 @@ class ObjectSearch extends React.Component {
     }
 
     render() {
-        let dialog = null, table = null;
+        let dialog = null, table;
         if (state.goto.objectdialog.shown) {
             dialog = <ObjectDialog/>;
         }

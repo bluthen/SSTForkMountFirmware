@@ -15,6 +15,7 @@ import MenuItem from '@mui/material/MenuItem';
 
 
 import {v4 as uuidv4} from 'uuid';
+import {action as mobxaction} from "mobx";
 
 const modelMap = ['single', 'buie', 'affine_all'];
 
@@ -29,6 +30,7 @@ class SlewLimitsSettings extends React.Component {
         APIHelp.fetchSettings();
     }
 
+    @mobxaction
     onGreaterThanChange(e) {
         let v = parseFloat(e.currentTarget.value);
         if (isNaN(v)) {
@@ -47,6 +49,7 @@ class SlewLimitsSettings extends React.Component {
         APIHelp.clearSyncPoints();
     }
 
+    @mobxaction
     handleLessThanChange(e) {
         let v = parseFloat(e.currentTarget.value);
         if (isNaN(v)) {
@@ -61,14 +64,17 @@ class SlewLimitsSettings extends React.Component {
         state.slewlimit.less_than = v;
     }
 
+    @mobxaction
     handleModelChange(e) {
         state.slewlimit.model = modelMap[~~(e.target.value)];
     }
 
+    @mobxaction
     handleSlewBelowHorizonChange(e) {
         state.slewlimit.enabled = e.currentTarget.checked;
     }
 
+    @mobxaction
     handleSaveClicked() {
         let gt = parseFloat(state.slewlimit.greater_than);
         let lt = parseFloat(state.slewlimit.less_than);

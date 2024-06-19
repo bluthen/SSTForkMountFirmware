@@ -117,7 +117,7 @@ const Formatting = {
         return topt - frompt;
     },
     deg2arcseconds: function (pt) {
-        return pt * 60. * 60.;
+        return pt * 60.0 * 60.0;
     }
 };
 

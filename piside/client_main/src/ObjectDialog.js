@@ -12,6 +12,7 @@ import APIHelp from './util/APIHelp';
 import {computed} from "mobx";
 import Formatting from "./util/Formatting";
 import LinearProgress from "@mui/material/LinearProgress";
+import {action as mobxaction} from 'mobx';
 
 @observer
 class ObjectDialog extends React.Component {
@@ -59,6 +60,7 @@ class ObjectDialog extends React.Component {
     }
 
 
+    @mobxaction
     handleClose() {
         state.goto.objectdialog.shown = false;
     }

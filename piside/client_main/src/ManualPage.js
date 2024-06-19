@@ -5,7 +5,8 @@ import Grid from '@mui/material/Grid';
 import DirectionControls from './DirectionControls';
 import Typography from '@mui/material/Typography';
 import state from './State';
-import {observer} from "mobx-react"
+import {observer} from "mobx-react";
+import {action as mobxaction} from 'mobx';
 
 
 const marks = [
@@ -25,6 +26,7 @@ class ManualPage extends React.Component {
         //this.classes = useStyles();
     }
 
+    @mobxaction
     handleDirectionChange(directions) {
         state.manual.directions.north = directions.north;
         state.manual.directions.south = directions.south;
@@ -32,6 +34,7 @@ class ManualPage extends React.Component {
         state.manual.directions.west = directions.west;
     }
 
+    @mobxaction
     handleSliderChange(event, value) {
         state.manual.speed = speedMap[value];
     }

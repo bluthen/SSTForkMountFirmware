@@ -23,6 +23,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContentText from '@mui/material/DialogContentText';
 import CheckCircle from '@mui/icons-material/CheckCircle';
+import {action as mobxaction} from 'mobx';
 
 
 @observer
@@ -45,6 +46,7 @@ class WifiClient extends React.Component {
         this.wifiScanInterval = null;
     }
 
+    @mobxaction
     genHandleConnectClicked(ssid, mac, flags, password) {
         //Is this known
         return () => {
@@ -81,10 +83,12 @@ class WifiClient extends React.Component {
 
     }
 
+    @mobxaction
     handleDialogClose() {
         state.network.password_dialog.shown = false;
     }
 
+    @mobxaction
     handleConnectClick() {
         if (!state.network.password_dialog.password) {
             state.network.password_dialog.password_error = 'Password required';
@@ -96,6 +100,7 @@ class WifiClient extends React.Component {
         this.genHandleConnectClicked(state.network.password_dialog.ssid, state.network.password_dialog.mac, 'psk', state.network.password_dialog.password)();
     }
 
+    @mobxaction
     handleDialogPasswordChange(e) {
         state.network.password_dialog.password = e.currentTarget.value;
     }
@@ -175,6 +180,7 @@ class KnownWifi extends React.Component {
 
     }
 
+    @mobxaction
     genHandleDeleteKnown(ssid, mac) {
         return () => {
             state.snack_bar = 'Deleting...';

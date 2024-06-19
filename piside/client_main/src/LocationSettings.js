@@ -34,6 +34,7 @@ import InputLabel from '@mui/material/InputLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 import Formatting from './util/Formatting';
 import APIHelp from './util/APIHelp';
+import {action as mobxaction} from 'mobx';
 
 
 import {v4 as uuidv4} from 'uuid';
@@ -50,6 +51,7 @@ class CitySearch extends React.Component {
         this.uuid = uuidv4();
     }
 
+    @mobxaction
     handleSearchChange(e) {
         state.location.city_search = e.currentTarget.value;
     }
@@ -196,34 +198,41 @@ class LocationSettings extends React.Component {
         this.citySearchClicked = this.citySearchClicked.bind(this);
     }
 
+    @mobxaction
     addClicked() {
         state.location.new_step = 1;
     }
 
+    @mobxaction
     newLocationOptionChanged(event) {
         state.location.option = event.currentTarget.value;
     }
 
+    @mobxaction
     cancelClicked() {
         state.location.new_step = null;
     }
 
+    @mobxaction
     citySearchClicked(name, lat, lon, elevation) {
         state.location.name = name;
         this.onCoordinateChange(lat, lon, elevation);
         this.step1NextClicked(null, true);
     }
 
+    @mobxaction
     onCoordinateChange(lat, lon, elevation) {
         state.location.coord_lat = lat;
         state.location.coord_long = lon;
         state.location.coord_elevation = elevation;
     }
 
+    @mobxaction
     step2LocationNameChanged(e) {
         state.location.name = e.currentTarget.value;
     }
 
+    @mobxaction
     step1NextClicked(e, dont_empty_name) {
         const lat = state.location.coord_lat;
         const long = state.location.coord_long;
@@ -259,6 +268,7 @@ class LocationSettings extends React.Component {
         }
     }
 
+    @mobxaction
     saveClicked() {
         if (!state.location.name) {
             state.location.name_error = "Location Name required"
@@ -276,6 +286,7 @@ class LocationSettings extends React.Component {
         });
     }
 
+    @mobxaction
     handleDialogClose() {
         state.location.new_step = 0;
     }

@@ -7,6 +7,7 @@ import Grid from '@mui/material/Grid';
 import InputAdornment from '@mui/material/InputAdornment';
 import Button from '@mui/material/Button';
 import APIHelp from './util/APIHelp';
+import {action as mobxaction} from 'mobx';
 
 @observer
 class DebugStepsInput extends React.Component {
@@ -18,6 +19,7 @@ class DebugStepsInput extends React.Component {
         this.buttonRef = React.createRef();
     }
 
+    @mobxaction
     onCoordChange(e, coord, sub) {
         let v = e.currentTarget.value;
         v = ~~v;
