@@ -35,7 +35,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Formatting from './util/Formatting';
 import APIHelp from './util/APIHelp';
 import {action as mobxaction} from 'mobx';
-
+import PropTypes from 'prop-types';
 
 import {v4 as uuidv4} from 'uuid';
 
@@ -63,7 +63,7 @@ class CitySearch extends React.Component {
     }
 
     render() {
-        let table = null;
+        let table;
         if (state.location.city_searching) {
             table = <CircularProgress/>
         } else if (state.location.city_search_results.length === 0) {
@@ -98,6 +98,11 @@ class CitySearch extends React.Component {
         </>;
     }
 }
+
+CitySearch.propTypes = {
+    onCityClick: PropTypes.func,
+    autoFocus: PropTypes.bool
+};
 
 function numE(v) {
     if (v === null || isNaN(v)) {
@@ -190,6 +195,16 @@ class GeoCoordinateInput extends React.Component {
     }
 }
 
+GeoCoordinateInput.propTypes = {
+    latitude: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    longitude: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    elevation: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    onChange: PropTypes.func,
+    autoFocus: PropTypes.bool,
+    latitude_error: PropTypes.string,
+    longitude_error: PropTypes.string,
+    elevation_error: PropTypes.string
+};
 
 @observer
 class LocationSettings extends React.Component {
@@ -312,7 +327,7 @@ class LocationSettings extends React.Component {
     }
 
     render() {
-        let location_option = null;
+        let location_option;
         if (state.location.option === 'city_search') {
             location_option = <CitySearch autoFocus={true} onCityClick={this.citySearchClicked}/>;
         } else {

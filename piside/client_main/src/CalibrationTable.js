@@ -1,4 +1,4 @@
-import React, {forwardRef} from "react";
+import React from "react";
 import Grid from '@mui/material/Grid';
 import APIHelp from './util/APIHelp';
 import {v4 as uuidv4} from 'uuid';
@@ -18,6 +18,7 @@ import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import {action as mobxaction} from 'mobx';
+import _ from 'lodash';
 
 
 
@@ -92,7 +93,7 @@ function makeOnChange(key, setting_map) {
     return mobxaction((e) => {
         if (setting_map.type === 'number') {
             const v = e.currentTarget.value;
-            if ((v !== '' && v !== '-' && v !== '-.') || (settings_map.hasOwnProperty('min') && settings_map.min >= 0)) {
+            if ((v !== '' && v !== '-' && v !== '-.') || (_.has(setting_map, 'min') && setting_map.min >= 0)) {
                 state.calibrationTable[key] = parseFloat(v);
             } else {
                 state.calibrationTable[key] = v;
@@ -296,8 +297,8 @@ class CalibrationTable extends React.Component {
                                     <TableCell>SlewFrom</TableCell>
                                     <TableCell>SlewTo</TableCell>
                                     <TableCell>Sync</TableCell>
-                                    <TableCell>Error RA(")</TableCell>
-                                    <TableCell>Error Dec(")</TableCell>
+                                    <TableCell>Error RA(&quot;)</TableCell>
+                                    <TableCell>Error Dec(&quot;)</TableCell>
                                     <TableCell>Error RA(%)</TableCell>
                                     <TableCell>Error Dec(%)</TableCell>
                                 </TableRow>

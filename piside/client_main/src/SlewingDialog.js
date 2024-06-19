@@ -102,7 +102,7 @@ class SlewingDialog extends React.Component {
             frameLabel = 'Alt/Az'
         }
 
-        return <Dialog open maxwidth="xs">
+        return <Dialog open={true} maxwidth="xs">
             <DialogTitle>{title}</DialogTitle>
             <DialogContent>
                 <Grid container>

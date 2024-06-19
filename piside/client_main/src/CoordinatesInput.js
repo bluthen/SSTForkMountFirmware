@@ -13,6 +13,7 @@ import CalibrationTable from './CalibrationTable';
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import {action as mobxaction} from 'mobx';
+import PropTypes from "prop-types";
 
 @observer
 class CoordinatesInput extends React.Component {
@@ -229,5 +230,10 @@ class CoordinatesInput extends React.Component {
         );
     }
 }
+
+CoordinatesInput.propTypes = {
+    coordinateType: PropTypes.string,
+    onTypeChange: PropTypes.func
+};
 
 export default CoordinatesInput;

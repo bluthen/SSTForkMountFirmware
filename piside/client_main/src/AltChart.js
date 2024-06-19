@@ -2,6 +2,7 @@ import React from "react";
 import CircularProgress from '@mui/material/CircularProgress';
 import APIHelp from './util/APIHelp';
 import {Line, LineChart, XAxis, YAxis,} from 'recharts';
+import PropTypes from 'prop-types';
 
 
 class AltChart extends React.Component {
@@ -29,6 +30,12 @@ class AltChart extends React.Component {
         }
         return ret;
     }
+}
+
+AltChart.propTypes = {
+    wanted: PropTypes.object,
+    width: PropTypes.number,
+    height: PropTypes.number
 }
 
 export default AltChart;

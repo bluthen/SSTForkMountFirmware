@@ -1,6 +1,7 @@
 import React from "react";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import IconButton from '@mui/material/IconButton';
+import PropTypes from "prop-types";
 
 
 const circle = {
@@ -159,5 +160,9 @@ class DirectionControls extends React.Component {
         );
     }
 }
+
+DirectionControls.propTypes = {
+  onDirectionChange: PropTypes.func
+};
 
 export default DirectionControls;

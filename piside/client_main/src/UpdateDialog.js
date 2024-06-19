@@ -12,7 +12,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 class InfoDialog extends React.Component {
 
     render() {
-        return <Dialog open maxwidth="xs">
+        return <Dialog open={true} maxwidth="xs">
             <DialogTitle>Updating</DialogTitle>
             <DialogContent>
                 <Grid container>

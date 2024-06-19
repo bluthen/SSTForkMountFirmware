@@ -151,7 +151,7 @@ class WifiClient extends React.Component {
             <DialogTitle>{state.network.password_dialog.ssid} Wifi Password</DialogTitle>
             <DialogContent>
                 <DialogContentText>Please enter password to connect to access point
-                    "{state.network.password_dialog.ssid}".</DialogContentText>
+                    &quot;{state.network.password_dialog.ssid}&quot;.</DialogContentText>
                 <TextField autoFocus type="text" fullWidth value={state.network.password_dialog.password}
                            placeholder="Password" onChange={this.handleDialogPasswordChange}
                            error={!!state.network.password_dialog.password_error}

@@ -376,13 +376,13 @@ const APIHelp = {
                     if (typeof d[key] === 'object') {
                         console.log('=== micro object' + key);
                         for (const key2 of Object.keys(d[key])) {
-                            if (state.advancedSettings.hasOwnProperty(key2)) {
+                            if (_.has(state.advancedSettings, key2)) {
                                 // console.log('==== ' + key2, d[key][key2]);
                                 state.advancedSettings[key2] = d[key][key2];
                             }
                         }
                     } else {
-                        if (state.advancedSettings.hasOwnProperty(key)) {
+                        if (_.has(state.advancedSettings, key)) {
                             state.advancedSettings[key] = d[key];
                         }
                     }

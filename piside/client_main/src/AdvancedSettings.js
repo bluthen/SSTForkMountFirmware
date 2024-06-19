@@ -10,6 +10,7 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import {v4 as uuidv4}  from 'uuid';
 import APIHelp from './util/APIHelp';
+import _ from 'lodash';
 
 
 const settings_map = {
@@ -129,7 +130,7 @@ function makeOnChange(key, setting_map) {
     return (e) => {
         if (setting_map.type === 'number') {
             const v = e.currentTarget.value;
-            if ((v !== '' && v !== '-' && v !== '-.') || (settings_map.hasOwnProperty('min') && settings_map.min >= 0)) {
+            if ((v !== '' && v !== '-' && v !== '-.') || (_.has(settings_map, 'min') && settings_map.min >= 0)) {
                 state.advancedSettings[key] = parseFloat(v);
             } else {
                 state.advancedSettings[key] = v;

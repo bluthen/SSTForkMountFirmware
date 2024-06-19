@@ -10,6 +10,7 @@ import TriTransferList from './TriTransferList';
 import state from './State';
 import _ from 'lodash';
 import {action as mobxaction} from 'mobx';
+import PropTypes from "prop-types";
 
 const sides = {'left': ['step_ra', 'enc_ra', 'step_dec', 'enc_dec'], 'right': ['ra_over_raenc', 'dec_over_decenc']};
 
@@ -172,5 +173,11 @@ class EncoderGraph extends React.Component {
         return ret;
     }
 }
+
+EncoderGraph.propTypes = {
+  width: PropTypes.number,
+  height: PropTypes.number,
+  data: PropTypes.array
+};
 
 export default EncoderGraph;

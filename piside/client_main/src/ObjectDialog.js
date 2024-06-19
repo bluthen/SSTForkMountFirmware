@@ -76,7 +76,7 @@ class ObjectDialog extends React.Component {
     }
 
     render() {
-        return <Dialog open maxwidth="xs" onClose={this.handleClose}>
+        return <Dialog open={true} maxwidth="xs" onClose={this.handleClose}>
             <DialogTitle>Object Title</DialogTitle>
             <DialogContent>
                 <Grid container>

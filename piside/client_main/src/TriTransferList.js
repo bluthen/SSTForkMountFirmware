@@ -9,6 +9,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import PropTypes from "prop-types";
 
 function not(a, b) {
     return a.filter(value => b.indexOf(value) === -1);
@@ -21,8 +22,7 @@ function intersection(a, b) {
 function union(a, b) {
     return [...a, ...not(b, a)];
 }
-
-export default function TriTransferList(props) {
+const TriTransferList = (props) => {
     const [checked, setChecked] = React.useState([]);
     let left = props.leftList;
     let right = props.rightList;
@@ -188,4 +188,18 @@ export default function TriTransferList(props) {
             <Grid item>{customList(props.rightLabel, right)}</Grid>
         </Grid>
     );
-}
+};
+
+TriTransferList.propTypes = {
+    leftList: PropTypes.array,
+    rightList: PropTypes.array,
+    centerList: PropTypes.array,
+    onLeftListChanged: PropTypes.func,
+    onCenterListChanged: PropTypes.func,
+    onRightListChanged: PropTypes.func,
+    leftLabel: PropTypes.string,
+    centerLabel: PropTypes.string,
+    rightLabel: PropTypes.string
+};
+
+export default TriTransferList;

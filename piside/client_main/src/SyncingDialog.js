@@ -8,7 +8,7 @@ import Grid from '@mui/material/Grid';
 
 class SyncingDialog extends React.Component {
     render() {
-        return <Dialog open maxwidth="xs">
+        return <Dialog open={true} maxwidth="xs">
             <DialogTitle>Syncing</DialogTitle>
             <DialogContent>
                 <Grid container>
