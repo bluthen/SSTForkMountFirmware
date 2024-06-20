@@ -75,6 +75,16 @@ class SlewLimitsSettings extends React.Component {
     }
 
     @mobxaction
+    handleModelRemember(e) {
+        state.slewlimit.model_remember = e.currentTarget.checked;
+    }
+
+    @mobxaction
+    handleModelPointsChange(e) {
+        state.slewlimit.model_points = parseInt(e.currentTarget.value, 10);
+    }
+
+    @mobxaction
     handleSaveClicked() {
         let gt = parseFloat(state.slewlimit.greater_than);
         let lt = parseFloat(state.slewlimit.less_than);
@@ -91,7 +101,7 @@ class SlewLimitsSettings extends React.Component {
         if (state.slewlimit.less_than_error || state.slewlimit.greater_than_error) {
             return;
         }
-        APIHelp.setPointingModel(state.slewlimit.model).then(() => {
+        APIHelp.setPointingModel(state.slewlimit.model, state.slewlimit.model_points, state.slewlimit.model_remember).then(() => {
             APIHelp.setSlewSettings(state.slewlimit.enabled, gt, lt);
         });
     }
@@ -119,18 +129,6 @@ class SlewLimitsSettings extends React.Component {
                     Editor&nbsp;&nbsp;<OpenInNewIcon/></Button>
             </Grid>
             <Grid item xs={12}>
-                <InputLabel htmlFor={this.uuid + "model-select"}>Pointing Model</InputLabel>
-                <Select id={this.uuid + "model_select"} value={modelMap.indexOf(state.slewlimit.model)}
-                        onChange={this.handleModelChange} name="model">
-                    <MenuItem value="0">Single</MenuItem>
-                    <MenuItem value="1">Buie</MenuItem>
-                    <MenuItem value="2">Affine</MenuItem>
-                </Select>
-            </Grid>
-            <Grid item xs={12}>
-                <Button color="primary" variant="contained" onClick={this.handleClearPointsClicked}>Clear Pointing Model</Button>
-            </Grid>
-            <Grid item xs={12}>
                 <h3>Allowed Declination</h3>
             </Grid>
             <Grid item xs={3}>
@@ -154,6 +152,38 @@ class SlewLimitsSettings extends React.Component {
                            InputProps={{
                                endAdornment: <InputAdornment position="end">&deg;</InputAdornment>,
                            }}/>
+            </Grid>
+            <Grid item xs={12}><h2>Pointing Model</h2></Grid>
+            <Grid item xs={6}>
+                <InputLabel htmlFor={this.uuid + "model-select"}>Pointing Model</InputLabel>
+                <Select id={this.uuid + "model_select"} value={modelMap.indexOf(state.slewlimit.model)}
+                        onChange={this.handleModelChange} name="model">
+                    <MenuItem value="0">Single</MenuItem>
+                    <MenuItem value="1">Buie</MenuItem>
+                    <MenuItem value="2">Affine</MenuItem>
+                </Select>
+            </Grid>
+            { (state.slewlimit.model === 'buie' || state.slewlimit.model === 'affine_all') ? <>
+            <Grid item xs={6}>
+                <InputLabel htmlFor={this.uuid + "model-points"}>Model Points</InputLabel>
+                <TextField label={'Number of model points'} id={this.uuid + 'model-points'} value={state.slewlimit.model_points}
+                           type="number" inputProps={{min: 3, max: 9999}}
+                onChange={this.handleModelPointsChange}/>
+            </Grid>
+            {/*<Grid item xs={12}>*/}
+            {/*    <FormControlLabel*/}
+            {/*        control={*/}
+            {/*            <Checkbox*/}
+            {/*                color="primary"*/}
+            {/*                onChange={this.handleModelRemember}*/}
+            {/*                checked={state.slewlimit.model_remember}*/}
+            {/*            />*/}
+            {/*        }*/}
+            {/*        label="Remember model"/>*/}
+            {/*</Grid>*/}
+            </> : <Grid item xs={6}/>}
+            <Grid item xs={12}>
+                <Button color="primary" variant="contained" onClick={this.handleClearPointsClicked}>Clear Pointing Model</Button>
             </Grid>
             <Grid item xs={12} style={{textAlign: "center"}}>
                 <Button color="primary" variant="contained" onClick={this.handleSaveClicked}>Save</Button>

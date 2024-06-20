@@ -518,11 +518,15 @@ def do_sync():
 def post_sync():
     reqj = request.json
     model = reqj.get('model')
+    points = int(reqj.get('points'))
+    remember = reqj.get('remember') is True
     if model not in ['single', 'buie', 'affine_all']:
         return 'Invalid model', 400
     # Set models
     control.clear_sync()
     settings.settings['pointing_model'] = model
+    settings.settings['pointing_model_points'] = points
+    settings.settings['pointing_model_remember'] = remember
     settings.write_settings(settings.settings)
     return 'Pointing Model Set', 200
 

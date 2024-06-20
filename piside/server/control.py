@@ -140,6 +140,7 @@ def sync(coord):
         set_last_slew(coord)
         hadec = skyconv.to_hadec(coord, obstime=obstime)
 
+        # TODO: If we hit the points limit remove the earliest ones.
         if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
                 skyconv.model_real_stepper.size() > 0:
             stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
@@ -158,13 +159,13 @@ def sync(coord):
             if settings.settings['pointing_model'] in ['single', 'buie']:
                 print(settings.settings['pointing_model'], 'sync')
                 if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
-                    skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+                    skyconv.model_real_stepper = pointing_model.PointingModelBuie(max_points=settings.settings['pointing_model_points'])
                 skyconv.model_real_stepper.clear()
                 skyconv.model_real_stepper.add_point(hadec, hadec)
             else:  # affine model
                 print('affine sync')
                 if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelAffine):
-                    skyconv.model_real_stepper = pointing_model.PointingModelAffine()
+                    skyconv.model_real_stepper = pointing_model.PointingModelAffine(max_points=settings.settings['pointing_model_points'])
                 altaz = skyconv.to_altaz(hadec)
                 skyconv.model_real_stepper.clear()
                 skyconv.model_real_stepper.add_point(altaz, altaz)

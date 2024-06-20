@@ -173,7 +173,9 @@ const state = observable({
         greater_than_error: null,
         less_than: 90.0,
         less_than_error: null,
-        model: null
+        model: null,
+        model_points: 3,
+        model_remember: false
     },
     network: {
         ssid: null,

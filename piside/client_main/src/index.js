@@ -30,6 +30,8 @@ const tabMap = ['manual', 'goto', 'setup'];
 class App extends React.Component {
     @mobxaction
     tabChange(event, newValue) {
+        console.log(event.value);
+        console.log('RUSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS', event)
         state.page = tabMap[newValue];
         state.topTabs = tabMap[newValue];
     }
@@ -44,11 +46,11 @@ class App extends React.Component {
         }
         let content = null;
         let tabs = <Container>
-            <Tabs value={tabIndex} onChange={this.tabChange} aria-label="setup goto manual"
+            <Tabs value={tabIndex} aria-label="setup goto manual"
                   indicatorColor="primary" textColor="primary" centered>
-                <Tab label="Manual"/>
-                <Tab label="Goto"/>
-                <Tab label="Setup"/>
+                <Tab onClick={(e) => { this.tabChange(e, 0);}} label="Manual"/>
+                <Tab onClick={(e) => { this.tabChange(e, 1);}} label="Goto"/>
+                <Tab onClick={(e) => { this.tabChange(e, 2);}} label="Setup"/>
             </Tabs>
         </Container>;
 

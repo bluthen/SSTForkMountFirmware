@@ -176,7 +176,7 @@ const APIHelp = {
         if (!settingsUpdateIntervalStarted) {
             settingsUpdateIntervalStarted = true;
             const f = () => {
-                if (state.page !== 'advancedSettings') {
+                if (state.page !== 'advancedSettings' && state.page !== 'slewLimitsSettings') {
                     this.fetchSettings().finally(() => {
                         setTimeout(() => {
                             f();
@@ -369,6 +369,8 @@ const APIHelp = {
                 state.slewlimit.greater_than = d.horizon_limit_dec.greater_than;
                 state.slewlimit.less_than = d.horizon_limit_dec.less_than;
                 state.slewlimit.model = d.pointing_model;
+                state.slewlimit.model_points = d.pointing_model_points;
+                state.slewlimit.model_remember = d.pointing_model_remember;
                 state.misc.encoder_logging = d.encoder_logging;
                 state.misc.calibration_logging = d.calibration_logging;
                 state.color_scheme = d.color_scheme;
@@ -660,10 +662,10 @@ const APIHelp = {
             throw e;
         }));
     },
-    setPointingModel(model) {
+    setPointingModel(model, points, remember) {
         return fetch('/api/sync', {
             method: 'post',
-            body: JSON.stringify({model: model}),
+            body: JSON.stringify({model, points, remember}),
             headers: {
                 'Content-Type': 'application/json'
             }

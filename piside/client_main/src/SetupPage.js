@@ -47,7 +47,7 @@ class ManualPage extends React.Component {
                     <Button variant="contained" color="primary" onClick={this.networkSettingsClicked}>Network Settings</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
-                    <Button variant="contained" color="primary" onClick={this.slewLimitsSettingsClicked}>Slew Limits</Button>
+                    <Button variant="contained" color="primary" onClick={this.slewLimitsSettingsClicked}>Slew Limits/Pointing Model</Button>
                 </Grid>
                 <Grid item xs={12} style={item}>
                     <Button variant="contained" color="primary" onClick={this.slewMiscSettingsClicked}>Miscellaneous</Button>

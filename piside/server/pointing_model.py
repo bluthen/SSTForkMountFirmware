@@ -203,7 +203,7 @@ scipy.optimize.leastsq(pointing_model.buie_model_error, p0[:], args=(xdata, xdat
 
 
 class PointingModelBuie:
-    def __init__(self, log=False, name=''):
+    def __init__(self, log=False, name='', max_points=-1):
         """
         :param log:
         :param name:
@@ -211,6 +211,7 @@ class PointingModelBuie:
         self.__from_points = None
         self.__to_points = []
         self.__buie_vals = None
+        self.__max_points = max_points
 
     def add_point(self, from_point, to_point):
         """
@@ -222,6 +223,10 @@ class PointingModelBuie:
         :return: None
         :rtype: None
         """
+        if self.__max_points != -1 and len(self.__to_points) >= self.__max_points:
+            self.__to_points = self.__to_points[1:]
+            self.__from_points = self.__from_points[1:]
+
         from_point = HADec(ha=from_point.ha, dec=from_point.dec)
         to_point = HADec(ha=to_point.ha, dec=to_point.dec)
         replace_idx = None
@@ -346,7 +351,7 @@ class PointingModelBuie:
 
 
 class PointingModelAffine:
-    def __init__(self, log=False, name='', isinverse=False):
+    def __init__(self, log=False, name='', isinverse=False, max_points=-1):
         """
         :Example:
         """
@@ -355,6 +360,7 @@ class PointingModelAffine:
 
         self.__sync_points = []
         self.__from_points = None
+        self.__max_points = max_points
         # Distance matrix for sync_points
         # https://en.wikipedia.org/wiki/Distance_matrix
         #: distance matrix created with sync_points
@@ -385,6 +391,11 @@ class PointingModelAffine:
         """
         if from_point.name != 'altaz' or to_point.name != 'altaz':
             raise ValueError('coords should be an alt-az coordinate')
+
+        if self.__max_points != -1 and len(self.__from_points) >= self.__max_points:
+            self.__from_points = self.__max_points[1:]
+            self.__sync_points = self.__sync_points[1:]
+
 
         from_point = SkyCoord(AltAz(alt=from_point.alt, az=from_point.az))
         to_point = SkyCoord(AltAz(alt=to_point.alt, az=to_point.az))

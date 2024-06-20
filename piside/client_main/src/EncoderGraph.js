@@ -175,8 +175,8 @@ class EncoderGraph extends React.Component {
 }
 
 EncoderGraph.propTypes = {
-  width: PropTypes.number,
-  height: PropTypes.number,
+  width: PropTypes.oneOfType(PropTypes.number, PropTypes.string),
+  height: PropTypes.oneOfType(PropTypes.number, PropTypes.string),
   data: PropTypes.array
 };
 

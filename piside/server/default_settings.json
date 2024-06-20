@@ -7,6 +7,8 @@
   "ra_encoder_pulse_per_degree": 0.0,
   "dec_encoder_pulse_per_degree": 0.0,
   "pointing_model": "single",
+  "pointing_model_points": 3,
+  "pointing_model_remember": false,
   "microserial": {
     "baud": 115200,
     "port": "/dev/serial0"
