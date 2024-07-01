@@ -170,17 +170,17 @@ class SlewLimitsSettings extends React.Component {
                            type="number" inputProps={{min: 3, max: 9999}}
                 onChange={this.handleModelPointsChange}/>
             </Grid>
-            {/*<Grid item xs={12}>*/}
-            {/*    <FormControlLabel*/}
-            {/*        control={*/}
-            {/*            <Checkbox*/}
-            {/*                color="primary"*/}
-            {/*                onChange={this.handleModelRemember}*/}
-            {/*                checked={state.slewlimit.model_remember}*/}
-            {/*            />*/}
-            {/*        }*/}
-            {/*        label="Remember model"/>*/}
-            {/*</Grid>*/}
+            <Grid item xs={12}>
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            color="primary"
+                            onChange={this.handleModelRemember}
+                            checked={state.slewlimit.model_remember}
+                        />
+                    }
+                    label="Remember model"/>
+            </Grid>
             </> : <Grid item xs={6}/>}
             <Grid item xs={12}>
                 <Button color="primary" variant="contained" onClick={this.handleClearPointsClicked}>Clear Pointing Model</Button>

@@ -6,7 +6,6 @@ import threading
 from functools import partial
 import time
 import traceback
-import sys
 import os
 import psutil
 import random
@@ -140,7 +139,7 @@ def sync(coord):
         set_last_slew(coord)
         hadec = skyconv.to_hadec(coord, obstime=obstime)
 
-        # TODO: If we hit the points limit remove the earliest ones.
+
         if settings.settings['pointing_model'] != 'single' and not park_sync and skyconv.model_real_stepper and \
                 skyconv.model_real_stepper.size() > 0:
             stepper_coord = skyconv.steps_to_coord({'ha': status['rep'], 'dec': status['dep']},
@@ -151,6 +150,8 @@ def sync(coord):
                 print(hadec, stepper_coord)
                 altaz = skyconv.to_altaz(hadec)
                 skyconv.model_real_stepper.add_point(altaz, stepper_coord)
+            if settings.settings['pointing_remember']:
+                settings.save_pointing_model(skyconv.model_real_stepper)
         else:
             park_sync = False
             sync_info = {'steps': {'ha': status['rep'], 'dec': status['dep']}, 'coord': hadec}
@@ -161,6 +162,11 @@ def sync(coord):
                 if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
                     skyconv.model_real_stepper = pointing_model.PointingModelBuie(max_points=settings.settings['pointing_model_points'])
                 skyconv.model_real_stepper.clear()
+                if settings.settings['pointing_remember']:
+                    try:
+                        skyconv.model_real_stepper = settings.load_pointing_model()
+                    except:
+                        pass
                 skyconv.model_real_stepper.add_point(hadec, hadec)
             else:  # affine model
                 print('affine sync')
@@ -168,6 +174,11 @@ def sync(coord):
                     skyconv.model_real_stepper = pointing_model.PointingModelAffine(max_points=settings.settings['pointing_model_points'])
                 altaz = skyconv.to_altaz(hadec)
                 skyconv.model_real_stepper.clear()
+                if settings.settings['pointing_remember']:
+                    try:
+                        skyconv.model_real_stepper = settings.load_pointing_model()
+                    except:
+                        pass
                 skyconv.model_real_stepper.add_point(altaz, altaz)
 
 
@@ -947,6 +958,7 @@ def clear_sync():
         frame_args = skyconv.get_frame_init_args('altaz')
         scord = AltAz(alt=last_status['alt'] * u.deg, az=last_status['az'] * u.deg, **frame_args)
     pointing_logger.debug(json.dumps({'func': 'control.clear_sync'}))
+    settings.rm_pointing_model()
     park_sync = True
     sync(scord)
     park_sync = True

@@ -1,3 +1,5 @@
+import copy
+
 import numpy
 import math
 import affine_fit

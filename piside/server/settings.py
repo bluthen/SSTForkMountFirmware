@@ -6,6 +6,7 @@ import logging
 import copy
 import shutil
 import subprocess
+import pickle
 
 _lock = threading.RLock()
 _plock = threading.RLock()
@@ -32,6 +33,37 @@ def write_settings(arg_settings):
             json.dump(arg_settings, f_settings)
     if not is_simulation():
         subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
+
+
+@fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
+def save_pointing_model(model):
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
+    with _lock:
+        with open('model.pickle', mode='wb') as f_model:
+            pickle.dump(model, f_model)
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
+
+
+@fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
+def rm_pointing_model():
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
+    with _lock:
+        os.remove('model.pickle')
+    if not is_simulation():
+        subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
+
+
+@fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
+def load_pointing_model():
+    model = None
+    with _lock:
+        if os.path.isfile('model.pickle'):
+            with open('model.pickle', mode='rb') as f_model:
+                model = pickle.load(f_model)
+    return model
 
 
 @fasteners.interprocess_locked('/tmp/ssteq_settings_lock')
