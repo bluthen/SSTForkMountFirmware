@@ -8,122 +8,161 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import {v4 as uuidv4}  from 'uuid';
+import {v4 as uuidv4} from 'uuid';
 import APIHelp from './util/APIHelp';
 import _ from 'lodash';
 
 
 const settings_map = {
-    ra_ticks_per_degree: {display: 'RA Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
-    dec_ticks_per_degree: {display: 'Dec Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°'},
-    ra_track_rate: {display: 'RA Stepper Tracking', type: 'number', min: 0, endAdornment: 'Step/s'},
-    ra_guide_rate: {display: 'RA Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
-    dec_guide_rate: {display: 'Dec Stepper Guide', type: 'number', min: 0, endAdornment: 'Step/s', jsonLevel: 'micro'},
-
+    empty00aa: {type: 'empty', xs: 12},
+    ra_ticks_per_degree: {display: 'RA Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°', xs: 3},
     ra_accel_tpss: {
         display: 'RA Max Acceleration',
         type: 'number',
         min: 0,
         endAdornment: 'Step/s^2',
-        jsonLevel: 'micro'
+        jsonLevel: 'micro',
+        xs: 3
     },
-    dec_accel_tpss: {
-        display: 'Dec Max Acceleration',
+    ra_track_rate: {display: 'RA Stepper Tracking', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    empty00a: {type: 'empty', xs: 3},
+
+    ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+
+    ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    ra_guide_rate: {
+        display: 'RA Guide',
         type: 'number',
         min: 0,
-        endAdornment: 'Step/s^2',
-        jsonLevel: 'micro'
+        endAdornment: 'Step/s',
+        jsonLevel: 'micro',
+        xs: 3
     },
+    empty00b: {type: 'empty', xs: 6},
 
     ra_run_current: {
         display: 'RA Run Current',
         type: 'number',
         min: 0,
         endAdornment: 'mA',
-        jsonLevel: 'micro'
+        jsonLevel: 'micro',
+        xs: 3
     },
-    dec_run_current: {
-        display: 'Dec Run Current',
-        type: 'number',
-        min: 0,
-        endAdornment: 'mA',
-        jsonLevel: 'micro'
-    },
+
     ra_med_current: {
         display: 'RA Medium Current',
         type: 'number',
         min: 0,
         endAdornment: 'mA',
-        jsonLevel: 'micro'
+        jsonLevel: 'micro',
+        xs: 3
     },
     ra_med_current_threshold: {
         display: 'RA Medium Threshold',
         type: 'number',
         min: 0,
         endAdornment: '<steps/s',
-        jsonLevel: 'micro'
-    },
-    dec_med_current: {
-        display: 'Dec Medium Current',
-        type: 'number',
-        min: 0,
-        endAdornment: 'mA',
-        jsonLevel: 'micro'
-    },
-    dec_med_current_threshold: {
-        display: 'Dec Medium Threshold',
-        type: 'number',
-        min: 0,
-        endAdornment: 'steps/s',
-        jsonLevel: 'micro'
+        jsonLevel: 'micro',
+        xs: 3
     },
     ra_hold_current: {
         display: 'RA Hold Current',
         type: 'number',
         min: 0,
         endAdornment: 'mA',
-        jsonLevel: 'micro'
+        jsonLevel: 'micro',
+        xs: 3
+    },
+
+    ra_direction: {display: 'RA Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro', xs: 3},
+    ra_disable: {display: 'RA Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro', xs: 3},
+    ra_use_encoder: {display: 'Use Encoders w/RA', type: 'boolean', xs: 3},
+    ra_encoder_pulse_per_degree: {
+        display: 'RA Encoder Scale',
+        type: 'number',
+        endAdornment: 'pulse/°',
+        xs: 3
+    },
+
+    emptyRADecSep: {type: 'empty', xs: 12},
+
+    dec_ticks_per_degree: {display: 'Dec Stepper Scale', type: 'number', min: 0, endAdornment: 'Step/°', xs: 3},
+    dec_accel_tpss: {
+        display: 'Dec Max Acceleration',
+        type: 'number',
+        min: 0,
+        endAdornment: 'Step/s^2',
+        jsonLevel: 'micro',
+        xs: 3
+    },
+    empty2: {type: 'empty', xs: 6},
+
+    dec_slew_fastest: {display: 'Dec Max Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    dec_slew_faster: {display: 'Dec Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    dec_slew_medium: {display: 'Dec Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    dec_slew_slower: {display: 'Dec Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+
+    dec_slew_slowest: {display: 'Dec Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    dec_guide_rate: {
+        display: 'Dec Stepper Guide',
+        type: 'number',
+        min: 0,
+        endAdornment: 'Step/s',
+        jsonLevel: 'micro',
+        xs: 3
+    },
+    empty2aa: {type: 'empty', xs: 6},
+
+    dec_run_current: {
+        display: 'Dec Run Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro',
+        xs: 3
+    },
+    dec_med_current: {
+        display: 'Dec Medium Current',
+        type: 'number',
+        min: 0,
+        endAdornment: 'mA',
+        jsonLevel: 'micro',
+        xs: 3
+    },
+    dec_med_current_threshold: {
+        display: 'Dec Medium Threshold',
+        type: 'number',
+        min: 0,
+        endAdornment: 'steps/s',
+        jsonLevel: 'micro',
+        xs: 3
     },
     dec_hold_current: {
         display: 'Dec Hold Current',
         type: 'number',
         min: 0,
         endAdornment: 'mA',
-        jsonLevel: 'micro'
+        jsonLevel: 'micro',
+        xs: 3
     },
 
-    ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Step/s'},
-
-    dec_slew_fastest: {display: 'Dec Max Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_faster: {display: 'Dec Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_medium: {display: 'Dec Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_slower: {display: 'Dec Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-    dec_slew_slowest: {display: 'Dec Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s'},
-
-    ra_direction: {display: 'RA Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
-    dec_direction: {display: 'Dec Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro'},
-
-    ra_disable: {display: 'RA Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
-    dec_disable: {display: 'Dec Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro'},
-
-    ra_use_encoder: {display: 'Use Encoders w/RA', type: 'boolean'},
-    dec_use_encoder: {display: 'Use Encoders w/Dec', type: 'boolean'},
-    limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean'},
-
-    ra_encoder_pulse_per_degree: {
-        display: 'RA Encoder Scale',
-        type: 'number',
-        endAdornment: 'pulse/°'
-    },
+    dec_direction: {display: 'Dec Reverse', type: 'boolean', map: {false: 1, true: -1}, jsonLevel: 'micro', xs: 3},
+    dec_disable: {display: 'Dec Disable Motor', type: 'boolean', map: {false: 0, true: 1}, jsonLevel: 'micro', xs: 3},
+    dec_use_encoder: {display: 'Use Encoders w/Dec', type: 'boolean', xs: 3},
     dec_encoder_pulse_per_degree: {
         display: 'Dec Encoder Scale',
         type: 'number',
-        endAdornment: 'pulse/°'
-    }
+        endAdornment: 'pulse/°',
+        xs: 3
+    },
+
+    empty4Sep: {type: 'empty', xs: 12},
+
+    limit_encoder_step_fillin: {display: 'Limit Encoder Step Fill-in', type: 'boolean', xs: 3},
+    empty4: {type: 'empty', xs: 9}
 };
 
 function makeOnChange(key, setting_map) {
@@ -159,21 +198,23 @@ class AdvancedSettings extends React.Component {
     handleSave() {
         const resp = {};
         for (const key of Object.keys(settings_map)) {
-            const jl = settings_map[key].jsonLevel;
-            if (jl) {
-                if (!resp[jl]) {
-                    resp[jl] = {};
-                }
-                if (typeof state.advancedSettings[key] === 'string') {
-                    resp[jl][key] = 0;
+            if (settings_map[key].type !== 'empty') {
+                const jl = settings_map[key].jsonLevel;
+                if (jl) {
+                    if (!resp[jl]) {
+                        resp[jl] = {};
+                    }
+                    if (typeof state.advancedSettings[key] === 'string') {
+                        resp[jl][key] = 0;
+                    } else {
+                        resp[jl][key] = state.advancedSettings[key];
+                    }
                 } else {
-                    resp[jl][key] = state.advancedSettings[key];
-                }
-            } else {
-                if (typeof state.advancedSettings[key] === 'string') {
-                    resp[key] = 0;
-                } else {
-                    resp[key] = state.advancedSettings[key];
+                    if (typeof state.advancedSettings[key] === 'string') {
+                        resp[key] = 0;
+                    } else {
+                        resp[key] = state.advancedSettings[key];
+                    }
                 }
             }
         }
@@ -187,14 +228,16 @@ class AdvancedSettings extends React.Component {
             spinner = <CircularProgress/>;
         } else {
             for (let key in settings_map) {
-                if (settings_map[key].type === 'boolean') {
+                if (settings_map[key].type === 'empty') {
+                    settings.push(<Grid item key={key + this.uuid} xs={settings_map[key].xs}></Grid>);
+                } else if (settings_map[key].type === 'boolean') {
                     let checked;
                     if (settings_map[key].map) {
                         checked = settings_map[key].map[true] === state.advancedSettings[key];
                     } else {
                         checked = state.advancedSettings[key];
                     }
-                    settings.push(<Grid item key={key + this.uuid} xs={4}><FormControlLabel
+                    settings.push(<Grid item key={key + this.uuid} xs={settings_map[key].xs}><FormControlLabel
                         control={
                             <Checkbox
                                 value={key}
@@ -206,7 +249,7 @@ class AdvancedSettings extends React.Component {
                         label={settings_map[key].display}
                     /></Grid>);
                 } else {
-                    settings.push(<Grid item key={key + this.uuid} xs={4}>
+                    settings.push(<Grid item key={key + this.uuid} xs={settings_map[key].xs}>
                         <TextField value={state.advancedSettings[key]}
                                    label={settings_map[key].display}
                                    key={key}
