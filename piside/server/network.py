@@ -94,7 +94,7 @@ wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
 def read_ethernet_settings():
     stemp = None
     found = False
-    ret = {'ip': '', 'netmask': '', 'dhcp_server': False}
+    ret = {'ip': '', 'netmask': ''}
     try:
         stemp = root_file_open('/ssteq/etc/defaults')
         for line in stemp[0]:
@@ -109,30 +109,7 @@ def read_ethernet_settings():
         if stemp and stemp[1]:
             stemp[0].close()
             os.remove(stemp[1])
-    try:
-        stemp = root_file_open('/etc/dnsmasq.conf')
-        for line in stemp[0]:
-            line = line.strip()
-            if line.find('interface=eth0') == 0:
-                ret['dhcp_server'] = True
-    finally:
-        if stemp and stemp[1]:
-            stemp[0].close()
-            os.remove(stemp[1])
     return ret
-
-
-def set_ethernet_dhcp_server(enabled):
-    if not settings.is_simulation():
-        if enabled:
-            subprocess.run(['sudo', '/usr/bin/python3', '/root/ctrl_dnsmasq.py', 'eth0', 'enable'])
-        else:
-            subprocess.run(['sudo', '/usr/bin/python3', '/root/ctrl_dnsmasq.py', 'eth0', 'disable'])
-        subprocess.run(['sudo', '/usr/bin/killall', 'wpa_supplicant'])
-        subprocess.run(['sudo', '/bin/systemctl', 'daemon-reload'])
-        subprocess.run(['sudo', '/bin/systemctl', 'restart', 'networking'])
-        time.sleep(25)
-        subprocess.run(['sudo', '/usr/bin/autohotspot'])
 
 
 def hostapd_write(ssid, channel, password=None):

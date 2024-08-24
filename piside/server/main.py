@@ -315,21 +315,13 @@ def settings_horizon_limit():
 @app.route('/api/settings_network_ethernet', methods=['PUT'])
 @nocache
 def settings_network_ethernet():
-    dhcp_server = request.form.get('dhcp_server', None)
-    if dhcp_server:
-        dhcp_server = dhcp_server.lower() == 'true'
-    else:
-        dhcp_server = False
-
     ip = request.form.get('ip', None)
     netmask = request.form.get('netmask', None)
 
-    if None not in (dhcp_server, ip, netmask):
-        network.set_ethernet_dhcp_server(dhcp_server)
+    if None not in (ip, netmask):
         network.set_ethernet_static(ip, netmask)
         settings.settings['network']['ip'] = ip
         settings.settings['network']['netmask'] = netmask
-        settings.settings['network']['dhcp_server'] = dhcp_server
     return 'Saved Network', 200
 
 

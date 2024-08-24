@@ -348,7 +348,7 @@ void Stepper::setCurrents() {
       Serial.println(driver->rms_current());
     }
     current_real = run_current;
-    driver->rms_current((uint16_t)((current_real * CURRENT_TO_RMS)*1000.0), hold_current / current_real);
+    driver->rms_current((uint16_t)(current_real), hold_current / current_real);
     if (Serial) {
       Serial.print("C: ");
       Serial.println(driver->rms_current());
@@ -359,7 +359,7 @@ void Stepper::setCurrents() {
       Serial.println(driver->rms_current());
     }
     current_real = med_current;
-    driver->rms_current((uint16_t)((current_real * CURRENT_TO_RMS)*1000.0), hold_current / current_real);
+    driver->rms_current((uint16_t)(current_real), hold_current / current_real);
     if (Serial) {
       Serial.print("C: ");
       Serial.println(driver->rms_current());

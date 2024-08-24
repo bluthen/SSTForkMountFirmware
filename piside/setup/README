@@ -1,6 +1,13 @@
-unzip 2021-01-11-raspios-buster-armhf-lite.zip 
-sudo dd if=2021-01-11-raspios-buster-armhf-lite.img of=/dev/sde bs=4M
-sync
+Raspberry pi imager to install image:
+  Custom settings
+  Set hostname: sstfork20240726
+  Set username: pi / sstfork pwd
+  Set locale
+  Services: enable sshe: allow public key
+
+#unzip 2021-01-11-raspios-buster-armhf-lite.zip 
+#sudo dd if=2021-01-11-raspios-buster-armhf-lite.img of=/dev/sde bs=4M
+#sync
 e2fsck -f /dev/sde2
 fdisk /dev/sde
   p
@@ -19,9 +26,6 @@ fdisk /dev/sde
   <partition 2's end>+1
   <enter>
   w
-mount /dev/sde1 /someplace
-touch /someplace/ssh; sync
-umount /dev/sde1
 resize2fs /dev/sde2
 mkfs.ext4 /dev/sde3
 sync
@@ -36,18 +40,16 @@ sudo reboot
 sudo raspi-config
         system options ->    boot options -> desktop/cli -> console
         system options -> network -> no wait on boot
-	localization -> change locale -> only enable (C&en_US ones, default en_US.UTF-8)
-	localization -> change timezone -> US -> Central
-	interfacing options -> ssh -> yes 
 	interfacing options -> serial -> no -> yes
         advanced->network -> interfaces names -> no 
 
 sudo reboot
 
-sudo apt install -y python3-pip git libblas3 libgfortran3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim avahi-utils astrometry.net imagemagick
+sudo apt install -y python3-pip git libblas3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim avahi-utils astrometry.net imagemagick
 
 # append fstab
 /dev/mmcblk0p3 /ssteq ext4 defaults,ro,noatime 0 2
+systemctl daemon-reload
 mkdir /ssteq
 mount /ssteq
 mount -o remount,rw /ssteq
@@ -55,7 +57,7 @@ mkdir -p /ssteq/piside
 mkdir -p /ssteq/setup
 chown -R pi /ssteq
 
-pip3 install pipenv
+pip3 install pipenv --break-system-packages
 
 
 # Copy piside code
@@ -66,92 +68,63 @@ ln -s /ssteq/piside/client_main/dist /ssteq/piside/client_main/dist/static
 export WORKON_HOME=/ssteq/piside/python_venvs
 pipenv sync 
 
-# Change password
-passwd
-
 #Copy setup scp -r setup pi@addr:/ssteq/
 # udev teensy files for controller
 sudo cp 49-teensy.rules /etc/udev/rules.d
 
 
+sudo cp hostapd.conf /etc/hostapd/hostapd.conf
+sudo bash -c "cat dnsmasq.conf.append >> /etc/dnsmasq.conf"
+sudo bash -c "echo ssteq20240724 > /etc/hostname"
+sudo cp interfaces.default /etc/network/interfaces.d/defaults
 
 
-#Edit /etc/dnsmasq.conf
-bogus-priv
-interface=wlan0
-dhcp-range=192.168.45.11,192.168.45.50,255.255.255.0,12h
-
-#log-facility=/var/log/dnsmasq.log
-#log-async
-#log-dhcp
-
-
-cp autohotspot /usr/bin/autohotspot
-chown root:root /usr/bin/autohotspot
-chmod 755 /usr/bin/autohotspot
-cp networkstartup.sh /root/
-ln -s /ssteq/piside/server/ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
+sudo cp autohotspot /usr/bin/autohotspot
+sudo chown root:root /usr/bin/autohotspot
+sudo chmod 755 /usr/bin/autohotspot
+sudo cp networkstartup.sh /root/
+sudo cp ctrl_dnsmasq.py /root/ctrl_dnsmasq.py
+sudo chmod 755 /root/networkstartup.sh
+sudo chmod 755 /root/ctrl_dnsmasq.py
+sudo cp wpa_supplicant.conf /etc/wpa_supplicant/
 
 
-#Append to dhcpcd.conf
-interface wlan0
-static ip_address=192.168.45.1/24
-denyinterfaces eth0
-denyinterfaces wlan0
-
-
-
-/etc/dhcp/dhclient.conf
-  timeout 15;
-
-
-/etc/rc.local
-/bin/hostname `cat /etc/hostname`
-
-
-systemctl disable ntp-client.service
 systemctl disable apt-daily.service
 systemctl disable apt-daily-upgrade.service
 systemctl disable dnsmasq.service
 systemctl disable hostapd.service
 systemctl disable bluetooth.service
+systemctl enable ntp.service
+
+
+
+/etc/rc.local:
+  /bin/hostname `cat /etc/hostname`
+
 
 cp ssteq25.service /etc/systemd/system/
 cp clearhomepyc.service /etc/systemd/system/
-cp dnsmasq-eth0.service /etc/systemd/system/
-cp autohotspot.service /etc/systemd/system/
-
-cp dnsmasq.eth0.conf /etc
-cp dnsmasq.eth0.sh /root
-cp interfaces.default /etc/network/interfaces.d/defaults
-cp wpa_supplicant.conf /etc/wpa_supplicant/
-cp hostapd.conf /etc/hostapd/
-cp hostname /etc/
-cp hosts /etc
-
-systemctl enable dnsmasq-eth0.service
 systemctl enable clearhomepyc.service 
 systemctl enable ssteq25
-systemctl enable autohotspot
 
+
+
+# Disable storage logs /etc/systemd/journald.conf
+```
+Storage=volatile
+RuntimeMaxUse=3M
+```
+# Set /etc/ssh/sshd_config to not allow password auth
+```
+PasswordAuthentication no
+```
 
 sudo bash /ssteq/setup/etc_symlinks_make.sh
 
 # Edit cron
 crontab -e
 */2 * * * * /usr/bin/autohotspot
-*/1 * * * * /root/dnsmasq.eth0.sh
-
-chmod a+x /root/dnsmasq.eth0.sh
-
-copy index data to /usr/share/astrometry
-
-rfkill unblock 0
 
 raspi-config
    performance->Overlay FS -> Yes -> Yes write protect
 
-#After reboot: dont need anymore
-#mount -o remount,rw /boot
-#Add to cmdline.txt
-#net.ifnames=0

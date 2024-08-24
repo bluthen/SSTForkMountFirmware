@@ -127,6 +127,46 @@ def set_last_slew_none():
         sls_debounce.start()
 
 
+def _ra_aminpsec_to_stppsec(arcmin_per_second):
+    """
+    arcmin/second to steps/second for RA
+    :param arcmin_per_second:
+    :return:
+    """
+    steps_per_degree = settings.settings['ra_ticks_per_degree']
+    return steps_per_degree * arcmin_per_second / 60.0
+
+
+def _ra_asecpsec_to_stppsec(arcsec_per_second):
+    """
+    arcsec/second to steps/second for RA
+    :param arcmin_per_second:
+    :return:
+    """
+    steps_per_degree = settings.settings['ra_ticks_per_degree']
+    return steps_per_degree * arcsec_per_second / (60.0 * 60.0)
+
+
+def _dec_aminpsec_to_stppsec(arcmin_per_second):
+    """
+    arcmin/second to steps/second for Dec
+    :param arcmin_per_second:
+    :return:
+    """
+    steps_per_degree = settings.settings['dec_ticks_per_degree']
+    return steps_per_degree * arcmin_per_second / 60.0
+
+
+def _dec_asecpsec_to_stppsec(arcsec_per_second):
+    """
+    arcmin/second to steps/second for Dec
+    :param arcmin_per_second:
+    :return:
+    """
+    steps_per_degree = settings.settings['dec_ticks_per_degree']
+    return steps_per_degree * arcsec_per_second / (60.0 * 60.0)
+
+
 def sync(coord):
     """
     :param coord:
@@ -150,7 +190,7 @@ def sync(coord):
                 print(hadec, stepper_coord)
                 altaz = skyconv.to_altaz(hadec)
                 skyconv.model_real_stepper.add_point(altaz, stepper_coord)
-            if settings.settings['pointing_remember']:
+            if settings.settings['pointing_model_remember']:
                 settings.save_pointing_model(skyconv.model_real_stepper)
         else:
             park_sync = False
@@ -162,7 +202,7 @@ def sync(coord):
                 if not isinstance(skyconv.model_real_stepper, pointing_model.PointingModelBuie):
                     skyconv.model_real_stepper = pointing_model.PointingModelBuie(max_points=settings.settings['pointing_model_points'])
                 skyconv.model_real_stepper.clear()
-                if settings.settings['pointing_remember']:
+                if settings.settings['pointing_model_remember']:
                     try:
                         skyconv.model_real_stepper = settings.load_pointing_model()
                     except:
@@ -174,7 +214,7 @@ def sync(coord):
                     skyconv.model_real_stepper = pointing_model.PointingModelAffine(max_points=settings.settings['pointing_model_points'])
                 altaz = skyconv.to_altaz(hadec)
                 skyconv.model_real_stepper.clear()
-                if settings.settings['pointing_remember']:
+                if settings.settings['pointing_model_remember']:
                     try:
                         skyconv.model_real_stepper = settings.load_pointing_model()
                     except:
@@ -322,14 +362,14 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
                     delta,
                     settings.settings['micro']['ra_accel_tpss'],
                     status['rs'],
-                    settings.settings['ra_slew_fastest'],
+                    _ra_aminpsec_to_stppsec(settings.settings['ra_slew_fastest']),
                     v_track, 'ra')
             else:
                 times = motion.calc_speed_sleeps(
                     delta,
                     settings.settings['micro']['dec_accel_tpss'],
                     status['ds'],
-                    settings.settings['dec_slew_fastest'],
+                    _dec_aminpsec_to_stppsec(settings.settings['dec_slew_fastest']),
                     0, 'dec'
                 )
 
@@ -737,11 +777,11 @@ def micro_update_settings():
     """
     Updates microcontroller runtime values with what is in settings.
     """
-    key_values = {'ra_max_tps': settings.settings['ra_slew_fastest'],
-                  'ra_guide_rate': settings.settings['micro']['ra_guide_rate'],
+    key_values = {'ra_max_tps': _ra_aminpsec_to_stppsec(settings.settings['ra_slew_fastest']),
+                  'ra_guide_rate': _ra_asecpsec_to_stppsec(settings.settings['micro']['ra_guide_rate']),
                   'ra_direction': settings.settings['micro']['ra_direction'],
-                  'dec_max_tps': settings.settings['dec_slew_fastest'],
-                  'dec_guide_rate': settings.settings['micro']['dec_guide_rate'],
+                  'dec_max_tps': _dec_aminpsec_to_stppsec(settings.settings['dec_slew_fastest']),
+                  'dec_guide_rate': _dec_asecpsec_to_stppsec(settings.settings['micro']['dec_guide_rate']),
                   'dec_direction': settings.settings['micro']['dec_direction'],
                   'dec_disable': settings.settings['micro']['dec_disable'],
                   'ra_disable': settings.settings['micro']['ra_disable'],
@@ -821,16 +861,16 @@ def guide_control(direction, time_ms):
     try:
         status = calc_status(stepper.get_status())
         if direction == 'n':
-            stepper.set_speed_dec(status['ds'] + settings.settings['micro']['dec_guide_rate'])
+            stepper.set_speed_dec(status['ds'] + _dec_asecpsec_to_stppsec(settings.settings['micro']['dec_guide_rate']))
             threading.Timer(time_ms / 1000.0, partial(stepper.set_speed_dec, status['ds']))
         elif direction == 's':
-            stepper.set_speed_dec(status['ds'] - settings.settings['micro']['dec_guide_rate'])
+            stepper.set_speed_dec(status['ds'] - _dec_asecpsec_to_stppsec(settings.settings['micro']['dec_guide_rate']))
             threading.Timer(time_ms / 1000.0, partial(stepper.set_speed_dec, status['ds']))
         elif direction == 'w':
-            stepper.set_speed_ra(status['rs'] + settings.settings['micro']['ra_guide_rate'])
+            stepper.set_speed_ra(status['rs'] + _ra_asecpsec_to_stppsec(settings.settings['micro']['ra_guide_rate']))
             threading.Timer(time_ms / 1000.0, partial(stepper.set_speed_ra, status['rs']))
         elif direction == 'e':
-            stepper.set_speed_ra(status['rs'] - settings.settings['micro']['ra_guide_rate'])
+            stepper.set_speed_ra(status['rs'] - _ra_asecpsec_to_stppsec(settings.settings['micro']['ra_guide_rate']))
             threading.Timer(time_ms / 1000.0, partial(stepper.set_speed_ra, status['rs']))
     except:
         traceback.print_exc()
@@ -910,13 +950,13 @@ def manual_control(direction, speed, client_id):
                 if OPPOSITE_MANUAL[direction] in timers:
                     return
                 if direction == 'left':
-                    stepper.set_speed_ra(-1.0 * settings.settings['ra_slew_' + speed])
+                    stepper.set_speed_ra(-1.0 * _ra_aminpsec_to_stppsec(settings.settings['ra_slew_' + speed]))
                 elif direction == 'right':
-                    stepper.set_speed_ra(settings.settings['ra_slew_' + speed])
+                    stepper.set_speed_ra(_ra_aminpsec_to_stppsec(settings.settings['ra_slew_' + speed]))
                 elif direction == 'up':
-                    stepper.set_speed_dec(settings.settings['dec_slew_' + speed])
+                    stepper.set_speed_dec(_dec_aminpsec_to_stppsec(settings.settings['dec_slew_' + speed]))
                 elif direction == 'down':
-                    stepper.set_speed_dec(-settings.settings['dec_slew_' + speed])
+                    stepper.set_speed_dec(-_dec_aminpsec_to_stppsec(settings.settings['dec_slew_' + speed]))
                 # We call this periodically if not alive it will cancel the slewing, if alive it will continue at
                 # speed we are at.
                 timers[direction] = threading.Timer(1, partial(manual_control, direction, speed, client_id))

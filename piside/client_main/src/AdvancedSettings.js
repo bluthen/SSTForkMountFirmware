@@ -27,17 +27,17 @@ const settings_map = {
     ra_track_rate: {display: 'RA Stepper Tracking', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
     empty00a: {type: 'empty', xs: 3},
 
-    ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
-    ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
-    ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
-    ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
+    ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
+    ra_slew_medium: {display: 'RA Medium Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
+    ra_slew_slower: {display: 'RA Slow Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
 
-    ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    ra_slew_slowest: {display: 'RA Slowest', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
     ra_guide_rate: {
         display: 'RA Guide',
         type: 'number',
         min: 0,
-        endAdornment: 'Step/s',
+        endAdornment: '"/s',
         jsonLevel: 'micro',
         xs: 3
     },
@@ -100,17 +100,17 @@ const settings_map = {
     },
     empty2: {type: 'empty', xs: 6},
 
-    dec_slew_fastest: {display: 'Dec Max Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
-    dec_slew_faster: {display: 'Dec Fast Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
-    dec_slew_medium: {display: 'Dec Medium Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
-    dec_slew_slower: {display: 'Dec Slow Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    dec_slew_fastest: {display: 'Dec Max Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
+    dec_slew_faster: {display: 'Dec Fast Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
+    dec_slew_medium: {display: 'Dec Medium Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
+    dec_slew_slower: {display: 'Dec Slow Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
 
-    dec_slew_slowest: {display: 'Dec Slowest Slew', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
+    dec_slew_slowest: {display: 'Dec Slowest Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
     dec_guide_rate: {
         display: 'Dec Stepper Guide',
         type: 'number',
         min: 0,
-        endAdornment: 'Step/s',
+        endAdornment: '"/s',
         jsonLevel: 'micro',
         xs: 3
     },
@@ -224,6 +224,7 @@ class AdvancedSettings extends React.Component {
     render() {
         const settings = [];
         let spinner = null;
+        let value;
         if (state.advancedSettings.fetching) {
             spinner = <CircularProgress/>;
         } else {
@@ -249,6 +250,7 @@ class AdvancedSettings extends React.Component {
                         label={settings_map[key].display}
                     /></Grid>);
                 } else {
+                    //value = settings_map[key]?.valueFunc?.(state.advancedSettings[key]) || state.advancedSettings[key];
                     settings.push(<Grid item key={key + this.uuid} xs={settings_map[key].xs}>
                         <TextField value={state.advancedSettings[key]}
                                    label={settings_map[key].display}
