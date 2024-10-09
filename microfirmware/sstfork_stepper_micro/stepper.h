@@ -5,6 +5,7 @@
 #include <QuadEncoder.h>
 #include "TeensyTimerTool.h"
 #include <TMCStepper.h>
+//#define R_SENSE 0.075f
 
 
 
@@ -70,7 +71,7 @@ private:
   void setStepResolution(bool _single_step);
   void setStepDirection(bool);
   void setRealSpeed(float speed);
-  void setCurrents();
+  void setCurrents(bool);
   void step();
   int id = -1;
   float v0 = 0;
@@ -91,10 +92,10 @@ private:
   bool stepper_enabled = true;
   float accell_tpss=1000.0;
   float current_real = -1;
-  float run_current = 0.1;
-  float med_current = 0.1;
+  float run_current = 100.0;
+  float med_current = 100.0;
   float med_current_threshold = 0;
-  float hold_current = 0.1;
+  float hold_current = 100.0;
   int step_pin;
   int dir_pin;
   float sp_speed = 0;

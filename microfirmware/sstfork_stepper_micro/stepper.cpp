@@ -23,8 +23,11 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   pinMode(step_pin, OUTPUT);
   //driver = new TMC5160Stepper(_cs_pin);
   //driver = new TMC5160Stepper(_cs_pin, 0.075f);
-  driver = new TMC5160Stepper(_cs_pin, _mosi_pin, _miso_pin, _sck_pin);
   //driver = new TMC5160Stepper(_cs_pin);
+
+  //driver = new TMC5160Stepper(_cs_pin, R_SENSE, _mosi_pin, _miso_pin, _sck_pin);
+  driver = new TMC5160Stepper(_cs_pin, _mosi_pin, _miso_pin, _sck_pin);
+
   driver->setSPISpeed(1000);
   driver->begin();
   delay(1000);
@@ -48,7 +51,7 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
 
 
 
-  this->setCurrents();
+  this->setCurrents(true);
 //  driver->pwm_autograd(true);
 //  driver->pwm_autoscale(true);
 //  driver->en_pwm_mode(false);
@@ -188,7 +191,7 @@ void Stepper::setRealSpeed(float speed) {
     // Must be 0.5 * desired period because square wave on and off.
     stepTimer->setPeriod(sp);
     v0 = speed;
-    setCurrents();
+    setCurrents(false);
   }
   if (stepper_stopped) {
     stepper_stopped = false;
@@ -306,23 +309,23 @@ bool Stepper::guidingDisabled() {
 }
 
 void Stepper::setRunCurrent(float _run_current) {
-  run_current = _run_current;
-  setCurrents();
+  run_current = _run_current > 1 ? _run_current : 1;
+  setCurrents(true);
 }
 
 void Stepper::setMedCurrent(float _med_current) {
-  med_current = _med_current;
-  setCurrents();
+  med_current = _med_current > 1 ? _med_current : 1;
+  setCurrents(true);
 }
 
 void Stepper::setMedCurrentThreshold(float _med_current_threshold) {
   med_current_threshold = _med_current_threshold;
-  setCurrents();
+  setCurrents(true);
 }
 
 void Stepper::setHoldCurrent(float _hold_current) {
-  hold_current = _hold_current;
-  setCurrents();
+  hold_current = _hold_current > 1 ? _hold_current : 1;
+  setCurrents(true);
 }
 
 float Stepper::getRunCurrent() {
@@ -341,8 +344,8 @@ float Stepper::getHoldCurrent() {
   return hold_current;
 }
 
-void Stepper::setCurrents() {
-  if (current_real != run_current && fabs(v0) >= med_current_threshold) {
+void Stepper::setCurrents(bool force) {
+  if ((force || current_real != run_current) && fabs(v0) >= med_current_threshold) {
     if (Serial) {
       Serial.print("C: ");
       Serial.println(driver->rms_current());
@@ -353,7 +356,7 @@ void Stepper::setCurrents() {
       Serial.print("C: ");
       Serial.println(driver->rms_current());
     }
-  } else if (current_real != med_current && fabs(v0) < med_current_threshold) {
+  } else if ((force || current_real != med_current) && fabs(v0) < med_current_threshold) {
     if (Serial) {
       Serial.print("C: ");
       Serial.println(driver->rms_current());
