@@ -135,7 +135,11 @@ const state = observable({
         dec_med_current: 0,
         dec_med_current_threshold: 0,
         ra_hold_current: 0,
-        dec_hold_current: 0
+        dec_hold_current: 0,
+        ra_backlash: 0,
+        ra_backlash_speed: 0,
+        dec_backlash: 0,
+        dec_backlash_speed: 0
     },
     calibrationLogs: [],
     calibrationTable: {

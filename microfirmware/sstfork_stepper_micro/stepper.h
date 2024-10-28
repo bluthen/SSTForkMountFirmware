@@ -5,7 +5,7 @@
 #include <QuadEncoder.h>
 #include "TeensyTimerTool.h"
 #include <TMCStepper.h>
-//#define R_SENSE 0.075f
+#define R_SENSE 0.075f
 
 
 
@@ -57,6 +57,12 @@ public:
   float getMedCurrentThreshold();
   float getHoldCurrent();
 
+  void setBacklash(int _backlash);
+  void setBlacklashSpeed(float _backlashSpeed);
+
+  int getBacklash();
+  float getBacklashSpeed();
+
   uint8_t test_connection();
 
   bool enabled();
@@ -72,7 +78,8 @@ private:
   void setStepDirection(bool);
   void setRealSpeed(float speed);
   void setCurrents(bool);
-  void step();
+  void step(bool);
+  void backlashSteps();
   int id = -1;
   float v0 = 0;
   float max_v0 = 35000;
@@ -107,6 +114,8 @@ private:
   elapsedMicros timer;
   elapsedMicros ptimer;
   TMC5160Stepper *driver = NULL;
+  int backlash = 0;
+  float backlashSpeed = 0;
 };
 
 #endif

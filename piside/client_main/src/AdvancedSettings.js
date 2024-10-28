@@ -26,6 +26,16 @@ const settings_map = {
     },
     ra_track_rate: {display: 'RA Stepper Tracking', type: 'number', min: 0, endAdornment: 'Step/s', xs: 3},
     empty00a: {type: 'empty', xs: 3},
+    ra_backlash: {display: 'RA Backlash', type: 'number', min: 0, endAdornment: 'Steps', xs: 3, jsonLevel: 'micro'},
+    ra_backlash_speed: {
+        display: 'RA Backlash Rate',
+        type: 'number',
+        min: 0,
+        endAdornment: 'Steps/s',
+        xs: 3,
+        jsonLevel: 'micro'
+    },
+    empty000aa: {type: 'empty', xs: 6},
 
     ra_slew_fastest: {display: 'RA Max Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
     ra_slew_faster: {display: 'RA Fast Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
@@ -98,7 +108,17 @@ const settings_map = {
         jsonLevel: 'micro',
         xs: 3
     },
-    empty2: {type: 'empty', xs: 6},
+    dec_backlash: {display: 'Dec Backlash', type: 'number', min: 0, endAdornment: 'Steps', xs: 3, jsonLevel: 'micro'},
+    dec_backlash_speed: {
+        display: 'Dec Backlash Rate',
+        type: 'number',
+        min: 0,
+        endAdornment: 'Steps/s',
+        xs: 3,
+        jsonLevel: 'micro'
+    },
+
+    //empty2: {type: 'empty', xs: 6},
 
     dec_slew_fastest: {display: 'Dec Max Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},
     dec_slew_faster: {display: 'Dec Fast Slew', type: 'number', min: 0, endAdornment: '\'/s', xs: 3},

@@ -1,4 +1,5 @@
 #include "stepper.h"
+#include "forkmount.h"
 
 static const int MICROSTEPS_IN_SINGLESTEP = 32;
 static const float CURRENT_TO_RMS = 0.7071;  // 1/sqrt(2) see page 74 of datasheet
@@ -25,32 +26,19 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   //driver = new TMC5160Stepper(_cs_pin, 0.075f);
   //driver = new TMC5160Stepper(_cs_pin);
 
-  //driver = new TMC5160Stepper(_cs_pin, R_SENSE, _mosi_pin, _miso_pin, _sck_pin);
-  driver = new TMC5160Stepper(_cs_pin, _mosi_pin, _miso_pin, _sck_pin);
+  driver = new TMC5160Stepper(_cs_pin, R_SENSE, _mosi_pin, _miso_pin, _sck_pin);
+  //driver = new TMC5160Stepper(_cs_pin, _mosi_pin, _miso_pin, _sck_pin);
 
   driver->setSPISpeed(1000);
   driver->begin();
-  delay(1000);
+  delay(100);
   this->test_connection();
   
-  if (Serial) {
-    Serial.print("GSTAT ");
-    Serial.print(id);
-    Serial.print(" - ");
-    Serial.println(driver->GSTAT());
-    Serial.print("GCONF ");
-    Serial.print(id);
-    Serial.print(" - ");
-    Serial.println(driver->GCONF());
-  }
-  //driver->pwm_autoscale(true);
-  driver->en_pwm_mode(false);
-  driver->intpol(true);
+  driver->pwm_autoscale(true);
+  driver->en_pwm_mode(true);
+  //driver->intpol(true);
   driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
   single_step = false;
-
-
-
   this->setCurrents(true);
 //  driver->pwm_autograd(true);
 //  driver->pwm_autoscale(true);
@@ -64,52 +52,40 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
     stepTimer = new TeensyTimerTool::PeriodicTimer();
   }
   setStepDirection(false);
-  this->step();
+  this->step(true);
   delay(50);
-  this->step();
+  this->step(true);
   delay(50);
   setStepDirection(true);
-  this->step();
+  this->step(true);
   delay(50);
-  this->step();
+  this->step(true);
   delay(50);
   stepTimer->begin([this] {
-    this->step();
+    this->step(true);
   }, 200ms, false);
 
   while(driver->microsteps() != MICROSTEPS_IN_SINGLESTEP) {
     driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
   }
-  if (Serial) {
-    Serial.print("GSTAT ");
-    Serial.print(id);
-    Serial.print(" - ");
-    Serial.println(driver->GSTAT());
-    Serial.print("GCONF ");
-    Serial.print(id);
-    Serial.print(" - ");
-    Serial.println(driver->GCONF());
-  }
 
-  this->test_connection();
-  // this->setSpeed(10000);
 }
 
 uint8_t Stepper::test_connection() {
   uint8_t tcv = driver->test_connection();
   while(tcv != 0) {
     if (Serial) {
-      Serial.print("WARN: Test connection failed ");
-      Serial.print(id);
-      Serial.print(", ");
-      Serial.println(tcv);
+      DEBUG_SERIAL.print("WARN: Test connection failed ");
+      DEBUG_SERIAL.print(id);
+      DEBUG_SERIAL.print(", ");
+      DEBUG_SERIAL.println(tcv);
     }
     delay(1000);
     tcv = driver->test_connection();
   } 
   if (Serial) {
-    Serial.print("Test Connection Good ");
-    Serial.println(id);
+    DEBUG_SERIAL.print("Test Connection Good ");
+    DEBUG_SERIAL.println(id);
   }
   return tcv;
 }
@@ -169,6 +145,7 @@ void Stepper::setRealSpeed(float speed) {
     stepTimer->stop();
     stepper_stopped = true;
     v0 = 0;
+    setCurrents(false);
     return;
   }
   float sp, dv;
@@ -199,6 +176,20 @@ void Stepper::setRealSpeed(float speed) {
   }
 }
 
+void Stepper::backlashSteps() {
+  stepper_stopped = true;
+  stepTimer->stop();
+  setStepResolution(true);
+  for(int i = 0; i < 2*backlash; i++) {
+    step(false);
+    if (backlashSpeed > 100) {
+      delayMicroseconds(500000/backlashSpeed);
+    } else {
+      delay(500/backlashSpeed);
+    }
+  }
+}
+
 void Stepper::setStepDirection(bool forward) {
   if (forward) {
     if (!inv_direction) {
@@ -206,12 +197,18 @@ void Stepper::setStepDirection(bool forward) {
     } else {
       digitalWrite(dir_pin, LOW);
     }
+    if(!mode_forward && backlash > 0 && backlashSpeed > 0) {
+      backlashSteps();
+    }
     mode_forward = true;
   } else {
     if (!inv_direction) {
       digitalWrite(dir_pin, LOW);
     } else {
       digitalWrite(dir_pin, HIGH);
+    }
+    if(mode_forward && backlash > 0 && backlashSpeed > 0) {
+      backlashSteps();
     }
     mode_forward = false;
   }
@@ -236,10 +233,10 @@ void Stepper::setStepResolution(bool _single_step) {
   }
 }
 
-void Stepper::step() {
+void Stepper::step(bool counters) {
   bool on = !digitalRead(step_pin);
   digitalWrite(step_pin, on);
-  if (on) {
+  if (counters && on) {
     if (mode_forward) {
       x0 += stepResolution;
     } else {
@@ -251,7 +248,11 @@ void Stepper::step() {
     if (encV != last_encoder) {
       prev_steps_in_pulse = steps_in_pulse;
       steps_in_pulse = 0;
-      last_encoder = encV;
+      if(counters) {
+        last_encoder = encV;
+      } else {
+        enc->write(last_encoder);
+      }
     } else {
       if (on) {
         if (mode_forward) {
@@ -324,7 +325,12 @@ void Stepper::setMedCurrentThreshold(float _med_current_threshold) {
 }
 
 void Stepper::setHoldCurrent(float _hold_current) {
-  hold_current = _hold_current > 1 ? _hold_current : 1;
+  // Setting 0 current doesn't work (at least if not doing ihold)
+  hold_current = _hold_current > 1 ? _hold_current : 100;
+  // if(Serial) {
+  //   DEBUG_SERIAL.print("Set hold current: ");
+  //   DEBUG_SERIAL.println(hold_current);
+  // }
   setCurrents(true);
 }
 
@@ -345,28 +351,36 @@ float Stepper::getHoldCurrent() {
 }
 
 void Stepper::setCurrents(bool force) {
-  if ((force || current_real != run_current) && fabs(v0) >= med_current_threshold) {
-    if (Serial) {
-      Serial.print("C: ");
-      Serial.println(driver->rms_current());
-    }
+  if ((force || current_real != run_current) && fabs(v0) >= med_current_threshold && fabs(v0) > 0.0f) {
     current_real = run_current;
-    driver->rms_current((uint16_t)(current_real), hold_current / current_real);
+    //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
+    driver->rms_current((uint16_t)(current_real));
     if (Serial) {
-      Serial.print("C: ");
-      Serial.println(driver->rms_current());
+      DEBUG_SERIAL.print("C1: ");
+      DEBUG_SERIAL.print(current_real);
+      DEBUG_SERIAL.print(", ");
+      DEBUG_SERIAL.println(driver->rms_current());
     }
-  } else if ((force || current_real != med_current) && fabs(v0) < med_current_threshold) {
-    if (Serial) {
-      Serial.print("C: ");
-      Serial.println(driver->rms_current());
-    }
+  } else if ((force || current_real != med_current) && fabs(v0) < med_current_threshold && fabs(v0) > 0.0f) {
     current_real = med_current;
-    driver->rms_current((uint16_t)(current_real), hold_current / current_real);
+    //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
+    driver->rms_current((uint16_t)(current_real));
     if (Serial) {
-      Serial.print("C: ");
-      Serial.println(driver->rms_current());
+      DEBUG_SERIAL.print("C2: ");
+      DEBUG_SERIAL.print(current_real);
+      DEBUG_SERIAL.print(", ");
+      DEBUG_SERIAL.println(driver->rms_current());
     }
+  } else if ((force || current_real != hold_current) && fabs(v0) == 0.0f) {
+    current_real = hold_current;
+    //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
+    driver->rms_current((uint16_t)(current_real));
+    if (Serial) {
+      DEBUG_SERIAL.print("C3: ");
+      DEBUG_SERIAL.print(current_real);
+      DEBUG_SERIAL.print(", ");
+      DEBUG_SERIAL.println(driver->rms_current());
+    }    
   }
 }
 
@@ -409,6 +423,22 @@ void Stepper::calcNewV(float a, float v_0, double t, float speed_wanted,
     v = a * t + v_0;
   }
   new_speed = v;
+}
+
+void Stepper::setBacklash(int _backlash) {
+  backlash = _backlash;
+}
+
+void Stepper::setBlacklashSpeed(float _backlashSpeed) {
+  backlashSpeed = _backlashSpeed;
+}
+
+int Stepper::getBacklash() {
+  return backlash;
+}
+
+float Stepper::getBacklashSpeed() {
+  return backlashSpeed;
 }
 
 // void Stepper::motion_func(float a, float v_0, long x_0, double t, float

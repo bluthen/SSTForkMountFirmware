@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include "stepper.h"
+#define DEBUG_SERIAL if(sst_debug)Serial
+
 
 extern bool sst_debug;
 

@@ -77,8 +77,6 @@ void Command::command_set_var() {
     raStepper->setRunCurrent(value);
   } else if (strcmp(argName, "ra_med_current") == 0) {
     raStepper->setMedCurrent(value);
-  } else if (strcmp(argName, "ra_med_threshold") == 0) {
-    raStepper->setMedCurrent(value);
   } else if (strcmp(argName, "ra_med_current_threshold") == 0) {
     raStepper->setMedCurrentThreshold(value);
   } else if (strcmp(argName, "ra_hold_current") == 0) {
@@ -91,6 +89,14 @@ void Command::command_set_var() {
     decStepper->setMedCurrentThreshold(value);
   } else if (strcmp(argName, "dec_hold_current") == 0) {
     decStepper->setHoldCurrent(value);
+  } else if (strcmp(argName, "ra_backlash") == 0) {
+    raStepper->setBacklash((int)value);
+  } else if (strcmp(argName, "ra_backlash_speed") == 0) {
+    raStepper->setBlacklashSpeed(value);
+  } else if (strcmp(argName, "dec_backlash") == 0) {
+    decStepper->setBacklash((int)value);
+  } else if (strcmp(argName, "dec_backlash_speed") == 0) {
+    decStepper->setBlacklashSpeed(value);
   } else {
     port->print("ERROR: Invalid variable name '");
     port->print(argName);
@@ -172,6 +178,15 @@ void Command::command_status() {
   port->println(decStepper->getMedCurrentThreshold());
   port->print("dec_hold_current=");
   port->println(decStepper->getHoldCurrent());
+
+  port->print("ra_backlash=");
+  port->println(raStepper->getBacklash());
+  port->print("ra_backlash_speed=");
+  port->println(raStepper->getBacklashSpeed());
+  port->print("dec_backlash=");
+  port->println(decStepper->getBacklash());
+  port->print("dec_backlash_speed=");
+  port->println(decStepper->getBacklashSpeed());
 
   port->print("debug:");
   port->println(sst_debug);

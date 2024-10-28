@@ -73,7 +73,7 @@ void setup() {
 
   delay(1000);
   if (Serial) {
-    Serial.println("Begin");
+    DEBUG_SERIAL.println("Begin");
   }
   //SPI.begin();
 
@@ -83,6 +83,7 @@ void setup() {
   decStepper = new Stepper(DEC_DIR_PIN, DEC_STEP_PIN,
                            DEC_CS_PIN, DEC_MISO_PIN, DEC_MOSI_PIN, DEC_SCK_PIN, 
                            2, DEC_ENC_A_PIN, DEC_ENC_B_PIN, 1);
+
   //raStepper->setSpeed(0.0);
   //decStepper->setSpeed(0.0);
   autoguide_init();
