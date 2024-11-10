@@ -33,14 +33,26 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   driver->begin();
   delay(100);
   this->test_connection();
-  
-  driver->pwm_autoscale(true);
-  driver->en_pwm_mode(true);
-  //driver->intpol(true);
-  driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
-  single_step = false;
+  driver->toff(5);
   this->setCurrents(true);
-//  driver->pwm_autograd(true);
+
+  // Somewhat working.
+  driver->en_pwm_mode(true);
+  driver->pwm_autoscale(true);
+  driver->intpol(true);
+  
+  
+  // driver->en_spreadCycle(true);
+  //driver->pwm_autograd(true);
+  //driver->chm(false));
+  //driver->TPWMTHRS(0);
+  //driver->TCOOLTHRS(1000000);
+
+  DEBUG_SERIAL.print("vhighfs: "); DEBUG_SERIAL.println(driver->vhighfs());
+  driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
+  driver->dedge(true);
+  single_step = false;
+
 //  driver->pwm_autoscale(true);
 //  driver->en_pwm_mode(false);
 
@@ -52,15 +64,15 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
     stepTimer = new TeensyTimerTool::PeriodicTimer();
   }
   setStepDirection(false);
-  this->step(true);
-  delay(50);
-  this->step(true);
-  delay(50);
+  for(int i = 0; i < 8; i++) {
+    this->step(true);
+    delay(50);
+  }
   setStepDirection(true);
-  this->step(true);
-  delay(50);
-  this->step(true);
-  delay(50);
+  for(int i = 0; i < 8; i++) {
+    this->step(true);
+    delay(50);
+  }
   stepTimer->begin([this] {
     this->step(true);
   }, 200ms, false);
@@ -91,6 +103,7 @@ uint8_t Stepper::test_connection() {
 }
 
 void Stepper::setSpeed(float speed) {
+  DEBUG_SERIAL.println(driver->DRV_STATUS(), BIN);
   sp_speed = speed;
   timer = 0;
 }
@@ -160,12 +173,12 @@ void Stepper::setRealSpeed(float speed) {
   if (dv > 0.001) {
     if (micro_threshold_v > 0 && fabs(speed) > micro_threshold_v) {
       setStepResolution(true);
-      sp = 1000000.0 / (2.0 * fabs(speed)/MICROSTEPS_IN_SINGLESTEP);  // us
+      sp = 1000000.0 / (fabs(speed)/MICROSTEPS_IN_SINGLESTEP);  // us
     } else {
       setStepResolution(false);
-      sp = 1000000.0 / (2.0*fabs(speed));  // us
+      sp = 1000000.0 / (fabs(speed));  // us
     }
-    // Must be 0.5 * desired period because square wave on and off.
+    // If dedge is false, Must be 0.5 * desired period because square wave on and off. otherwise can be period
     stepTimer->setPeriod(sp);
     v0 = speed;
     setCurrents(false);
@@ -177,17 +190,25 @@ void Stepper::setRealSpeed(float speed) {
 }
 
 void Stepper::backlashSteps() {
-  stepper_stopped = true;
   stepTimer->stop();
-  setStepResolution(true);
-  for(int i = 0; i < 2*backlash; i++) {
+  setStepResolution(false);
+  for(int i = 0; i < backlash; i++) {
     step(false);
     if (backlashSpeed > 100) {
-      delayMicroseconds(500000/backlashSpeed);
+      delayMicroseconds(1000000/backlashSpeed);
     } else {
-      delay(500/backlashSpeed);
+      delay(1000/backlashSpeed);
     }
   }
+  if (!stepper_stopped) {
+    stepTimer->start();
+  }
+  DEBUG_SERIAL.print("D: Done Backlash: ");
+  DEBUG_SERIAL.print(driver->GCONF());
+  DEBUG_SERIAL.print(" ");
+  DEBUG_SERIAL.print(driver->GSTAT());
+  DEBUG_SERIAL.print(" ");
+  DEBUG_SERIAL.println(driver->SW_MODE());
 }
 
 void Stepper::setStepDirection(bool forward) {
@@ -385,6 +406,7 @@ void Stepper::setCurrents(bool force) {
 }
 
 void Stepper::update() {
+  // 30000
   if (timer < 30000) {
     return;
   }
