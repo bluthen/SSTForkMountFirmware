@@ -794,7 +794,12 @@ def micro_update_settings():
                   'dec_med_current': settings.settings['micro']['dec_med_current'],
                   'dec_med_current_threshold': settings.settings['micro']['dec_med_current_threshold'],
                   'ra_hold_current': settings.settings['micro']['ra_hold_current'],
-                  'dec_hold_current': settings.settings['micro']['dec_hold_current']}
+                  'dec_hold_current': settings.settings['micro']['dec_hold_current'],
+                  'dec_backlash': settings.settings['micro']['dec_backlash'],
+                  'dec_backlash_speed': settings.settings['micro']['dec_backlash_speed'],
+                  'ra_backlash': settings.settings['micro']['ra_backlash'],
+                  'ra_backlash_speed': settings.settings['micro']['ra_backlash_speed'],
+                  }
     stepper.update_settings(key_values)
     if settings.runtime_settings['tracking']:
         stepper.set_speed_ra(settings.settings['ra_track_rate'])

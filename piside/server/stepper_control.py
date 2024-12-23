@@ -10,7 +10,8 @@ class StepperControl:
                                'dec_direction', 'dec_disable', 'ra_disable', 'ra_accel_tpss',
                                'dec_accel_tpss', 'ra_run_current', 'dec_run_current', 'ra_med_current',
                                'dec_med_current', 'ra_med_current_threshold', 'dec_med_current_threshold',
-                               'ra_hold_current', 'dec_hold_current']
+                               'ra_hold_current', 'dec_hold_current', 'ra_backlash', 'dec_backlash',
+                               'ra_backlash_speed', 'dec_backlash_speed']
 
     def __read_serial_until_prompt(self):
         s = ""
