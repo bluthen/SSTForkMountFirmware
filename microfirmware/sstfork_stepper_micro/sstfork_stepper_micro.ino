@@ -19,9 +19,9 @@ static const int DEC_ENC_B_PIN = 4;
 static const int RA_DIR_PIN = 7;
 static const int RA_STEP_PIN = 8;
 static const int RA_CS_PIN = 10;
-static const int RA_MISO_PIN = 9;
-static const int RA_SCK_PIN = 11;
-static const int RA_MOSI_PIN = 12;
+static const int RA_MISO_PIN = 16;
+static const int RA_SCK_PIN = 18;
+static const int RA_MOSI_PIN = 19;
 
 static const int DEC_DIR_PIN = 14;
 static const int DEC_STEP_PIN = 15;
@@ -29,6 +29,8 @@ static const int DEC_CS_PIN = 17;
 static const int DEC_MISO_PIN = 16;
 static const int DEC_SCK_PIN = 18;
 static const int DEC_MOSI_PIN = 19;
+
+static const int LED_PIN = 13;
 
 const static int AUTOGUIDE_DEC_NEGY_PIN = 15;
 const static int AUTOGUIDE_DEC_POSY_PIN = 14;
@@ -60,10 +62,13 @@ void setup() {
   digitalWrite(DEC_CS_PIN, HIGH);
   pinMode(RA_CS_PIN, OUTPUT);
   digitalWrite(RA_CS_PIN, HIGH);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
 
   while (!Serial && millis() < 2000) {
 
   }
+  digitalWrite(LED_PIN, LOW);
   if (Serial) {
     Serial.begin(115200);
     usbCommand = new Command(&Serial);
@@ -77,12 +82,12 @@ void setup() {
   }
   //SPI.begin();
 
-  raStepper = new Stepper(RA_DIR_PIN, RA_STEP_PIN,
-                          RA_CS_PIN, RA_MISO_PIN, RA_MOSI_PIN, RA_SCK_PIN, 
-                          1, RA_ENC_A_PIN, RA_ENC_B_PIN, 0);
   decStepper = new Stepper(DEC_DIR_PIN, DEC_STEP_PIN,
                            DEC_CS_PIN, DEC_MISO_PIN, DEC_MOSI_PIN, DEC_SCK_PIN, 
                            2, DEC_ENC_A_PIN, DEC_ENC_B_PIN, 1);
+  raStepper = new Stepper(RA_DIR_PIN, RA_STEP_PIN,
+                          RA_CS_PIN, RA_MISO_PIN, RA_MOSI_PIN, RA_SCK_PIN, 
+                          1, RA_ENC_A_PIN, RA_ENC_B_PIN, 0);
 
   //raStepper->setSpeed(0.0);
   //decStepper->setSpeed(0.0);
@@ -90,9 +95,11 @@ void setup() {
   if (Serial && usbCommand != NULL) {
     Serial.print(F("StarSync Tracker Fork Mount "));
     Serial.println(sstversion);
+    Serial.print("$ ");
   }
   Serial1.print(F("StarSync Tracker Fork Mount "));
   Serial1.println(sstversion);
+  Serial1.print("$ ");
 }
 
 uint8_t status = 0;

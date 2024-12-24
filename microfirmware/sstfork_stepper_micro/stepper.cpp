@@ -4,6 +4,7 @@
 static const int MICROSTEPS_IN_SINGLESTEP = 32;
 static const float CURRENT_TO_RMS = 0.7071;  // 1/sqrt(2) see page 74 of datasheet
 // GLOBALSCALER/256  *  (CS + 1)/32  *  V_FS/R_SENSE  *  1/sqrt(2)
+static const bool STEP_DEDGE = true; // Step on rising or falling edge
 
 template<typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
@@ -36,25 +37,14 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   driver->toff(5);
   this->setCurrents(true);
 
-  // Somewhat working.
   driver->en_pwm_mode(true);
   driver->pwm_autoscale(true);
   driver->intpol(true);
   
-  
-  // driver->en_spreadCycle(true);
-  //driver->pwm_autograd(true);
-  //driver->chm(false));
-  //driver->TPWMTHRS(0);
-  //driver->TCOOLTHRS(1000000);
-
   DEBUG_SERIAL.print("vhighfs: "); DEBUG_SERIAL.println(driver->vhighfs());
   driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
-  driver->dedge(true);
+  driver->dedge(STEP_DEDGE);
   single_step = false;
-
-//  driver->pwm_autoscale(true);
-//  driver->en_pwm_mode(false);
 
   if (id == 0) {
     stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT1);
@@ -179,7 +169,7 @@ void Stepper::setRealSpeed(float speed) {
       sp = 1000000.0 / (fabs(speed));  // us
     }
     // If dedge is false, Must be 0.5 * desired period because square wave on and off. otherwise can be period
-    stepTimer->setPeriod(sp);
+    stepTimer->setPeriod((STEP_DEDGE ? 1.0 : 0.5) * sp);
     v0 = speed;
     setCurrents(false);
   }
@@ -192,12 +182,12 @@ void Stepper::setRealSpeed(float speed) {
 void Stepper::backlashSteps() {
   stepTimer->stop();
   setStepResolution(false);
-  for(int i = 0; i < backlash; i++) {
+  for(int i = 0; i < (STEP_DEDGE ? 1 : 2) * backlash; i++) {
     step(false);
     if (backlashSpeed > 100) {
-      delayMicroseconds(1000000/backlashSpeed);
+      delayMicroseconds((STEP_DEDGE ? 1 : 0.5) * 1000000/backlashSpeed);
     } else {
-      delay(1000/backlashSpeed);
+      delay((STEP_DEDGE ? 1 : 0.5) * 1000/backlashSpeed);
     }
   }
   if (!stepper_stopped) {
@@ -257,7 +247,7 @@ void Stepper::setStepResolution(bool _single_step) {
 void Stepper::step(bool counters) {
   bool on = !digitalRead(step_pin);
   digitalWrite(step_pin, on);
-  if (counters && on) {
+  if (counters && (STEP_DEDGE || on)) {
     if (mode_forward) {
       x0 += stepResolution;
     } else {
@@ -275,7 +265,7 @@ void Stepper::step(bool counters) {
         enc->write(last_encoder);
       }
     } else {
-      if (on) {
+      if (STEP_DEDGE || on) {
         if (mode_forward) {
           steps_in_pulse += stepResolution;
         } else {
