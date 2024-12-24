@@ -57,6 +57,8 @@ public:
   float getMedCurrentThreshold();
   float getHoldCurrent();
 
+  float getCurrentReal();
+
   void setBacklash(int _backlash);
   void setBlacklashSpeed(float _backlashSpeed);
 

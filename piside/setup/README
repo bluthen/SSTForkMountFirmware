@@ -60,7 +60,7 @@ chown -R pi /ssteq
 pip3 install pipenv --break-system-packages
 
 
-# Copy piside code
+# Copy piside code: server, client_main, and client_advanced_slew_limits
 ln -s /ssteq/piside/client_main/dist /ssteq/piside/client_main/dist/static
 # Copy object database
 

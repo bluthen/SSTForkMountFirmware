@@ -395,6 +395,10 @@ void Stepper::setCurrents(bool force) {
   }
 }
 
+float Stepper::getCurrentReal() {
+  return current_real;
+}
+
 void Stepper::update() {
   // 30000
   if (timer < 30000) {

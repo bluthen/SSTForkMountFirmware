@@ -44,6 +44,9 @@ void Command::command_set_var() {
     return;
   }
   value = atof(argVal);
+  DEBUG_SERIAL.print(argName);
+  DEBUG_SERIAL.print(": ");
+  DEBUG_SERIAL.println(value);
 
   if (strcmp(argName, "ra_max_tps") == 0) {
     raStepper->setMaxSpeed(value);
@@ -78,6 +81,8 @@ void Command::command_set_var() {
   } else if (strcmp(argName, "ra_med_current") == 0) {
     raStepper->setMedCurrent(value);
   } else if (strcmp(argName, "ra_med_current_threshold") == 0) {
+    DEBUG_SERIAL.print("ra_med_current_threshold");
+    DEBUG_SERIAL.println(value);
     raStepper->setMedCurrentThreshold(value);
   } else if (strcmp(argName, "ra_hold_current") == 0) {
     raStepper->setHoldCurrent(value);
@@ -187,6 +192,13 @@ void Command::command_status() {
   port->println(decStepper->getBacklash());
   port->print("dec_backlash_speed=");
   port->println(decStepper->getBacklashSpeed());
+
+
+  port->print("ra_current_real=");
+  port->println(raStepper->getCurrentReal());
+  port->print("dec_current_real=");
+  port->println(decStepper->getCurrentReal());
+
 
   port->print("debug:");
   port->println(sst_debug);
