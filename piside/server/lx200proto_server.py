@@ -9,6 +9,8 @@ import settings
 import typing
 import sys
 
+DEBUG_PROT = False
+
 ourport = 10002
 kill = False
 lx200Clients = {}
@@ -152,9 +154,9 @@ class LX200Client:
 
         # self.re_set_field_diameter = re.compile(':SF(\\d\\d\\d)#')
 
-        self.re_set_site_long = re.compile(':Sg(\\d\\d\\d)[:*](\\d\\d)#')
+        self.re_set_site_long = re.compile(':Sg([-+]?\\d+)[:*](\\d+)#')
 
-        self.re_set_site_hours_add_utc = re.compile(':SG ?([-+])(\\d?\\d(\\.\\d)?)#')
+        self.re_set_site_hours_add_utc = re.compile(':SG ?([-+])?(\\d+(\\.\\d+)?)#')
         self.re_set_dst = re.compile(':SH(\\d)#')
 
         # self.re_set_max_object_elevation = re.compile(':Sh(\\d\\d)#')
@@ -168,8 +170,8 @@ class LX200Client:
 
         # self.re_set_backlash_home_sensor = re.compile(':Sp[BHS].*#')
 
-        self.re_set_target_object_ra = re.compile(':Sr ?(\\d\\d):(\\d\\d\\.\\d)#')
-        self.re_set_target_object_ra_hp = re.compile(':Sr ?(\\d\\d):(\\d\\d):(\\d\\d)#')
+        self.re_set_target_object_ra = re.compile(':Sr ?(\\d+):(\\d+\\.\\d+)#')
+        self.re_set_target_object_ra_hp = re.compile(':Sr ?(\\d+):(\\d+):(\\d+)#')
 
         # self.re_set_largest_find = re.compile(':Ss(\\d\\d\\d)#')
 
@@ -190,35 +192,37 @@ class LX200Client:
         self.utc_offset = None
 
     def read(self):
-        buffer = ""
-        max_buffer = 1024
-        while not kill:
-            b = self.socket.recv(1024)
-            # print('read2', b)
-            if len(b) == 0:
-                # print('Socket done')
-                return
-            buffer += b.decode('utf8')
-            # print('Buffer: ', buffer)
+        try:
             cmdbuf = ""
-            last_idx = -1
-            for i in range(len(buffer)):
-                c = buffer[i]
-                if c == '\x06':  # Alignment Query
-                    last_idx = i
-                    self.write(b'P')
-                    continue
-                if len(cmdbuf) == 0 and c == ':':
-                    cmdbuf = ':'
-                elif len(cmdbuf) > 0:
-                    cmdbuf += c
-                    if c == '#':
+            while not kill:
+                b = self.socket.recv(1024)
+                # print('read2', b)
+                if len(b) == 0:
+                    # print('Socket done')
+                    return
+                buffer = b.decode('utf8').strip()
+                if DEBUG_PROT:
+                    print("Buffer ", buffer)
+                for i in range(len(buffer)):
+                    c = buffer[i]
+                    if c == '\x06':  # Alignment Query
+                        self.write(b'P')
+                        continue
+                    if len(cmdbuf) == 0 and c == ':':
+                        cmdbuf = ':'
+                    elif len(cmdbuf) > 0:
+                        cmdbuf += c
+                    if len(cmdbuf) > 2 and c == '#':
+                        if DEBUG_PROT:
+                            print("Process: ", cmdbuf)
                         self.process(cmdbuf)
-                        last_idx = i
                         cmdbuf = ''
-            buffer = buffer[last_idx + 1:]
-            if len(buffer) > max_buffer:
-                buffer = ""
+                if len(cmdbuf) > 1024:
+                    cmdbuf = ""
+        except KeyboardInterrupt:
+            raise
+        except:
+            traceback.print_exc()
 
     def process(self, cmd):
         global set_utc_offset, localtime_daylight_savings, slew_speed, target, slew_intervals, slewing_time_buffer
@@ -226,14 +230,6 @@ class LX200Client:
         control.set_alive(self.client_id)
         if cmd == ':Aa#':  # Start automatic alignment sequence
             self.write(b'0')
-        elif cmd == ':FB#':  # Query focus busy status
-            self.write(b'0')
-        elif cmd[1] == 'D':  # PRIORITY
-            # If slewing hashes till how close we are? 0-8 #
-            if slewing_time_buffer or control.last_status['slewing']:
-                self.write(b'\x7f\x7f#')
-            else:
-                self.write(b'#')  # or is it b'' ?
         elif cmd == ':CM#':
             # Sychronize with current selected object coords PRIORITY DONE
             if target['ra'] and target['dec']:
@@ -244,6 +240,14 @@ class LX200Client:
                 self.write(b'M31 EX GAL MAG 3.5 SZ178.0\'#')
             else:
                 print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
+        elif cmd[1] == 'D':  # PRIORITY
+            # If slewing hashes till how close we are? 0-8 #
+            if slewing_time_buffer or control.last_status['slewing']:
+                self.write(b'\x7f\x7f#')
+            else:
+                self.write(b'#')  # or is it b'' ?
+        elif cmd == ':FB#':  # Query focus busy status
+            self.write(b'0')
         elif cmd[1] == 'G':
             if cmd == ':Ga#':  # Get Local Telescope Time in 12 Hour Format
                 # self.write(b'HH:MM:SS#')
@@ -272,7 +276,13 @@ class LX200Client:
                 self.write(b's10.1#')
             elif cmd == ':GG#':  # utc offset time PRIORITY DONE
                 # self.write(b'sHH.H#')
-                self.write(("s%02.1f#" % (set_utc_offset,)).encode())
+                s = ""
+                if set_utc_offset > 0:
+                    s = "+"
+                if set_utc_offset.is_integer():
+                    self.write(("%s%02d#" % (s, int(set_utc_offset),)).encode())
+                else:
+                    self.write(("%s%04.1f#" % (s, set_utc_offset,)).encode())
             elif cmd == ':Gg#':  # currente site longitude PRIORITY DONE
                 # TODO: dec says east should be negative, is that true?
                 # self.write(b'sDDD*MM#')
@@ -300,7 +310,7 @@ class LX200Client:
             elif cmd == ':GO#':  # Get Site 3 name
                 self.write(b'site3#')
             elif cmd == ':GP#':  # Get site 4 name
-                self.write(b'site4')
+                self.write(b'site4#')
             elif cmd == ':Go#':  # Lower altitude limit
                 self.write(b'00*#')
             elif cmd == ':Gq#':  # min quality for find
@@ -316,7 +326,7 @@ class LX200Client:
             elif cmd == ':Gs#':  # smaller size limit returned by find
                 self.write(b'100\'#')
             elif cmd == ':GT#':  # Tracking rate in hz #PRIORITY DONE
-                self.write(b'60.0#')
+                self.write(b'59.8#')
             elif cmd == ':Gt#':  # current site latitude # PRIORITY DONE
                 # self.write(b'sDD*MM#') s is sign
                 lat = settings.runtime_settings['earth_location'].lat.deg
