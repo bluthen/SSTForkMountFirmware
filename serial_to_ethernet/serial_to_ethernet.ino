@@ -45,16 +45,20 @@ void setup() {
 
 
 void loop() {
+  int connectCounter = 0;
   if(!qn::Ethernet.linkState()) {
+    client.stop();
     DEBUG_SERIAL.println("Ethernet cable is not connected.");
     qn::Ethernet.waitForLink(1000);
     DEBUG_SERIAL.print("linkState: ");
     DEBUG_SERIAL.println(qn::Ethernet.linkState());
   } else if(!client.connected()) {
-    DEBUG_SERIAL.println("Client disconnected");
+    DEBUG_SERIAL.println("Trying to connect client");
     client.stop();
     delay(10);
-    while (!client.connected()) {
+    connectCounter += 1;
+    while (!client.connected() || connectCounter > 300) {
+      connectCounter++;
       client.connect(mount, 10002);
       delay(10);
     }
