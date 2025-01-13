@@ -3,7 +3,6 @@
 
 
 #include <QuadEncoder.h>
-#include "TeensyTimerTool.h"
 #include <TMCStepper.h>
 #define R_SENSE 0.075f
 
@@ -84,7 +83,8 @@ private:
   void backlashSteps();
   int id = -1;
   float v0 = 0;
-  float max_v0 = 35000;
+  float vt = 0;
+  float max_v = 35000;
   volatile long x0 = 0;
   volatile bool mode_forward = true;
   volatile long last_encoder = 0;
@@ -98,10 +98,11 @@ private:
   int guiding = 0;
   bool guiding_enabled = false;
 
+  unsigned long period_us = 0;
   bool stepper_enabled = true;
-  float accell_tpss=1000.0;
+  float accell_tpss=8000.0;
   float current_real = -1;
-  float run_current = 100.0;
+  float run_current = 1100.0;
   float med_current = 100.0;
   float med_current_threshold = 0;
   float hold_current = 100.0;
@@ -112,9 +113,8 @@ private:
   long micro_threshold_v = 0;
   bool single_step = false;
   QuadEncoder *enc = NULL;
-  TeensyTimerTool::PeriodicTimer *stepTimer = NULL;
   elapsedMicros timer;
-  elapsedMicros ptimer;
+  elapsedMicros step_timer;
   TMC5160Stepper *driver = NULL;
   int backlash = 0;
   float backlashSpeed = 0;

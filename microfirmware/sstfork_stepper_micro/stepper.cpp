@@ -41,18 +41,10 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   driver->pwm_autoscale(true);
   driver->intpol(true);
   
-  DEBUG_SERIAL.print("vhighfs: "); DEBUG_SERIAL.println(driver->vhighfs());
   driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
   driver->dedge(STEP_DEDGE);
   single_step = false;
 
-  if (id == 0) {
-    stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT1);
-  } else if (id == 1) {
-    stepTimer = new TeensyTimerTool::PeriodicTimer(TeensyTimerTool::GPT2);
-  } else {
-    stepTimer = new TeensyTimerTool::PeriodicTimer();
-  }
   setStepDirection(false);
   for(int i = 0; i < 8; i++) {
     this->step(true);
@@ -63,9 +55,6 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
     this->step(true);
     delay(50);
   }
-  stepTimer->begin([this] {
-    this->step(true);
-  }, 200ms, false);
 
   while(driver->microsteps() != MICROSTEPS_IN_SINGLESTEP) {
     driver->microsteps(MICROSTEPS_IN_SINGLESTEP);
@@ -76,19 +65,15 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
 uint8_t Stepper::test_connection() {
   uint8_t tcv = driver->test_connection();
   while(tcv != 0) {
-    if (Serial) {
-      DEBUG_SERIAL.print("WARN: Test connection failed ");
-      DEBUG_SERIAL.print(id);
-      DEBUG_SERIAL.print(", ");
-      DEBUG_SERIAL.println(tcv);
-    }
+    DEBUG_SERIAL.print("WARN: Test connection failed ");
+    DEBUG_SERIAL.print(id);
+    DEBUG_SERIAL.print(", ");
+    DEBUG_SERIAL.println(tcv);
     delay(1000);
     tcv = driver->test_connection();
   } 
-  if (Serial) {
-    DEBUG_SERIAL.print("Test Connection Good ");
-    DEBUG_SERIAL.println(id);
-  }
+  DEBUG_SERIAL.print("Test Connection Good ");
+  DEBUG_SERIAL.println(id);
   return tcv;
 }
 
@@ -96,10 +81,11 @@ void Stepper::setSpeed(float speed) {
   DEBUG_SERIAL.println(driver->DRV_STATUS(), BIN);
   sp_speed = speed;
   timer = 0;
+  v0 = vt;
 }
 
 float Stepper::getSpeed() {
-  return v0;
+  return vt;
 }
 
 long Stepper::getPosition() {
@@ -143,44 +129,8 @@ bool Stepper::encoderEnabled() {
   return enc_enabled;
 }
 
-void Stepper::setRealSpeed(float speed) {
-  if (fabs(speed) < 0.05) {
-    stepTimer->stop();
-    stepper_stopped = true;
-    v0 = 0;
-    setCurrents(false);
-    return;
-  }
-  float sp, dv;
-  if (speed > 0) {
-    setStepDirection(true);
-  } else {
-    setStepDirection(false);
-  }
-  dv = fabs(v0-speed);
-  // Only bother changing frequency if speed different is more than 1 step per
-  // 1000 seconds.
-  if (dv > 0.001) {
-    if (micro_threshold_v > 0 && fabs(speed) > micro_threshold_v) {
-      setStepResolution(true);
-      sp = 1000000.0 / (fabs(speed)/MICROSTEPS_IN_SINGLESTEP);  // us
-    } else {
-      setStepResolution(false);
-      sp = 1000000.0 / (fabs(speed));  // us
-    }
-    // If dedge is false, Must be 0.5 * desired period because square wave on and off. otherwise can be period
-    stepTimer->setPeriod((STEP_DEDGE ? 1.0 : 0.5) * sp);
-    v0 = speed;
-    setCurrents(false);
-  }
-  if (stepper_stopped) {
-    stepper_stopped = false;
-    stepTimer->start();
-  }
-}
 
 void Stepper::backlashSteps() {
-  stepTimer->stop();
   setStepResolution(false);
   for(int i = 0; i < (STEP_DEDGE ? 1 : 2) * backlash; i++) {
     step(false);
@@ -189,9 +139,6 @@ void Stepper::backlashSteps() {
     } else {
       delay((STEP_DEDGE ? 1 : 0.5) * 1000/backlashSpeed);
     }
-  }
-  if (!stepper_stopped) {
-    stepTimer->start();
   }
   DEBUG_SERIAL.print("D: Done Backlash: ");
   DEBUG_SERIAL.print(driver->GCONF());
@@ -285,11 +232,11 @@ float Stepper::getMaxAccel() {
 }
 
 void Stepper::setMaxSpeed(float _max_tps) {
-  max_v0 = _max_tps;
+  max_v = _max_tps;
 }
 
 float Stepper::getMaxSpeed() {
-  return max_v0;
+  return max_v;
 }
 
 bool Stepper::enabled() {
@@ -338,10 +285,8 @@ void Stepper::setMedCurrentThreshold(float _med_current_threshold) {
 void Stepper::setHoldCurrent(float _hold_current) {
   // Setting 0 current doesn't work (at least if not doing ihold)
   hold_current = _hold_current > 1 ? _hold_current : 100;
-  // if(Serial) {
-  //   DEBUG_SERIAL.print("Set hold current: ");
-  //   DEBUG_SERIAL.println(hold_current);
-  // }
+  // DEBUG_SERIAL.print("Set hold current: ");
+  // DEBUG_SERIAL.println(hold_current);
   setCurrents(true);
 }
 
@@ -362,36 +307,30 @@ float Stepper::getHoldCurrent() {
 }
 
 void Stepper::setCurrents(bool force) {
-  if ((force || current_real != run_current) && fabs(v0) >= med_current_threshold && fabs(v0) > 0.0f) {
+  if ((force || current_real != run_current) && fabs(vt) >= med_current_threshold && fabs(vt) > 0.0f) {
     current_real = run_current;
     //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
     driver->rms_current((uint16_t)(current_real));
-    if (Serial) {
-      DEBUG_SERIAL.print("C1: ");
-      DEBUG_SERIAL.print(current_real);
-      DEBUG_SERIAL.print(", ");
-      DEBUG_SERIAL.println(driver->rms_current());
-    }
-  } else if ((force || current_real != med_current) && fabs(v0) < med_current_threshold && fabs(v0) > 0.0f) {
+    DEBUG_SERIAL.print("C1: ");
+    DEBUG_SERIAL.print(current_real);
+    DEBUG_SERIAL.print(", ");
+    DEBUG_SERIAL.println(driver->rms_current());
+  } else if ((force || current_real != med_current) && fabs(vt) < med_current_threshold && fabs(vt) > 0.0f) {
     current_real = med_current;
     //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
     driver->rms_current((uint16_t)(current_real));
-    if (Serial) {
-      DEBUG_SERIAL.print("C2: ");
-      DEBUG_SERIAL.print(current_real);
-      DEBUG_SERIAL.print(", ");
-      DEBUG_SERIAL.println(driver->rms_current());
-    }
-  } else if ((force || current_real != hold_current) && fabs(v0) == 0.0f) {
+    DEBUG_SERIAL.print("C2: ");
+    DEBUG_SERIAL.print(current_real);
+    DEBUG_SERIAL.print(", ");
+    DEBUG_SERIAL.println(driver->rms_current());
+  } else if ((force || current_real != hold_current) && fabs(vt) == 0.0f) {
     current_real = hold_current;
     //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
     driver->rms_current((uint16_t)(current_real));
-    if (Serial) {
-      DEBUG_SERIAL.print("C3: ");
-      DEBUG_SERIAL.print(current_real);
-      DEBUG_SERIAL.print(", ");
-      DEBUG_SERIAL.println(driver->rms_current());
-    }    
+    DEBUG_SERIAL.print("C3: ");
+    DEBUG_SERIAL.print(current_real);
+    DEBUG_SERIAL.print(", ");
+    DEBUG_SERIAL.println(driver->rms_current());
   }
 }
 
@@ -399,11 +338,46 @@ float Stepper::getCurrentReal() {
   return current_real;
 }
 
-void Stepper::update() {
-  // 30000
-  if (timer < 30000) {
+
+void Stepper::setRealSpeed(float speed) {
+  if (fabs(speed) == 0.0) {
+    period_us = 0;
+    stepper_stopped = true;
+    vt = 0;
+    setCurrents(false);
     return;
   }
+  float sp, dv;
+  if (speed > 0) {
+    setStepDirection(true);
+  } else {
+    setStepDirection(false);
+  }
+  dv = fabs(vt-speed);
+  // Only bother changing frequency if speed different is more than 1 step per
+  // 1000 seconds.
+  if (dv > 0.001) {
+    if (micro_threshold_v > 0 && fabs(speed) > micro_threshold_v) {
+      setStepResolution(true);
+      sp = 1000000.0 / (fabs(speed)/MICROSTEPS_IN_SINGLESTEP);  // us
+    } else {
+      setStepResolution(false);
+      sp = 1000000.0 / (fabs(speed));  // us
+    }
+    // If dedge is false, Must be 0.5 * desired period because square wave on and off. otherwise can be period
+    period_us = ((STEP_DEDGE ? 1.0 : 0.5) * sp);
+    vt = speed;
+    setCurrents(false);
+  }
+  if (stepper_stopped) {
+    v0 = 0;
+    timer = 0;
+    stepper_stopped = false;
+  }
+}
+
+
+void Stepper::update() {
   float new_speed;
   float t = timer / 1000000.0;
   float sp = sp_speed;
@@ -414,13 +388,29 @@ void Stepper::update() {
   if (!stepper_enabled) {
     setRealSpeed(0);
   } else {
-    if (fabs(new_speed) > max_v0) {
-      setRealSpeed(copysignf(max_v0, new_speed));
+    if (fabs(new_speed) >= max_v) {
+      setRealSpeed(copysignf(max_v, new_speed));
+      timer = 0;
+      v0 = vt;
     } else {
       setRealSpeed(new_speed);
     }
   }
-  timer = 0;
+  if (period_us > 0 && step_timer > period_us) {
+    int error = step_timer - period_us;
+    if(error > 5 && error > period_us*0.01) {
+      DEBUG_SERIAL.print("serror: ");
+      DEBUG_SERIAL.print(step_timer - period_us);
+      DEBUG_SERIAL.print(", ");
+      DEBUG_SERIAL.println(period_us);
+    }
+    step(true);
+    step_timer = 0;
+    if (timer > 360000000) {
+      timer = 0;
+      v0 = vt;
+    }
+  }
 }
 
 void Stepper::calcNewV(float a, float v_0, double t, float speed_wanted,
@@ -433,7 +423,7 @@ void Stepper::calcNewV(float a, float v_0, double t, float speed_wanted,
   t_v_max = (speed_wanted - v_0) / a;
   dt_v_max = t - t_v_max;
 
-  if (dt_v_max > 0) {
+  if (dt_v_max >= 0.0) {
     v = speed_wanted;
   } else {
     v = a * t + v_0;

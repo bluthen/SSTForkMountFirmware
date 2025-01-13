@@ -7,6 +7,5 @@ profiles:
         platform_index_url: https://www.pjrc.com/teensy/package_teensy_index.json
     libraries:
       - TMCStepper (0.7.3)
-      - TeensyTimerTool (1.4.1)
 
 default_profile: teensy4
