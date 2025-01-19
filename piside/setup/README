@@ -45,7 +45,7 @@ sudo raspi-config
 
 sudo reboot
 
-sudo apt install -y python3-pip git libblas3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim avahi-utils astrometry.net imagemagick
+sudo apt install -y python3-pip git libblas3 liblapack3 libatlas3-base ntp ntpdate ntpstat hostapd dnsmasq vim avahi-utils astrometry.net imagemagick libssl-dev libbz2-dev libncurses-dev libreadline-dev libffi-dev libsqlite3-dev lzma-dev
 
 # append fstab
 /dev/mmcblk0p3 /ssteq ext4 defaults,ro,noatime 0 2
@@ -53,29 +53,35 @@ systemctl daemon-reload
 mkdir /ssteq
 mount /ssteq
 mount -o remount,rw /ssteq
-mkdir -p /ssteq/piside
+mkdir -p /ssteq/piside/client_main
 mkdir -p /ssteq/setup
 chown -R pi /ssteq
 
 pip3 install pipenv --break-system-packages
 
-
 # Copy piside code: server, client_main, and client_advanced_slew_limits
+#   cd copy piside
+#   scp -r server pi@$IP:/ssteq/piside
+#   scp -r client_advanced_slew_limits pi@$IP:/ssteq/piside
+#   cd client_main
+#   scp -r dist pi@$IP:/ssteq/piside/client_main/
+#   cd ..
+#   scp -r setup pi@$IP:/ssteq/
 ln -s /ssteq/piside/client_main/dist /ssteq/piside/client_main/dist/static
 # Copy object database
 
 # in server folder as pi user
+cd /ssteq/piside/server
 export WORKON_HOME=/ssteq/piside/python_venvs
 pipenv sync 
 
-#Copy setup scp -r setup pi@addr:/ssteq/
 # udev teensy files for controller
 sudo cp 49-teensy.rules /etc/udev/rules.d
 
 
 sudo cp hostapd.conf /etc/hostapd/hostapd.conf
 sudo bash -c "cat dnsmasq.conf.append >> /etc/dnsmasq.conf"
-sudo bash -c "echo ssteq20240724 > /etc/hostname"
+sudo bash -c "echo ssteq20250118 > /etc/hostname"
 sudo cp interfaces.default /etc/network/interfaces.d/defaults
 
 
