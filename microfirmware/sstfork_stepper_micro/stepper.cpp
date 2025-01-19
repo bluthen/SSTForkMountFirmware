@@ -79,13 +79,19 @@ uint8_t Stepper::test_connection() {
 
 void Stepper::setSpeed(float speed) {
   DEBUG_SERIAL.println(driver->DRV_STATUS(), BIN);
+  cli();
   sp_speed = speed;
   timer = 0;
   v0 = vt;
+  sei();
 }
 
 float Stepper::getSpeed() {
-  return vt;
+  float ret;
+  cli();
+  ret = vt;
+  sei();
+  return ret;
 }
 
 long Stepper::getPosition() {
@@ -105,8 +111,10 @@ void Stepper::getEncoder(stepper_encoder_t& encodervalues) {
 }
 
 void Stepper::setInvertedStepping(bool inverted) {
+  cli();
   inv_direction = inverted;
   setStepDirection(mode_forward);
+  sei();
 }
 
 bool Stepper::getInvertedStepping() {
@@ -114,11 +122,16 @@ bool Stepper::getInvertedStepping() {
 }
 
 void Stepper::setSingleStepThreshold(long steps_per_sec) {
+  cli();
   micro_threshold_v = steps_per_sec;
+  sei();
 }
 
 long Stepper::getSingleStepThreshold() {
-  return micro_threshold_v;
+  cli();
+  long ret = micro_threshold_v;
+  sei();
+  return ret;
 }
 
 void Stepper::enableEncoder(bool enabled) {
@@ -131,6 +144,7 @@ bool Stepper::encoderEnabled() {
 
 
 void Stepper::backlashSteps() {
+  cli();
   setStepResolution(false);
   for(int i = 0; i < (STEP_DEDGE ? 1 : 2) * backlash; i++) {
     step(false);
@@ -140,6 +154,7 @@ void Stepper::backlashSteps() {
       delay((STEP_DEDGE ? 1 : 0.5) * 1000/backlashSpeed);
     }
   }
+  sei();
   DEBUG_SERIAL.print("D: Done Backlash: ");
   DEBUG_SERIAL.print(driver->GCONF());
   DEBUG_SERIAL.print(" ");
@@ -149,6 +164,7 @@ void Stepper::backlashSteps() {
 }
 
 void Stepper::setStepDirection(bool forward) {
+  cli();
   if (forward) {
     if (!inv_direction) {
       digitalWrite(dir_pin, HIGH);
@@ -170,9 +186,11 @@ void Stepper::setStepDirection(bool forward) {
     }
     mode_forward = false;
   }
+  sei();
 }
 
 void Stepper::setStepResolution(bool _single_step) {
+  cli();
   if (_single_step && !single_step) {
     single_step = true;
     while(driver->microsteps() != 0) {
@@ -189,9 +207,11 @@ void Stepper::setStepResolution(bool _single_step) {
     // Every micro step is 1 microsteps
     stepResolution = 1;
   }
+  sei();
 }
 
 void Stepper::step(bool counters) {
+  cli();
   bool on = !digitalRead(step_pin);
   digitalWrite(step_pin, on);
   if (counters && (STEP_DEDGE || on)) {
@@ -221,22 +241,34 @@ void Stepper::step(bool counters) {
       }
     }
   }
+  sei();
 }
 
 void Stepper::setMaxAccel(float _accell_tpss) {
+  cli();
   accell_tpss = _accell_tpss;
+  sei();
 }
 
 float Stepper::getMaxAccel() {
-  return accell_tpss;
+  cli();
+  float ret = accell_tpss;
+  sei();
+  return ret;
 }
 
 void Stepper::setMaxSpeed(float _max_tps) {
+  cli();
   max_v = _max_tps;
+  sei();
 }
 
 float Stepper::getMaxSpeed() {
-  return max_v;
+  float ret;
+  cli();
+  ret = max_v;
+  sei();
+  return ret;
 }
 
 bool Stepper::enabled() {
@@ -248,15 +280,23 @@ void Stepper::enable(bool _enable) {
 }
 
 void Stepper::setGuideRate(long _guideRate) {
+  cli();
   guide_rate = _guideRate;
+  sei();
 }
 
 long Stepper::getGuideRate() {
-  return guide_rate;
+  long ret;
+  cli();
+  ret = guide_rate;
+  sei();
+  return ret;
 }
 
 void Stepper::guide(int direction) {
+  cli();
   guiding = direction;
+  sei();
 }
 
 void Stepper::disableGuiding(bool disable) {
@@ -268,45 +308,70 @@ bool Stepper::guidingDisabled() {
 }
 
 void Stepper::setRunCurrent(float _run_current) {
+  cli();
   run_current = _run_current > 1 ? _run_current : 1;
   setCurrents(true);
+  sei();
 }
 
 void Stepper::setMedCurrent(float _med_current) {
+  cli();
   med_current = _med_current > 1 ? _med_current : 1;
   setCurrents(true);
+  sei();
 }
 
 void Stepper::setMedCurrentThreshold(float _med_current_threshold) {
+  cli();
   med_current_threshold = _med_current_threshold;
   setCurrents(true);
+  sei();
 }
 
 void Stepper::setHoldCurrent(float _hold_current) {
+  cli();
   // Setting 0 current doesn't work (at least if not doing ihold)
   hold_current = _hold_current > 1 ? _hold_current : 100;
   // DEBUG_SERIAL.print("Set hold current: ");
   // DEBUG_SERIAL.println(hold_current);
   setCurrents(true);
+  sei();
 }
 
 float Stepper::getRunCurrent() {
-  return run_current;
+  float ret;
+  cli();
+  ret = run_current;
+  sei();
+  return ret;
 }
 
 float Stepper::getMedCurrent() {
-  return med_current;
+  float ret;
+  cli();
+  ret = med_current;
+  sei();
+  return ret;
 }
 
 float Stepper::getMedCurrentThreshold() {
-  return med_current_threshold;
+  float ret;
+  cli();
+  ret = med_current_threshold;
+  sei();
+  return ret;
 }
 
 float Stepper::getHoldCurrent() {
-  return hold_current;
+  float ret;
+  cli();
+  ret = hold_current;
+  sei();
+  return ret;
 }
 
 void Stepper::setCurrents(bool force) {
+  cli();
   if ((force || current_real != run_current) && fabs(vt) >= med_current_threshold && fabs(vt) > 0.0f) {
     current_real = run_current;
     //driver->rms_current((uint16_t)(current_real), hold_current / current_real);
@@ -332,19 +397,26 @@ void Stepper::setCurrents(bool force) {
     DEBUG_SERIAL.print(", ");
     DEBUG_SERIAL.println(driver->rms_current());
   }
+  sei();
 }
 
 float Stepper::getCurrentReal() {
-  return current_real;
+  float ret;
+  cli();
+  ret = current_real;
+  sei();
+  return ret;
 }
 
 
 void Stepper::setRealSpeed(float speed) {
+  cli();
   if (fabs(speed) == 0.0) {
     period_us = 0;
     stepper_stopped = true;
     vt = 0;
     setCurrents(false);
+    sei();
     return;
   }
   float sp, dv;
@@ -374,6 +446,7 @@ void Stepper::setRealSpeed(float speed) {
     timer = 0;
     stepper_stopped = false;
   }
+  sei();
 }
 
 
@@ -398,7 +471,7 @@ void Stepper::update() {
   }
   if (period_us > 0 && step_timer > period_us) {
     int error = step_timer - period_us;
-    if(error > 5 && error > period_us*0.01) {
+    if(error > 6 && error > period_us*0.01) {
       DEBUG_SERIAL.print("serror: ");
       DEBUG_SERIAL.print(step_timer - period_us);
       DEBUG_SERIAL.print(", ");
@@ -432,19 +505,31 @@ void Stepper::calcNewV(float a, float v_0, double t, float speed_wanted,
 }
 
 void Stepper::setBacklash(int _backlash) {
+  cli();
   backlash = _backlash;
+  sei();
 }
 
 void Stepper::setBlacklashSpeed(float _backlashSpeed) {
+  cli();
   backlashSpeed = _backlashSpeed;
+  sei();
 }
 
 int Stepper::getBacklash() {
-  return backlash;
+  int ret;
+  cli();
+  ret = backlash;
+  sei();
+  return ret;
 }
 
 float Stepper::getBacklashSpeed() {
-  return backlashSpeed;
+  float ret;
+  cli();
+  ret = backlashSpeed;
+  sei();
+  return ret;
 }
 
 // void Stepper::motion_func(float a, float v_0, long x_0, double t, float

@@ -82,9 +82,9 @@ private:
   void step(bool);
   void backlashSteps();
   int id = -1;
-  float v0 = 0;
-  float vt = 0;
-  float max_v = 35000;
+  volatile float v0 = 0;
+  volatile float vt = 0;
+  volatile float max_v = 35000;
   volatile long x0 = 0;
   volatile bool mode_forward = true;
   volatile long last_encoder = 0;
@@ -98,26 +98,26 @@ private:
   int guiding = 0;
   bool guiding_enabled = false;
 
-  unsigned long period_us = 0;
-  bool stepper_enabled = true;
-  float accell_tpss=8000.0;
-  float current_real = -1;
-  float run_current = 1100.0;
-  float med_current = 100.0;
-  float med_current_threshold = 0;
-  float hold_current = 100.0;
+  volatile unsigned long period_us = 0;
+  volatile bool stepper_enabled = true;
+  volatile float accell_tpss=8000.0;
+  volatile float current_real = -1;
+  volatile float run_current = 1100.0;
+  volatile float med_current = 100.0;
+  volatile float med_current_threshold = 0;
+  volatile float hold_current = 100.0;
   int step_pin;
   int dir_pin;
-  float sp_speed = 0;
-  bool stepper_stopped = true;
-  long micro_threshold_v = 0;
-  bool single_step = false;
+  volatile float sp_speed = 0;
+  volatile bool stepper_stopped = true;
+  volatile long micro_threshold_v = 0;
+  volatile bool single_step = false;
   QuadEncoder *enc = NULL;
   elapsedMicros timer;
   elapsedMicros step_timer;
   TMC5160Stepper *driver = NULL;
-  int backlash = 0;
-  float backlashSpeed = 0;
+  volatile int backlash = 0;
+  volatile float backlashSpeed = 0;
 };
 
 #endif

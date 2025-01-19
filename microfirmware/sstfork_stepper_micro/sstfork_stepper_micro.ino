@@ -41,6 +41,7 @@ bool sst_debug = false;
 
 static Command* piCommand = NULL;
 static Command* usbCommand = NULL;
+IntervalTimer stepperTimer;
 
 void autoguide_init() {
   pinMode(AUTOGUIDE_DEC_NEGY_PIN, INPUT);
@@ -92,6 +93,7 @@ void setup() {
   //raStepper->setSpeed(0.0);
   //decStepper->setSpeed(0.0);
   autoguide_init();
+  stepperTimer.begin(update, 2);
   if (Serial && usbCommand != NULL) {
     Serial.print(F("StarSync Tracker Fork Mount "));
     Serial.println(sstversion);
@@ -120,6 +122,11 @@ void autoguide_read() {
   status |= digitalRead(AUTOGUIDE_DEC_NEGY_PIN) << AG_NEGY_MASK;
   status |= digitalRead(AUTOGUIDE_RA_NEGX_PIN) << AG_NEGX_MASK;
   status |= digitalRead(AUTOGUIDE_RA_POSX_PIN) << AG_POSX_MASK;
+}
+
+void update() {
+  raStepper->update();
+  decStepper->update();
 }
 
 void autoguide_run() {
@@ -184,6 +191,7 @@ void autoguide_run() {
   }
 }
 
+
 /**
  * Program loop.
  */
@@ -198,6 +206,4 @@ void loop() {
     }
     usbCommand->read();
   }
-  raStepper->update();
-  decStepper->update();
 }
