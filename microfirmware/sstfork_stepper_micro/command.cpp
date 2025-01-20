@@ -97,11 +97,11 @@ void Command::command_set_var() {
   } else if (strcmp(argName, "ra_backlash") == 0) {
     raStepper->setBacklash((int)value);
   } else if (strcmp(argName, "ra_backlash_speed") == 0) {
-    raStepper->setBlacklashSpeed(value);
+    raStepper->setBacklashSpeed(value);
   } else if (strcmp(argName, "dec_backlash") == 0) {
     decStepper->setBacklash((int)value);
   } else if (strcmp(argName, "dec_backlash_speed") == 0) {
-    decStepper->setBlacklashSpeed(value);
+    decStepper->setBacklashSpeed(value);
   } else {
     port->print("ERROR: Invalid variable name '");
     port->print(argName);

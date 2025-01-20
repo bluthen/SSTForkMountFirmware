@@ -46,11 +46,13 @@ Stepper::Stepper(const int _dir_pin, const int _step_pin,
   single_step = false;
 
   setStepDirection(false);
+  backlashCounter=9999999;
   for(int i = 0; i < 8; i++) {
     this->step(true);
     delay(50);
   }
   setStepDirection(true);
+  backlashCounter=9999999;
   for(int i = 0; i < 8; i++) {
     this->step(true);
     delay(50);
@@ -143,26 +145,6 @@ bool Stepper::encoderEnabled() {
 }
 
 
-void Stepper::backlashSteps() {
-  cli();
-  setStepResolution(false);
-  for(int i = 0; i < (STEP_DEDGE ? 1 : 2) * backlash; i++) {
-    step(false);
-    if (backlashSpeed > 100) {
-      delayMicroseconds((STEP_DEDGE ? 1 : 0.5) * 1000000/backlashSpeed);
-    } else {
-      delay((STEP_DEDGE ? 1 : 0.5) * 1000/backlashSpeed);
-    }
-  }
-  sei();
-  DEBUG_SERIAL.print("D: Done Backlash: ");
-  DEBUG_SERIAL.print(driver->GCONF());
-  DEBUG_SERIAL.print(" ");
-  DEBUG_SERIAL.print(driver->GSTAT());
-  DEBUG_SERIAL.print(" ");
-  DEBUG_SERIAL.println(driver->SW_MODE());
-}
-
 void Stepper::setStepDirection(bool forward) {
   cli();
   if (forward) {
@@ -172,7 +154,7 @@ void Stepper::setStepDirection(bool forward) {
       digitalWrite(dir_pin, LOW);
     }
     if(!mode_forward && backlash > 0 && backlashSpeed > 0) {
-      backlashSteps();
+      backlashCounter = 0;
     }
     mode_forward = true;
   } else {
@@ -182,7 +164,7 @@ void Stepper::setStepDirection(bool forward) {
       digitalWrite(dir_pin, HIGH);
     }
     if(mode_forward && backlash > 0 && backlashSpeed > 0) {
-      backlashSteps();
+      backlashCounter = 0;
     }
     mode_forward = false;
   }
@@ -422,7 +404,7 @@ void Stepper::setRealSpeed(float speed) {
   float sp, dv;
   if (speed > 0) {
     setStepDirection(true);
-  } else {
+  } else if (speed < -0) {
     setStepDirection(false);
   }
   dv = fabs(vt-speed);
@@ -469,7 +451,19 @@ void Stepper::update() {
       setRealSpeed(new_speed);
     }
   }
-  if (period_us > 0 && step_timer > period_us) {
+  // Backlash
+  if (backlash > 0 && backlashSpeed > 0 && backlashCounter < (STEP_DEDGE ? 1 : 2) * backlash) {
+    if (step_timer >= (STEP_DEDGE ? 1 : 0.5) * 1000000/backlashSpeed) {
+      step(false);
+      backlashCounter++;
+      step_timer = 0;
+      if (backlashCounter == (STEP_DEDGE ? 1 : 2) * backlash || timer > 360000000) {
+        timer = 0;
+        v0 = vt;      
+      }
+    }
+  // Regular step
+  } else if (period_us > 0 && step_timer >= period_us) {
     int error = step_timer - period_us;
     if(error > 6 && error > period_us*0.01) {
       DEBUG_SERIAL.print("serror: ");
@@ -510,7 +504,7 @@ void Stepper::setBacklash(int _backlash) {
   sei();
 }
 
-void Stepper::setBlacklashSpeed(float _backlashSpeed) {
+void Stepper::setBacklashSpeed(float _backlashSpeed) {
   cli();
   backlashSpeed = _backlashSpeed;
   sei();

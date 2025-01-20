@@ -93,7 +93,7 @@ void setup() {
   //raStepper->setSpeed(0.0);
   //decStepper->setSpeed(0.0);
   autoguide_init();
-  stepperTimer.begin(update, 2);
+  stepperTimer.begin(update, 4);
   if (Serial && usbCommand != NULL) {
     Serial.print(F("StarSync Tracker Fork Mount "));
     Serial.println(sstversion);

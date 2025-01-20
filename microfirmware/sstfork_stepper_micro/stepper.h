@@ -59,7 +59,7 @@ public:
   float getCurrentReal();
 
   void setBacklash(int _backlash);
-  void setBlacklashSpeed(float _backlashSpeed);
+  void setBacklashSpeed(float _backlashSpeed);
 
   int getBacklash();
   float getBacklashSpeed();
@@ -80,7 +80,6 @@ private:
   void setRealSpeed(float speed);
   void setCurrents(bool);
   void step(bool);
-  void backlashSteps();
   int id = -1;
   volatile float v0 = 0;
   volatile float vt = 0;
@@ -116,6 +115,7 @@ private:
   elapsedMicros timer;
   elapsedMicros step_timer;
   TMC5160Stepper *driver = NULL;
+  volatile int backlashCounter = 0;
   volatile int backlash = 0;
   volatile float backlashSpeed = 0;
 };
