@@ -67,13 +67,15 @@ def slew_commanded():
     timer.start()
 
 
-def ra_format(ra_deg):
+def ra_format(ra_deg, high_precision=True):
     ra = (24.0 / 360.0) * ra_deg
     remain = ra - int(ra)
     minutes = int(remain * 60)
     seconds = (remain - (minutes / 60.0)) * 60 * 60
     hours = int(abs(ra))
-    return '%02d:%02d:%02d#' % (hours, minutes, seconds)
+    if high_precision:
+        return '%02d:%02d:%02d#' % (hours, minutes, seconds)
+    return '%02d:%02d.%1d#' % (hours, minutes, int(10*seconds/60+0.5))
 
 
 def dec_format(dec, high_precision=True):
@@ -117,7 +119,9 @@ def ra_to_deg(hours, minutes, seconds=0.0):
 
 def dec_to_deg(sign, deg, minutes, seconds=0.0):
     deg = abs(deg)
-    return sign * (deg + minutes / 60 + seconds / 3600)
+    if DEBUG_PROT:
+        print(deg, minutes, seconds, (deg + minutes / 60 + seconds / 3600)) 
+    return sign * (deg + minutes / 60.0 + seconds / 3600.0)
 
 
 class LX200Client:
@@ -126,6 +130,7 @@ class LX200Client:
         self.socket = socket_conn
         self.client_address = client_address
         self.buf = ""
+        self.is_highprecision = False
         # self.re_autostar_settime_cmd = re.compile(":hI\\d{12}#")
         # self.re_select_ds_libary_cmd = re.compile(":Lo\\d#")
         # self.re_select_s_libary_cmd = re.compile(":Ls\\d#")
@@ -254,7 +259,7 @@ class LX200Client:
                 self.write(pendulum.now(tz=set_utc_offset).strftime('%I:%M:%S#').encode())
             elif cmd == ':GA#':  # Get Telescope Altitude
                 # self.write(b'sDD*MM\'SS#')
-                self.write(dec_format(control.last_status['alt']))
+                self.write(dec_format(control.last_status['alt'], self.is_highprecision))
             elif cmd == ':Gb#':  # Browser Brighter Mag Limit
                 self.write(b's10.1#')
             elif cmd == ':GC#':  # Get current date PRIORITY DONE
@@ -264,7 +269,10 @@ class LX200Client:
                 self.write(b'24#')
             elif cmd == ':GD#':  # Telescope Declination PRIORITY DONE
                 # self.write(b'sDD*MM\'SS#')
-                self.write(dec_format(control.last_status['tete_dec']).encode())
+                reply = dec_format(control.last_status['tete_dec'], self.is_highprecision).encode()
+                if DEBUG_PROT:
+                    print("Reply ", reply)
+                self.write(reply)
             elif cmd == ':Gd#':  # Currently selected target dec
                 # TODO: Get slewto object
                 self.write(b'sDD*MM\'SS#')
@@ -318,7 +326,10 @@ class LX200Client:
             elif cmd == ':GR#':  # telescope RA PRIORITY DONE
                 # self.write(b'HH:MM:SS#')
                 control.set_alive(self.client_id)
-                self.write(ra_format(control.last_status['tete_ra']).encode())
+                reply = ra_format(control.last_status['tete_ra'], self.is_highprecision).encode()
+                if DEBUG_PROT:
+                    print("Reply ", reply)
+                self.write(reply)
             elif cmd == ':Gr#':  # current target RA
                 self.write(b'HH:MM:SS#')
             elif cmd == ':GS#':  # get sidereal time
@@ -351,7 +362,7 @@ class LX200Client:
                 self.write(b'gpdco#')
             elif cmd == ':GZ#':  # Get telescope azimuth
                 # self.write(b'DDD*MM\'SS#')
-                self.write(az_format(control.last_status['az']).encode())
+                self.write(az_format(control.last_status['az'], self.is_highprecision).encode())
             else:
                 print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         elif cmd[1] == 'h':
@@ -693,6 +704,8 @@ class LX200Client:
                 print('!!UNHANDLED CMD: ', cmd, file=sys.stderr)
         # inc dec tracking :T+# :T-#, set lunar tracking :TL# custom tracking :TM#, sidereal tracking :TS#
         # toggle between high low precision positions :U#
+        elif cmd == ':U#':
+            self.is_highprecision = not self.is_highprecision 
         elif cmd[1:3] == 'VD':
             # m = self.re_dec_pec_table_entry.match(cmd)
             self.write(b'0.0000')
