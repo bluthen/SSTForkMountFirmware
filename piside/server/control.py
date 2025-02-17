@@ -7,6 +7,7 @@ from functools import partial
 import time
 import traceback
 import os
+
 import psutil
 import random
 
@@ -255,6 +256,7 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
     count = 0
     close_timer = None
     while not cancel_slew:
+        # print('_move_to_coord_threadf', axis)
         if close_timer is not None and (time.time() - close_timer) > 10.0:
             # For some reason we are never getting there
             # print('WARNING: close_time slew giving up', file=sys.stderr)
@@ -291,7 +293,7 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             settle_thresh = 10 * settings.settings['dec_ticks_per_degree'] * SIDEREAL_RATE
 
         if abs(delta) < settle_thresh:
-            print('Settle Threshold', axis)
+            # print('Settle Threshold', axis)
             if axis == 'ra':
                 stepper.set_speed_ra(settle_speed)
             else:
@@ -307,7 +309,8 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             pid.set_auto_mode(True, last_output=settle_speed)
             error = delta
             last_output = -9999999999
-            while abs(error) > close_enough:
+            settling_start = time.time()
+            while abs(error) > close_enough and not cancel_slew and time.time() - settling_start < 5:
                 status = calc_status(stepper.get_status())
                 if axis == 'ra':
                     pv = status['rep']
@@ -328,29 +331,7 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
                     else:
                         stepper.set_speed_dec(output)
                 error = new_sp - pv
-
-            # Settling
-            # For settling we use pid controller.
-            # start = datetime.datetime.now()
-            # status = calc_status(stepper.get_status())
-            # if settings.is_simulation():
-            #    time.sleep(0.2+random.random()/10.0)
-            # status_end = datetime.datetime.now()
-            # target = status[status_pos_key] + delta
-            # if axis == 'ra':
-            #    stepper.set_speed_ra(settle_speed)
-            # else:
-            #    stepper.set_speed_dec(settle_speed)
-            # t = abs(delta / settle_speed) - 2 * ((status_end - start).total_seconds())
-            # if t > 0:
-            #    time.sleep(t)
-            # while abs(status[status_pos_key] - target) > close_enough:
-            #    status = calc_status(stepper.get_status())
-            #    if settings.is_simulation():
-            #        time.sleep(0.2+random.random()/10.0)
-            #    time.sleep(0.1)
-            #    if axis == 'ra' and not parking and not steps and settings.runtime_settings['tracking']:
-            #        target += (datetime.datetime.now() - start).total_seconds() * settings.settings['ra_track_rate']
+            # print('End Settle Loop', axis)
         else:
             if axis == 'ra':
                 if not parking and settings.runtime_settings['tracking']:
@@ -376,7 +357,6 @@ def _move_to_coord_threadf(wanted_skycoord, axis='ra', parking=False, close_enou
             # print('dec_times', dec_times)
 
             for t in times:
-                # print(t)
                 if t['speed'] is not None:
                     if axis == 'ra':
                         stepper.set_speed_ra(t['speed'])
@@ -430,26 +410,24 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
             rspeed = settings.settings['ra_track_rate']
         stepper.set_speed_ra(rspeed)
         stepper.set_speed_dec(0.0)
-
-        status = stepper.get_status()
-        while not math.isclose(status['rs'], rspeed, rel_tol=0.02) and math.isclose(status['ds'], 0, rel_tol=0.02):
-            time.sleep(0.25)
-            status = stepper.get_status()
+        time.sleep(0.25)
     except:
         traceback.print_exc()
         raise
     finally:
-        if parking and not cancel_slew:
-            settings.parked()
-        else:
-            settings.not_parked()
-        if cancel_slew or type(wanted_skycoord) is dict and 'ha' in wanted_skycoord:
-            set_last_slew(None)
-        else:
-            set_last_slew(wanted_skycoord)
-        stepper.autoguide_enable()
-        slewing = False
-        slew_lock.release()
+        try:
+            if parking and not cancel_slew:
+                settings.parked()
+            else:
+                settings.not_parked()
+            if cancel_slew or type(wanted_skycoord) is dict and 'ha' in wanted_skycoord:
+                set_last_slew(None)
+            else:
+                set_last_slew(wanted_skycoord)
+            stepper.autoguide_enable()
+        finally:
+            slewing = False
+            slew_lock.release()
 
 
 class SimpleInterval:
@@ -989,6 +967,10 @@ def cancel_slews():
     """
     global cancel_slew
     cancel_slew = True
+    time.sleep(0.25)
+    while not cancel_slew:
+        cancel_slew = True
+        time.sleep(0.25)
 
 
 def clear_sync():

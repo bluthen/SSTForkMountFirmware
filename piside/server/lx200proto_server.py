@@ -8,6 +8,7 @@ import pendulum
 import settings
 import typing
 import sys
+import time
 
 DEBUG_PROT = False
 
@@ -150,7 +151,7 @@ class LX200Client:
         self.re_set_handbox_date = re.compile(':SC ?(\\d\\d)/(\\d\\d)/(\\d\\d)#')
 
         self.re_set_target_obj_dec = re.compile(':Sd ?([-+])(\\d\\d)[:*](\\d\\d)#')
-        self.re_set_target_obj_dec_hp = re.compile(':Sd ?([-+])(\\d\\d)[:*](\\d\\d):(\\d\\d)#')
+        self.re_set_target_obj_dec_hp = re.compile(':Sd ?([-+])(\\d\\d)[:*](\\d\\d):(\\d+(\\.\\d+)?)#')
 
         # self.re_set_selenographic_lat_moon = re.compile(':SEs(\\d\\d)\\*(\\d\\d)#')
         # self.re_set_selenographic_lon_moon = re.compile(':Ses(\\d\\d)\\*(\\d\\d)#')
@@ -176,7 +177,7 @@ class LX200Client:
         # self.re_set_backlash_home_sensor = re.compile(':Sp[BHS].*#')
 
         self.re_set_target_object_ra = re.compile(':Sr ?(\\d+):(\\d+\\.\\d+)#')
-        self.re_set_target_object_ra_hp = re.compile(':Sr ?(\\d+):(\\d+):(\\d+)#')
+        self.re_set_target_object_ra_hp = re.compile(':Sr ?(\\d+):(\\d+):(\\d+(\\.\\d+)?)#')
 
         # self.re_set_largest_find = re.compile(':Ss(\\d\\d\\d)#')
 
@@ -206,8 +207,8 @@ class LX200Client:
                     # print('Socket done')
                     return
                 buffer = b.decode('utf8').strip()
-                if DEBUG_PROT:
-                    print("Buffer ", buffer)
+                #if DEBUG_PROT:
+                #    print("Buffer ", buffer)
                 for i in range(len(buffer)):
                     c = buffer[i]
                     if c == '\x06':  # Alignment Query
@@ -219,9 +220,12 @@ class LX200Client:
                         cmdbuf += c
                     if len(cmdbuf) > 2 and c == '#':
                         if DEBUG_PROT:
+                            t=time.time()
                             print("Process: ", cmdbuf)
                         self.process(cmdbuf)
                         cmdbuf = ''
+                        if DEBUG_PROT:
+                            print('Process time:', time.time() - t)
                 if len(cmdbuf) > 1024:
                     cmdbuf = ""
         except KeyboardInterrupt:
@@ -259,7 +263,7 @@ class LX200Client:
                 self.write(pendulum.now(tz=set_utc_offset).strftime('%I:%M:%S#').encode())
             elif cmd == ':GA#':  # Get Telescope Altitude
                 # self.write(b'sDD*MM\'SS#')
-                self.write(dec_format(control.last_status['alt'], self.is_highprecision))
+                self.write(dec_format(control.last_status['alt'], self.is_highprecision).encode())
             elif cmd == ':Gb#':  # Browser Brighter Mag Limit
                 self.write(b's10.1#')
             elif cmd == ':GC#':  # Get current date PRIORITY DONE

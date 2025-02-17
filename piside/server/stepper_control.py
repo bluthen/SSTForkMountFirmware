@@ -1,5 +1,6 @@
 import serial
 import threading
+import time
 
 
 class StepperControl:
@@ -15,15 +16,19 @@ class StepperControl:
 
     def __read_serial_until_prompt(self):
         s = ""
+        t = time.time()
         with self.serial_lock:
             while True:
                 if self.serial.in_waiting > 0:
                     s += self.serial.read(self.serial.in_waiting).decode()
-                else:
-                    s += self.serial.read(1).decode()
-                if '$' in s:
-                    # print('BREAK', s, 'BREAK')
+                    if '$' in s:
+                        break
+                elif time.time() - t > 0.02:
+                    self.serial.write(b'\r')
+                elif time.time() - t > 0.25:
                     break
+                else:
+                    time.sleep(0.01)
         return s
 
     def get_status(self):
