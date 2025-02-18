@@ -59,6 +59,7 @@ void loop() {
     connectCounter += 1;
     while (!client.connected() || connectCounter > 300) {
       connectCounter++;
+      client.abort();
       client.connect(mount, 10002);
       delay(10);
     }
@@ -76,7 +77,7 @@ void loop() {
     while (Serial.available() > 0) {
       char inChar = Serial.read();
       if (client.connected()) {
-        client.print(inChar);
+        client.writeFully(inChar);
       }
     }
   }
