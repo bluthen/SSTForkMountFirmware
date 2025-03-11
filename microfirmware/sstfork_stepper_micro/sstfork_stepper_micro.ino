@@ -32,10 +32,10 @@ static const int DEC_MOSI_PIN = 19;
 
 static const int LED_PIN = 13;
 
-const static int AUTOGUIDE_DEC_NEGY_PIN = 15;
-const static int AUTOGUIDE_DEC_POSY_PIN = 14;
-const static int AUTOGUIDE_RA_NEGX_PIN = 11;
-const static int AUTOGUIDE_RA_POSX_PIN = 12;
+const static int AUTOGUIDE_DEC_NEGY_PIN = 21;
+const static int AUTOGUIDE_DEC_POSY_PIN = 22;
+const static int AUTOGUIDE_RA_NEGX_PIN = 20;
+const static int AUTOGUIDE_RA_POSX_PIN = 23;
 
 bool sst_debug = false;
 
@@ -196,7 +196,7 @@ void autoguide_run() {
  * Program loop.
  */
 void loop() {
-  // Serial1.println("Loop");
+  // Serial.println("Loop");
   autoguide_run();
   piCommand->read();
   if (Serial) {

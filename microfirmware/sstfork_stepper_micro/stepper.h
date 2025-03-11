@@ -95,7 +95,7 @@ private:
 
   long guide_rate = 22;
   int guiding = 0;
-  bool guiding_enabled = false;
+  bool guiding_enabled = true;
 
   volatile unsigned long period_us = 0;
   volatile bool stepper_enabled = true;
