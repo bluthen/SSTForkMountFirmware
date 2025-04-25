@@ -416,6 +416,7 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
         raise
     finally:
         try:
+            stepper.autoguide_enable()
             if parking and not cancel_slew:
                 settings.parked()
             else:
@@ -424,7 +425,6 @@ def move_to_coord_threadf(wanted_skycoord, parking=False):
                 set_last_slew(None)
             else:
                 set_last_slew(wanted_skycoord)
-            stepper.autoguide_enable()
         finally:
             slewing = False
             slew_lock.release()
