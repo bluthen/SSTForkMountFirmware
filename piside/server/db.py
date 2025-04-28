@@ -30,7 +30,7 @@ def to_list_of_dicts(tuple_of_tuples, keys):
     return b
 
 
-def search_planets(search):
+def search_planets(search, obstime=AstroTime.now(), location=None):
     do_altaz = True
     planet_search = search.lower()
     bodies = solar_system_ephemeris.bodies
@@ -39,13 +39,15 @@ def search_planets(search):
         if body.find('earth') != -1:
             continue
         if body.find(planet_search) != -1:
-            location = None
-            location = settings.runtime_settings['earth_location']
-            coord = astropy.coordinates.get_body(body, AstroTime.now(),
+            if location is None:
+                location = settings.runtime_settings['earth_location']
+            coord = astropy.coordinates.get_body(body, obstime,
                                                  location=location)
-            coord = coord.icrs
+            # get_body() gives in GCRS. GCRS is good for solar system bodies. We don't
+            # want to convert just take it as is.
+            coord = ICRS(ra=coord.ra, dec=coord.dec)
             if do_altaz:
-                altaz = skyconv.to_altaz(coord)
+                altaz = skyconv.to_altaz(coord, obstime)
                 altaz = {'alt': altaz.alt.deg, 'az': altaz.az.deg}
             else:
                 altaz = {'alt': None, 'az': None}
