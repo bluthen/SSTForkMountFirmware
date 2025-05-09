@@ -130,7 +130,7 @@ void update() {
 }
 
 void autoguide_run() {
-  if (raStepper->guidingDisabled() && decStepper->guidingDisabled()) {
+  if (!raStepper->guidingEnabled() || !decStepper->guidingEnabled()) {
     return;
   }
 

@@ -43,8 +43,8 @@ public:
   void setGuideRate(long _guideRate);
   long getGuideRate();
   void guide(int direction);
-  void disableGuiding(bool disable);
-  bool guidingDisabled();
+  void guidingEnable(bool enable);
+  bool guidingEnabled();
 
   void setRunCurrent(float _run_current);
   void setMedCurrent(float _med_current);

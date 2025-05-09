@@ -203,7 +203,7 @@ void Command::command_status() {
   port->print("debug:");
   port->println(sst_debug);
   port->print("autoguide:");
-  port->println(!raStepper->guidingDisabled());
+  port->println(raStepper->guidingEnabled());
   port->print("ra_speed:");
   port->println(raStepper->getSpeed());
   port->print("dec_speed:");
@@ -284,14 +284,14 @@ void Command::command_help(const char *cmd) {
 }
 
 void Command::command_autoguide_disable() {
-  raStepper->disableGuiding(true);
-  decStepper->disableGuiding(true);
+  raStepper->guidingEnable(false);
+  decStepper->guidingEnable(false);
   print_prompt();
 }
 
 void Command::command_autoguide_enable() {
-  raStepper->disableGuiding(false);
-  decStepper->disableGuiding(false);
+  raStepper->guidingEnable(true);
+  decStepper->guidingEnable(true);
   print_prompt();
 }
 

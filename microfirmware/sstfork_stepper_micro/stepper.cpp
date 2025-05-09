@@ -281,12 +281,12 @@ void Stepper::guide(int direction) {
   sei();
 }
 
-void Stepper::disableGuiding(bool disable) {
-  guiding_enabled = !disable;
+void Stepper::guidingEnable(bool enable) {
+  guiding_enabled = enable;
 }
 
-bool Stepper::guidingDisabled() {
-  return !guiding_enabled;
+bool Stepper::guidingEnabled() {
+  return guiding_enabled;
 }
 
 void Stepper::setRunCurrent(float _run_current) {
