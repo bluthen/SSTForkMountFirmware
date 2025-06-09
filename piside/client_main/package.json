@@ -39,6 +39,8 @@
     "style-loader": "^4.0.0"
   },
   "browser": "> 0.5%, last 2 versions, Firefox ESR, not dead, not IE 11, maintained node versions",
-  "dependencies": {
+  "dependencies": {},
+  "volta": {
+    "node": "22.14.0"
   }
 }

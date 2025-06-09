@@ -1,0 +1,31 @@
+services:
+  client_main:
+    container_name: client_main-node
+    build:
+      context: ./client_main
+    tty: true
+    ports: 
+      - 127.0.0.1:5001:8080
+    volumes:
+      - ./client_main:/workspace
+    command: bash -c "npm ci && npm run start"
+    environment:
+      API_SERVER: "http://api_server:5000"
+    networks:
+      - ssteqdev
+  api_server:
+    container_name: api_server-python
+    build:
+      context: ./server
+    tty: true
+    ports: 
+      - 127.0.0.1:5000:5000
+    volumes:
+      - ./server:/workspace/server    
+      - ./client_advanced_slew_limits:/workspace/client_advanced_slew_limits
+    command: bash -c "cd /workspace/server && poetry install && poetry run python main.py -m"
+    networks:
+      - ssteqdev
+networks:
+  ssteqdev:
+    name: ssteqdevnet

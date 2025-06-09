@@ -1,13 +1,16 @@
 const path = require('path');
 const webpack = require('webpack');
 
+let dserver = process.env.API_SERVER || "http://localhost:5000"
+
+
 module.exports = {
     devtool: 'source-map',
     mode: 'development',
     devServer: {
         proxy: [
-            {context: ['/api'], target: 'http://localhost:5000'},
-            {context: ['/advanced_slew_limits'], target: 'http://localhost:5000'}
+            {context: ['/api'], target: dserver},
+            {context: ['/advanced_slew_limits'], target: dserver}
         ],
         static: {
             directory: __dirname,

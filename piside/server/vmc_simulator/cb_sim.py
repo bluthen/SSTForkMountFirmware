@@ -275,13 +275,13 @@ def motion_func(a, v_0, x_0, t, speed_wanted):
     return p, v
 
 
-def main():
+def main(sport):
     global serialcom, sio
     cmd_funcs = {'set_var': command_set_var, 'ra_set_speed': command_ra_set_speed,
                  'dec_set_speed': command_dec_set_speed,
                  'autoguide_disable': command_autoguide_disable, 'autoguide_enable': command_autoguide_enable,
                  'status': command_status, 'qs': command_qs, 'help': command_help}
-    serialcom = serial.Serial(port=sys.argv[1], baudrate=115200)
+    serialcom = serial.Serial(port=sport, baudrate=115200)
     line = b''
     while True:
         # while serialcom.in_waiting > 0:
@@ -311,4 +311,4 @@ if __name__ == "__main__":
         print("To setup virtual serial port:")
         print("    socat -d -d pty,raw,echo=0 pty,raw,echo=0")
         sys.exit(1)
-    main()
+    main(sys.argv[1])

@@ -13,6 +13,8 @@ import tempfile
 import threading
 import traceback
 import zipfile
+import argparse
+import vmc_simulator
 from functools import wraps, update_wrapper
 
 import astropy.units as u
@@ -621,7 +623,7 @@ def altitude_data():
             coord = ICRS(ra=ra * u.deg, dec=dec * u.deg)
     elif frame == 'hadec':
         frame_args = skyconv.get_frame_init_args('hadec', obstime=obstime[0])
-        coord = HADec(ha=reqj['ha'] * u.deg, dec=reqj['dec']*u.deg, **frame_args)
+        coord = HADec(ha=reqj['ha'] * u.deg, dec=reqj['dec'] * u.deg, **frame_args)
         coord = skyconv.to_icrs(coord)
     else:  # AltAz
         frame_args = skyconv.get_frame_init_args('altaz', obstime=obstime[0])
@@ -810,6 +812,20 @@ def send_static(path):
 
 def main():
     global st_queue, power_thread_quit, avahi_process
+    parser = argparse.ArgumentParser(prog='SSTEQ Control')
+    parser.add_argument('--https', '-s', action=argparse.BooleanOptionalAction,
+                        help='Try running HTTPS instead of HTTP', default=False)
+    parser.add_argument('--vmc', '-m', action=argparse.BooleanOptionalAction,
+                        help='Use socat to make loopback virutal serial ports and use them', default=False)
+    args = parser.parse_args(sys.argv[1:])
+
+    vmc_sim = None
+    if args.vmc:
+        vmc_sim = vmc_simulator.VirtualMotorController()
+        settings.settings['microserial']['port'] = vmc_sim.port
+        print('Using Virtual Motor Controller on Serial: ', vmc_sim.port)
+        settings.write_settings(settings.settings)
+
     power_thread_quit = False
     if not settings.settings['power_switch']:
         power_thread_quit = True
@@ -848,7 +864,7 @@ def main():
     print('Running...')
     try:
         ssl_context = None
-        if len(sys.argv) == 2 and sys.argv[1] == '--https':
+        if args.https:
             make_ssl_devcert('../key')
             ssl_context = ('../key.crt', '../key.key')
         compress.init_app(app)
@@ -859,6 +875,8 @@ def main():
         lx200proto_thread.join()
         handpad_thread.join()
         power_thread.join()
+        if vmc_sim:
+            vmc_sim.stop()
         avahi_process.kill()
     finally:
         pass
