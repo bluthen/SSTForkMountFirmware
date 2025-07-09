@@ -130,17 +130,18 @@ def log_p2dict(point):
 
 def buie_model(xdata, r, dr, dd, dt, i, c, gamma, nu, e, phi):
     """
-
+    Tried to apply Buie model. From the paper "General Anlytical Telescope Point Model" By Marc W. Buie Feb. 16, 2003
+    https://sites.astro.caltech.edu/~srk/TP/Literature/Lowell.pdf
     :param xdata: [ra_array, dec_array]
-    :param r: ra scale error
-    :param dr: dec scale error
-    :param dd: zeropoint offset dec
-    :param dt: zeropoint offset ra
-    :param i: polar axis non-orthogonality value
-    :param c: mis-alignment of optical and mechanical axes
-    :param gamma: angular separation of true and instrument pole
-    :param nu: angle between true meridian and line of true and instrumental poles
-    :param e: tube flexure
+    :param r: RA - scale error
+    :param dr: Dec - scale error
+    :param dd: Dec - zeropoint offset
+    :param dt: RA - zeropoint offset
+    :param i: Dec - polar axis non-orthogonality value
+    :param c: RA - mis-alignment of optical and mechanical axes
+    :param gamma: Dec - angular separation of true and instrument pole
+    :param nu: Dec - angle between true meridian and line of true and instrumental poles
+    :param e: RA/Dec - tube flexure
     :param phi: latitude
     :return:
     """
@@ -157,7 +158,26 @@ def buie_model(xdata, r, dr, dd, dt, i, c, gamma, nu, e, phi):
     s = 1 / x_hat
     z = numpy.sin(phi) * x_hat - numpy.cos(phi) * numpy.sin(delta) * x
 
+    # Paper notes:
+    # Equation d = delta - (a0 - a1*x - a2*y - a3*z)   with:
+    # a0 = dd
+    # a3 = e
+    # We added dec scale error: dr*delta
     d = delta - (dd - a1 * x - a2 * y - e * z + dr * delta)
+
+    # Paper notes:
+    # Equation t = tau - (b0 + b1*S - b2*T + H + b3*q + b4*tau)
+    # b0 = dt
+    # delta_tan = tan(delta)
+    # b1 = c
+    # b2 = i
+    # b3 = l # Not used, so we set to 0 and remove
+    # b4 = r
+    # S = sec(delta)
+    # H = (-a1*y+a2*x)*T+a3*cos(phi)*S*y = (-a1*sin(tau)+a2*cos(tau))*tan(delta)+a3*cos(phi)*sec(delta)*sin(tau)
+    #   =
+    # t = tau - (dt + c*sec(delta) - c * tan(delta) + (-a1*y+a2*x)*tan(delta)+a3*cos(phi)*sec(delta)*sin(tau) )
+    # We add ra scale error: r*tau
     t = tau - (dt + delta_tan * (a2 * x - a1 * y - i) + s * (c + e * y * numpy.cos(phi)) + r * tau)
 
     return numpy.array([(180.0 / math.pi) * t, (180.0 / math.pi) * d]).T
@@ -351,6 +371,21 @@ class PointingModelBuie:
         """
         return len(self.__to_points)
 
+    def __str__(self):
+        if self.__buie_vals is None:
+            return 'PointingModelBuie: no points'
+        return f""""PointingModelBuie:
+r={self.__buie_vals[0]:.2f} -- RA - scale error 
+dr={self.__buie_vals[1]:.2f} -- Dec - scale error
+dd={self.__buie_vals[2]:.2f} -- Dec - zero point offset
+dt={self.__buie_vals[3]:.2f} -- RA - zero point offset
+i={self.__buie_vals[4]:.2f} -- Dec - polar axis non-orthogonality value
+c={self.__buie_vals[5]:.2f} -- RA - misalignment of mechanical axes
+gamma={self.__buie_vals[6]:.2f} -- Dec - angular separation of true and instrument pole
+nu={self.__buie_vals[7]:.2f} -- Dec - angle between true meridian line and true instrument pole
+e={self.__buie_vals[8]:.2f} -- RA/Dec - tube flexure
+phi={self.__buie_vals[9]:.2f} -- Latitude"""
+
 
 class PointingModelAffine:
     def __init__(self, log=False, name='', isinverse=False, max_points=-1):
@@ -537,6 +572,9 @@ class PointingModelAffine:
         :rtype: int
         """
         return len(self.__sync_points)
+
+    def __str__(self):
+        return "Affine Model"
 
 
 # Finding point in triangle
