@@ -374,17 +374,20 @@ class PointingModelBuie:
     def __str__(self):
         if self.__buie_vals is None:
             return 'PointingModelBuie: no points'
+        v = [None, None, None, None, None, None, None, None, None, None]
+        for i in range(len(self.__buie_vals)):
+            v[i] = self.__buie_vals[i]
         return f""""PointingModelBuie:
-r={self.__buie_vals[0]:.2f} -- RA - scale error 
-dr={self.__buie_vals[1]:.2f} -- Dec - scale error
-dd={self.__buie_vals[2]:.2f} -- Dec - zero point offset
-dt={self.__buie_vals[3]:.2f} -- RA - zero point offset
-i={self.__buie_vals[4]:.2f} -- Dec - polar axis non-orthogonality value
-c={self.__buie_vals[5]:.2f} -- RA - misalignment of mechanical axes
-gamma={self.__buie_vals[6]:.2f} -- Dec - angular separation of true and instrument pole
-nu={self.__buie_vals[7]:.2f} -- Dec - angle between true meridian line and true instrument pole
-e={self.__buie_vals[8]:.2f} -- RA/Dec - tube flexure
-phi={self.__buie_vals[9]:.2f} -- Latitude"""
+r={v[0]} -- RA - scale error
+dr={v[1]} -- Dec - scale error
+dd={v[2]} -- Dec - zero point offset
+dt={v[3]} -- RA - zero point offset
+i={v[4]} -- Dec - polar axis non-orthogonality value
+c={v[5]} -- RA - misalignment of mechanical axes
+gamma={v[6]} -- Dec - angular separation of true and instrument pole
+nu={v[7]} -- Dec - angle between true meridian line and true instrument pole
+e={v[8]} -- RA/Dec - tube flexure
+phi={v[9]} -- Latitude"""
 
 
 class PointingModelAffine:
