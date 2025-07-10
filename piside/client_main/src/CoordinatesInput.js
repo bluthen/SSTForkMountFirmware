@@ -154,7 +154,7 @@ class CoordinatesInput extends React.Component {
     }
 
     render() {
-        let field1, field2, dialog = null, calibration_table = null;
+        let field1, field2, dialog = null, calibration_table = null, model_info = null;
         if (this.props.coordinateType === 'icrs' || this.props.coordinateType === 'tete') {
             field1 = this.fieldGen('ra', [{key: 'h', min: 0, max: 23, adornment: 'h', ref: this.one, nextRef: this.two},
                 {key: 'm', min: 0, max: 59, adornment: 'm', ref: this.two, nextRef: this.three},
@@ -196,6 +196,15 @@ class CoordinatesInput extends React.Component {
             calibration_table = <Grid item xs={12}><CalibrationTable/></Grid>
         }
 
+        if (state.misc.debug_options) {
+            model_info = <Grid item xs={12}>
+                <Grid item xs={12}>
+                    <h2>Model Debug Info</h2>
+                    <pre>{state.status.model_info}</pre>
+                </Grid>
+            </Grid>
+        }
+
         return (
             <Typography component="div">
                 <Grid container spacing={2} justifyContent="center" alignContent="center" alignItems="center">
@@ -225,6 +234,7 @@ class CoordinatesInput extends React.Component {
                     </Grid>
                 </Grid>
                 {calibration_table}
+                {model_info}
                 {dialog}
             </Typography>
         );

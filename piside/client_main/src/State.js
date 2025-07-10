@@ -50,7 +50,8 @@ const state = observable({
         tracking: true,
         handpad: false,
         last_target: {ra: null, dec: null, ha: null, alt: null, az: null, frame: null, parking: false},
-        cpustats: {tempc: null, tempf: null, load_percent: null, memory_percent_usage: null}
+        cpustats: {tempc: null, tempf: null, load_percent: null, memory_percent_usage: null},
+        model_info: ''
     },
     goto: {
         slewing: false,

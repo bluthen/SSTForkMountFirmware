@@ -504,7 +504,8 @@ def do_sync():
     except Exception as e:
         traceback.print_tb(e)
         return str(e), 400
-    return jsonify({'text': 'Sync Points: ' + str(size)})
+    model_info = str(skyconv.model_real_stepper)
+    return jsonify({'text': 'Sync Points: ' + str(size), 'model_info': model_info})
 
 
 @app.route('/api/sync', methods=['POST'])

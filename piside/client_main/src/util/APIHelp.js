@@ -313,6 +313,8 @@ const APIHelp = {
             state.snack_bar = 'Error: Failed to sync.';
             state.snack_bar_error = true;
             throw e;
+        })).then(mobxaction((syncinfo) => {
+            state.status.model_info = syncinfo.model_info;
         })).finally(mobxaction(() => {
             state.goto.syncing = false;
         }));

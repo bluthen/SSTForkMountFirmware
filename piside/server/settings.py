@@ -51,7 +51,8 @@ def rm_pointing_model():
     if not is_simulation():
         subprocess.run(['sudo', 'mount', '-o', 'remount,rw', '/ssteq'])
     with _lock:
-        os.remove('model.pickle')
+        if os.path.isfile('model.pickle'):
+            os.remove('model.pickle')
     if not is_simulation():
         subprocess.run(['sudo', 'mount', '-o', 'remount,ro', '/ssteq'])
 
