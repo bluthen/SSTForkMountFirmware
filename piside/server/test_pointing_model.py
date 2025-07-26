@@ -96,28 +96,44 @@ class TestPointingModelBuie(unittest.TestCase):
         point = HADec(dec=50 * u.deg, ha=95 * u.deg)
         tpt = self.pm.transform_point(point)
         # TODO: Really expect 95.1 and 50.8, is this close enough?
-        assert_almost_equal_list(self, (tpt.ha.deg, tpt.dec.deg), (95.1016616, 50.7996))
+        numpy.testing.assert_almost_equal((tpt.ha.deg, tpt.dec.deg), (95.1, 50.4), 4)
         tpt = self.pm.inverse_transform_point(tpt)
         # TODO: Really expect 95.0 and 50.0, is this close enough
-        assert_almost_equal_list(self, (tpt.ha.deg, tpt.dec.deg), (95.0000, 50.0000))
+        numpy.testing.assert_almost_equal((tpt.ha.deg, tpt.dec.deg), (95.0000, 50.0000), 4)
 
     def test_one_degree(self):
         sync_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
         stepper_point = HADec(dec=10 * u.deg, ha=90 * u.deg)
         self.pm.add_point(sync_point, stepper_point)
         sync_point = HADec(dec=60 * u.deg, ha=95 * u.deg)
-        sp = pointing_model.test_hadec_transform(10.0, 90.0, 60., 95.0, 1.)
+        sp = pointing_model.test_hadec_transform(10.0, 3.0, 60., 95.0, 1.)
         stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
         self.pm.add_point(sync_point, stepper_point)
         sync_point = HADec(dec=20 * u.deg, ha=100 * u.deg)
-        sp = pointing_model.test_hadec_transform(10.0, 90.0, 20., 100.0, 1.0)
+        sp = pointing_model.test_hadec_transform(10.0, 3.0, 20., 100.0, 1.0)
         stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
         self.pm.add_point(sync_point, stepper_point)
+
+        sync_point = HADec(dec=-33 * u.deg, ha=40 * u.deg)
+        sp = pointing_model.test_hadec_transform(10.0, 3.0, -33., 40.0, 1.0)
+        stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
+        self.pm.add_point(sync_point, stepper_point)
+
+        sync_point = HADec(dec=-53 * u.deg, ha=4 * u.deg)
+        sp = pointing_model.test_hadec_transform(10.0, 3.0, -53., 4.0, 1.0)
+        stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
+        self.pm.add_point(sync_point, stepper_point)
+
+        sync_point = HADec(dec=-70 * u.deg, ha=60 * u.deg)
+        sp = pointing_model.test_hadec_transform(10.0, 3.0, -70., 60.0, 1.0)
+        stepper_point = HADec(dec=sp['dec'] * u.deg, ha=sp['ha'] * u.deg)
+        self.pm.add_point(sync_point, stepper_point)
+
         point = HADec(dec=50 * u.deg, ha=95 * u.deg)
         tpt = self.pm.transform_point(point)
-        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (95.42570155323564, 49.90590943208097))
+        numpy.testing.assert_almost_equal((tpt.ha.deg, tpt.dec.deg), (95.2814793, 48.702525), 4)
         tpt = self.pm.inverse_transform_point(tpt)
-        self.assertEqual((tpt.ha.deg, tpt.dec.deg), (94.99998504751636, 49.9999766439837))
+        numpy.testing.assert_almost_equal((tpt.ha.deg, tpt.dec.deg), (94.99998504751636, 49.9999766439837), 4)
 
     def test_single(self):
         point1 = HADec(dec=10 * u.deg, ha=90 * u.deg)

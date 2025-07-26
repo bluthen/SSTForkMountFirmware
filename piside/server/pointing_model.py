@@ -37,7 +37,7 @@ def inverse_altaz_projection(xy_coord):
     elif r < 0.0:
         r = 0.0
     alt = 90.0 * (1.0 - r)
-    return SkyCoord(AltAz(alt=alt*u.deg, az=az*u.deg))
+    return SkyCoord(AltAz(alt=alt * u.deg, az=az * u.deg))
 
 
 def alt_az_projection(altaz_coord):
@@ -128,100 +128,57 @@ def log_p2dict(point):
         return {}
 
 
-def buie_model(xdata, r, dr, dd, dt, i, c, gamma, nu, e, phi):
+def buie_model(xdata, ih, id, sh, sd, ch, np, ma, me, tf, fo):
     """
-    Tried to apply Buie model. From the paper "General Anlytical Telescope Point Model" By Marc W. Buie Feb. 16, 2003
-    https://sites.astro.caltech.edu/~srk/TP/Literature/Lowell.pdf
-    :param xdata: [ra_array, dec_array]
-    :param r: RA - scale error
-    :param dr: Dec - scale error
-    :param dd: Dec - zeropoint offset
-    :param dt: RA - zeropoint offset
-    :param i: Dec - polar axis non-orthogonality value
-    :param c: RA - mis-alignment of optical and mechanical axes
-    :param gamma: Dec - angular separation of true and instrument pole
-    :param nu: Dec - angle between true meridian and line of true and instrumental poles
-    :param e: RA/Dec - tube flexure
-    :param phi: latitude
+    Model for point, see:
+    Papers
+      * Marc W. Buie, "General Anlytical Telescope Point Model", Feb. 16, 2003
+        * <https://sites.astro.caltech.edu/~srk/TP/Literature/Lowell.pdf>
+      * P.T. Wallace, "TPOINT -- Telescope Pointing Analysis System" Starlink User Note 100, 1994
+        * <https://ui.adsabs.harvard.edu/abs/1994StaUN.100.....W/abstract>
+      * Toshimi Taki, "A New Concept in Computer-Aided Telescopes," Sky & Telescope, February 1989, pp.194-196.
+    :param xdata: [ha_array, dec_array]
+    :param ih: index error in hour angle (base offset)
+    :param id: index error in declination (base offset)
+    :param sh: scale error in hour angle
+    :param sd: scale error in declination
+    :param ch: collimation error in hour angle
+    :param np: Non-perpendicularity - get largs near poles
+    :param ma: Polar axis azimuth misalignment (left right of pole)
+    :param me: Polar axis altitude misalignment (up down of pole)
+    :param tf: tube flexure (cos term)
+    :param fo: fork flexure (sin term)
     :return:
     """
     xdata_t = xdata.T
-    tau = xdata_t[0] * math.pi / 180.0
-    delta = xdata_t[1] * math.pi / 180.0
+    # Convert to radians
+    ha = xdata_t[0] * math.pi / 180.0
+    dec = xdata_t[1] * math.pi / 180.0
+    tan_dec = numpy.tan(dec)
+    tan85 = math.tan(85 * math.pi / 180.0)
+    tan_dec[dec > (85 * math.pi / 180.0)] = tan85
+    tan_dec[dec < (85 * math.pi / 180.0)] = -tan85
 
-    a1 = gamma * numpy.cos(nu)
-    a2 = gamma * numpy.sin(nu)
-    x = numpy.cos(tau)
-    y = numpy.sin(tau)
-    x_hat = numpy.cos(delta)
-    delta_tan = numpy.tan(delta)
-    s = 1 / x_hat
-    z = numpy.sin(phi) * x_hat - numpy.cos(phi) * numpy.sin(delta) * x
+    ha_corrected = (ih + sh * ha + np * tan_dec + ch * numpy.cos(ha) * tan_dec +
+                    ma * numpy.sin(ha) * tan_dec)
+    dec_corrected = id + sd * dec + me * numpy.cos(ha) + ma * numpy.sin(ha) + tf * numpy.cos(dec) + fo * numpy.sin(dec)
 
-    # Paper notes:
-    # Equation d = delta - (a0 - a1*x - a2*y - a3*z)   with:
-    # a0 = dd
-    # a3 = e
-    # We added dec scale error: dr*delta
-    d = delta - (dd - a1 * x - a2 * y - e * z + dr * delta)
+    # Convert back to degrees
+    ha_corrected = ha_corrected * 180.0 / math.pi
+    dec_corrected = dec_corrected * 180.0 / math.pi
 
-    # Paper notes:
-    # Equation t = tau - (b0 + b1*S - b2*T + H + b3*q + b4*tau)
-    # b0 = dt
-    # delta_tan = tan(delta)
-    # b1 = c
-    # b2 = i
-    # b3 = l # Not used, so we set to 0 and remove
-    # b4 = r
-    # S = sec(delta)
-    # H = (-a1*y+a2*x)*T+a3*cos(phi)*S*y = (-a1*sin(tau)+a2*cos(tau))*tan(delta)+a3*cos(phi)*sec(delta)*sin(tau)
-    #   =
-    # t = tau - (dt + c*sec(delta) - c * tan(delta) + (-a1*y+a2*x)*tan(delta)+a3*cos(phi)*sec(delta)*sin(tau) )
-    # We add ra scale error: r*tau
-    t = tau - (dt + delta_tan * (a2 * x - a1 * y - i) + s * (c + e * y * numpy.cos(phi)) + r * tau)
+    ha_corrected = numpy.mod(ha_corrected, 360.0)
+    ha_corrected[ha_corrected > 180.0] -= 360.0
 
-    return numpy.array([(180.0 / math.pi) * t, (180.0 / math.pi) * d]).T
+    return numpy.array([xdata_t[0] + ha_corrected, xdata_t[1] + dec_corrected]).T
 
 
 def buie_model_error(p0, x, y):
-    p0a = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    p0a = numpy.zeros(10)
     p0a = numpy.concatenate([p0, p0a[len(p0):]])
     ny = buie_model(x, *p0a)
-    err = numpy.power(ny.T[0] - y.T[0], 2) + numpy.power(ny.T[1] - y.T[1], 2)
+    err = numpy.concatenate((ny.T[0] - y.T[0], ny.T[1] - y.T[1]))
     return err
-
-
-# scipy.curve_fit(buie_model, x_data, y_data, p0=[altitude, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-"""
-import pointing_model
-import numpy
-import scipy
-import scipy.optimize
-xdata = numpy.array([
-[30, 21],
-[50, 41],
-[44, 51],
-[33, 61],
-[130, 71],
-[150, 81],
-[92, 11],
-[66, 14],
-[98.2, 15],
-[21, -50],
-[89, -22],
-[190, 44],
-[200, -70],
-[21, 1],
-[44, 5],
-])
-ydata = numpy.array([xdata.T[0]*1.02, xdata.T[1]*0.98]).T
-p0=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-scipy.optimize.leastsq(pointing_model.buie_model_error, p0[:], args=(xdata, xdata))
-"""
-
-
-# scipy.optimize.curve_fit(pointing_model.buie_model ,
-# numpy.array([[30.0, 40.0, 24, 26, 70, 82, 32, 44, 65, 70, 12, 170], [45.0, 50.0, -32, -50, 32, 33, 66, 89, 11, 23, 66, -12]]) , numpy.array([[30.0, 40.0, 24, 26, 70, 82, 32, 44, 65, 70, 12, 170], [45.0, 50.0, -32, -50, 32, 33, 66, 89, 11, 23, 66, -12]]) , p0=[39.9, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
 
 class PointingModelBuie:
@@ -378,16 +335,16 @@ class PointingModelBuie:
         for i in range(len(self.__buie_vals)):
             v[i] = self.__buie_vals[i]
         return f""""PointingModelBuie:
-r={v[0]} -- RA - scale error
-dr={v[1]} -- Dec - scale error
-dd={v[2]} -- Dec - zero point offset
-dt={v[3]} -- RA - zero point offset
-i={v[4]} -- Dec - polar axis non-orthogonality value
-c={v[5]} -- RA - misalignment of mechanical axes
-gamma={v[6]} -- Dec - angular separation of true and instrument pole
-nu={v[7]} -- Dec - angle between true meridian line and true instrument pole
-e={v[8]} -- RA/Dec - tube flexure
-phi={v[9]} -- Latitude"""
+ih={v[0]} -- RA - index error
+id={v[1]} -- Dec - index error
+sh={v[2]} -- RA - scale error
+sd={v[3]} -- Dec - scale error
+ch={v[4]} -- RA - collimation
+np={v[5]} -- RA - non-perpendicularity
+ma={v[6]} -- Polar Axis (left-right of pole)
+me={v[7]} -- Polar Axis (up-down of pole)
+tf={v[8]} -- Dec - tube flexure - cos term
+fo={v[9]} -- Dec - tube flexure - sin term"""
 
 
 class PointingModelAffine:
@@ -435,7 +392,6 @@ class PointingModelAffine:
         if self.__max_points != -1 and len(self.__from_points) >= self.__max_points:
             self.__from_points = self.__max_points[1:]
             self.__sync_points = self.__sync_points[1:]
-
 
         from_point = SkyCoord(AltAz(alt=from_point.alt, az=from_point.az))
         to_point = SkyCoord(AltAz(alt=to_point.alt, az=to_point.az))
@@ -494,7 +450,7 @@ class PointingModelAffine:
             new_az = new_az - 360.0
         elif new_az < 0:
             new_az = 360 + new_az
-        to_point = SkyCoord(AltAz(alt=new_alt*u.deg, az=new_az*u.deg))
+        to_point = SkyCoord(AltAz(alt=new_alt * u.deg, az=new_az * u.deg))
         if self.__log:
             pointing_logger.debug(json.dumps(
                 {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
