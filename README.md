@@ -42,7 +42,7 @@ Below it tries to describe
 * Improve a test Error modeling
     * Add Star Alignment to handpad that uses the error modeling feature
     * Good prompts for error modeling/alignment to web ui
-* Script and instructions to generate object database `ssteq.sqlite`
+* Script and instructions to generate object and city elevation database `ssteq.sqlite`
 * More python type-hinting
 * Switch from Flask to [FastAPI](https://fastapi.tiangolo.com/)
 * Cleanup files piside/server in director submodules

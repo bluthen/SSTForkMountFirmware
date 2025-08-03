@@ -23,6 +23,15 @@ docker compose up
 
 Open browser to: [http://localhost:5001](http://localhost:5001)
 
+# Package Management: Local Development vs on Pi
+
+Two package managers are used depending on if you are development on your desktop or development/running on the Pi.
+Mainly so the package manager could be configured to utilize [Pi Wheels](https://www.piwheels.org/)
+
+* [Pipenv](https://pipenv.pypa.io/en/latest/) was used for dependencies on the PI. Here we are able to
+  utilize [Pi Wheels](https://www.piwheels.org/)
+* [Poetry](https://python-poetry.org/) is used for desktop development
+
 # Directory structure
 
 * [server](server) - API Server
