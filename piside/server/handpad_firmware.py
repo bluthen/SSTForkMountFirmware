@@ -1,1 +1,0 @@
-../../sst_handpad/firmware/main.py

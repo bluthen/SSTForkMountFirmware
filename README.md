@@ -1,7 +1,8 @@
 # SST Forkmount
 
 This repo contains the electronic designs and software for [StarSync Trackers](https://starsynctrackers.com/)
-computerized forkmount equatorial mounts.
+computerized forkmount equatorial mounts. It was designed to work with SST hardware but should work with any fork mount
+that uses steppers for motors.
 
 ## Component Structure
 
@@ -35,3 +36,33 @@ Below it tries to describe
     * [client_advanced_slew_limits](piside/client_advanced_slew_limits) - Slew limits UI component
     * [client_main](pisiude/client_main) - The Material UI web client
     * [server](piside/server) - Flask API Server
+
+# TODOs
+
+* Improve a test Error modeling
+    * Add Star Alignment to handpad that uses the error modeling feature
+    * Good prompts for error modeling/alignment to web ui
+* Better testing of encoder usage
+* Easier pi setup
+* Instructions for settings.json for docker usage
+* Alt/Az Mode
+
+# Screenshots
+
+Screen shots of the web client.
+
+![Screen shot of web client software running, circle in middle control directions, side vertical slider for speed.](piside/imgs/shot1.png)
+
+![Screen shot of web client software running, a graph with time and altitude of Arcuturus with coordinates listed](piside/imgs/shot2.png)
+
+![Screen shot of web client software running, advanced configuration window showing settings like steps per degrees, backlash, acceleration](./piside/imgs/shot3.png)
+
+![Screen shot of web client software running, setup menu with a set of buttons to different configuration screens](./piside/imgs/shot4.png)
+
+# Related projects
+
+If you are interested in this project, some of these other open source projects might interest you.
+
+* [OneStep](https://github.com/hjd1964/OnStep)
+* [AstroEQ](https://www.astroeq.co.uk/)
+* [TeenAstro](https://groups.io/g/TeenAstro)
