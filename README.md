@@ -45,6 +45,7 @@ Below it tries to describe
 * Script and instructions to generate object database `ssteq.sqlite`
 * More python type-hinting
 * Switch from Flask to [FastAPI](https://fastapi.tiangolo.com/)
+* Cleanup files piside/server in director submodules
 * Better testing of encoder usage
 * Easier pi setup
 * Instructions for settings.json for docker usage
