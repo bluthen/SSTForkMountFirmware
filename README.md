@@ -24,3 +24,12 @@ Below it tries to describe
 
 
 # Project directory structure
+
+* [electronics](electronics) - Files related to the hardware of: Handpad, serial to ethernet, main controller
+  * [enclosures](electronics/enclosures) - Enclosures to house electronics
+  * [firmware](electronics/firmware) - Microcontroller firmware
+  * [pcb](electronics/pcb) - Schematic and PCB files
+* [piside](piside) - Software the run on the Pi.
+  * [client_advanced_slew_limits](piside/client_advanced_slew_limits) - Slew limits UI component
+  * [client_main](pisiude/client_main) - The Material UI web client
+  * [server](piside/server) - Flask API Server
