@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name SSTForkMountPrototype2-rescue)(type Legacy)(uri ${KIPRJMOD}/SSTForkMountPrototype2-rescue.lib)(options "")(descr ""))
-)
