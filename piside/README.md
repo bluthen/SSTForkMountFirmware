@@ -10,7 +10,11 @@
 
 # Docker compose
 
-You can run the software in docker with a simulated microcontroller board. If 
+You can run the software in docker with a simulated microcontroller board.
+
+* `settings.json` - needs to be set up correctly
+* `ssteq.sqlite` - needs to be generated (gen script and documentation are on TODO list)
+* `server/simulation_files` - may need to be set up
 
 ```bash
 docker compose build
