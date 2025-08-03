@@ -67,6 +67,6 @@ Screen shots of the web client.
 
 If you are interested in this project, some of these other open source projects might interest you.
 
-* [OneStep](https://github.com/hjd1964/OnStep)
+* [OnStep](https://github.com/hjd1964/OnStep)
 * [AstroEQ](https://www.astroeq.co.uk/)
 * [TeenAstro](https://groups.io/g/TeenAstro)
