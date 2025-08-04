@@ -51,7 +51,7 @@ class StepperControl:
                 try:
                     status[line_status[0]] = float(line_status[1])
                 except ValueError:
-                    print(line, line_status)
+                    print('StepperControl.get_status() - error: line, line_status = ', line, line_status)
                     raise
         # print(status)
         # print('status' + str(datetime.datetime.now()))
