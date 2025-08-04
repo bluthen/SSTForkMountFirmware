@@ -1,3 +1,5 @@
+import traceback
+
 import serial
 import threading
 import time
@@ -44,8 +46,13 @@ class StepperControl:
         for line in s:
             # print('@@@', line)
             line_status = line.split(':')
-            if len(line_status) == 2:
-                status[line_status[0]] = float(line_status[1])
+            if len(line_status) == 2 and line_status[0].strip() and line_status[1].strip():
+                # TODO: Maybe and issue with vmc_simulator that shows here sometimes.
+                try:
+                    status[line_status[0]] = float(line_status[1])
+                except ValueError:
+                    print(line, line_status)
+                    raise
         # print(status)
         # print('status' + str(datetime.datetime.now()))
         return status

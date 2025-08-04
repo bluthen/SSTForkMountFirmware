@@ -803,7 +803,7 @@ def init():
     # Open serial port
     stepper = stepper_control.StepperControl(settings.settings['microserial']['port'],
                                              settings.settings['microserial']['baud'])
-    skyconv.model_real_stepper = pointing_model.PointingModelBuie()
+    skyconv.model_real_stepper = pointing_model.PointingModelBuie(max_points=settings.settings['pointing_model_points'])
     # Handpad will set time/location from GPS eventually
     update_location()
     micro_update_settings()

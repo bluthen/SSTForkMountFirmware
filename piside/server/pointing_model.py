@@ -15,7 +15,7 @@ import astropy.units as u
 
 pointing_logger = settings.get_logger('pointing')
 
-SEPERATION_THRESHOLD = 0.5
+SEPERATION_THRESHOLD = 5
 
 
 def inverse_altaz_projection(xy_coord):
@@ -202,18 +202,29 @@ class PointingModelBuie:
         :return: None
         :rtype: None
         """
-        if self.__max_points != -1 and len(self.__to_points) >= self.__max_points:
-            self.__to_points = self.__to_points[1:]
-            self.__from_points = self.__from_points[1:]
+        # if self.__max_points != -1 and len(self.__to_points) >= self.__max_points:
+        #     self.__to_points = self.__to_points[1:]
+        #     self.__from_points = self.__from_points[1:]
+        print('PointingModelBuie.add_point, __max_points=', self.__max_points, 'len(self.__to_points)=',
+              len(self.__to_points))
 
         from_point = HADec(ha=from_point.ha, dec=from_point.dec)
         to_point = HADec(ha=to_point.ha, dec=to_point.dec)
         replace_idx = None
         if self.__from_points is not None:
-            replace_idxex = numpy.where(self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD)[0]
-            if len(replace_idxex) > 0:
-                replace_idx = replace_idxex[0]
+            seperation = self.__from_points.separation(from_point).deg
+            if self.__max_points != -1 and len(self.__to_points) >= self.__max_points:
+                print('PointingModelBuie.add_point, seperation=', seperation)
+                # If we are at max points, then lets replace the nearest one with this new point.
+                replace_idx = numpy.argmin(seperation)
+            else:
+                # If we are syncing points too close together
+                # Replace first point less than SEPERATION_THRESHOLD away with this new point.
+                replace_idxex = numpy.where(seperation < SEPERATION_THRESHOLD)[0]
+                if len(replace_idxex) > 0:
+                    replace_idx = replace_idxex[0]
         if replace_idx is not None:
+            print('PointingModelBuie.add_point replace_idx=', replace_idx)
             fra = self.__from_points.ha.deg
             fdec = self.__from_points.dec.deg
             fra[replace_idx] = from_point.ha.deg
