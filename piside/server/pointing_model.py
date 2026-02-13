@@ -13,7 +13,7 @@ from astropy.coordinates import AltAz, SkyCoord
 from skyconv_hadec import HADec
 import astropy.units as u
 
-pointing_logger = settings.get_logger('pointing')
+pointing_logger = settings.get_logger("pointing")
 
 SEPERATION_THRESHOLD = 5
 
@@ -26,8 +26,8 @@ def inverse_altaz_projection(xy_coord):
     :return: Coordinates projected back to altaz frame.
     :rtype: SkyCoord
     """
-    x = numpy.array(xy_coord['x'])
-    y = numpy.array(xy_coord['y'])
+    x = numpy.array(xy_coord["x"])
+    y = numpy.array(xy_coord["y"])
     caz = numpy.arctan2(y, x) * 180.0 / math.pi
     az = 90 - caz
     r = x / numpy.cos(caz * math.pi / 180.0)
@@ -54,7 +54,7 @@ def alt_az_projection(altaz_coord):
     r = 1.0 - alt / 90.0
     x = r * numpy.cos(caz * math.pi / 180.0)
     y = r * numpy.sin(caz * math.pi / 180.0)
-    return {'x': x, 'y': y}
+    return {"x": x, "y": y}
 
 
 def get_projection_coords(indexes, sync_points, sync_point_key):
@@ -71,7 +71,12 @@ def get_projection_coords(indexes, sync_points, sync_point_key):
     """
     ret = []
     for idx in indexes:
-        ret.append([sync_points[idx][sync_point_key]['x'], sync_points[idx][sync_point_key]['y']])
+        ret.append(
+            [
+                sync_points[idx][sync_point_key]["x"],
+                sync_points[idx][sync_point_key]["y"],
+            ]
+        )
     return ret
 
 
@@ -87,8 +92,10 @@ def test_altaz_transform(oalt, oaz, alt, az, deg):
     :rtype: Dict[str, float]
     """
     theta = deg * math.pi / 180.0
-    return {'alt': oalt + (alt - oalt) * math.cos(theta) + (az - oaz) * math.sin(theta),
-            'az': oaz + (az - oaz) * math.cos(theta) - (alt - oalt) * math.sin(theta)}
+    return {
+        "alt": oalt + (alt - oalt) * math.cos(theta) + (az - oaz) * math.sin(theta),
+        "az": oaz + (az - oaz) * math.cos(theta) - (alt - oalt) * math.sin(theta),
+    }
 
 
 def test_hadec_transform(offset_dec, offset_ha, dec, ha, deg):
@@ -108,8 +115,14 @@ def test_hadec_transform(offset_dec, offset_ha, dec, ha, deg):
     :rtype: Dict[str, float]
     """
     theta = deg * math.pi / 180.0
-    return {'ha': offset_ha + (ha - offset_ha) * math.cos(theta) + (dec - offset_dec) * math.sin(theta),
-            'dec': offset_dec + (dec - offset_dec) * math.cos(theta) - (ha - offset_ha) * math.sin(theta)}
+    return {
+        "ha": offset_ha
+        + (ha - offset_ha) * math.cos(theta)
+        + (dec - offset_dec) * math.sin(theta),
+        "dec": offset_dec
+        + (dec - offset_dec) * math.cos(theta)
+        - (ha - offset_ha) * math.sin(theta),
+    }
 
 
 def log_p2dict(point):
@@ -120,10 +133,10 @@ def log_p2dict(point):
     :return: dictionary with key values being coordinate axis
     :rtype: Dict[str, float]
     """
-    if hasattr(point, 'alt'):
-        return {'alt': point.alt.deg, 'az': point.az.deg}
-    elif hasattr(point, 'dec'):
-        return {'ra': point.ra.deg, 'dec': point.dec.deg}
+    if hasattr(point, "alt"):
+        return {"alt": point.alt.deg, "az": point.az.deg}
+    elif hasattr(point, "dec"):
+        return {"ra": point.ra.deg, "dec": point.dec.deg}
     else:
         return {}
 
@@ -157,11 +170,23 @@ def buie_model(xdata, ih, id, sh, sd, ch, np, ma, me, tf, fo):
     tan_dec = numpy.tan(dec)
     tan85 = math.tan(85 * math.pi / 180.0)
     tan_dec[dec > (85 * math.pi / 180.0)] = tan85
-    tan_dec[dec < (85 * math.pi / 180.0)] = -tan85
+    tan_dec[dec < (-85 * math.pi / 180.0)] = -tan85
 
-    ha_corrected = (ih + sh * ha + np * tan_dec + ch * numpy.cos(ha) * tan_dec +
-                    ma * numpy.sin(ha) * tan_dec)
-    dec_corrected = id + sd * dec + me * numpy.cos(ha) + ma * numpy.sin(ha) + tf * numpy.cos(dec) + fo * numpy.sin(dec)
+    ha_corrected = (
+        ih
+        + sh * ha
+        + np * tan_dec
+        + ch * numpy.cos(ha) * tan_dec
+        + ma * numpy.sin(ha) * tan_dec
+    )
+    dec_corrected = (
+        id
+        + sd * dec
+        + me * numpy.cos(ha)
+        + ma * numpy.sin(ha)
+        + tf * numpy.cos(dec)
+        + fo * numpy.sin(dec)
+    )
 
     # Convert back to degrees
     ha_corrected = ha_corrected * 180.0 / math.pi
@@ -175,14 +200,14 @@ def buie_model(xdata, ih, id, sh, sd, ch, np, ma, me, tf, fo):
 
 def buie_model_error(p0, x, y):
     p0a = numpy.zeros(10)
-    p0a = numpy.concatenate([p0, p0a[len(p0):]])
+    p0a = numpy.concatenate([p0, p0a[len(p0) :]])
     ny = buie_model(x, *p0a)
     err = numpy.concatenate((ny.T[0] - y.T[0], ny.T[1] - y.T[1]))
     return err
 
 
 class PointingModelBuie:
-    def __init__(self, log=False, name='', max_points=-1):
+    def __init__(self, log=False, name="", max_points=-1):
         """
         :param log:
         :param name:
@@ -205,8 +230,12 @@ class PointingModelBuie:
         # if self.__max_points != -1 and len(self.__to_points) >= self.__max_points:
         #     self.__to_points = self.__to_points[1:]
         #     self.__from_points = self.__from_points[1:]
-        print('PointingModelBuie.add_point, __max_points=', self.__max_points, 'len(self.__to_points)=',
-              len(self.__to_points))
+        print(
+            "PointingModelBuie.add_point, __max_points=",
+            self.__max_points,
+            "len(self.__to_points)=",
+            len(self.__to_points),
+        )
 
         from_point = HADec(ha=from_point.ha, dec=from_point.dec)
         to_point = HADec(ha=to_point.ha, dec=to_point.dec)
@@ -214,7 +243,7 @@ class PointingModelBuie:
         if self.__from_points is not None:
             seperation = self.__from_points.separation(from_point).deg
             if self.__max_points != -1 and len(self.__to_points) >= self.__max_points:
-                print('PointingModelBuie.add_point, seperation=', seperation)
+                print("PointingModelBuie.add_point, seperation=", seperation)
                 # If we are at max points, then lets replace the nearest one with this new point.
                 replace_idx = numpy.argmin(seperation)
             else:
@@ -224,7 +253,7 @@ class PointingModelBuie:
                 if len(replace_idxex) > 0:
                     replace_idx = replace_idxex[0]
         if replace_idx is not None:
-            print('PointingModelBuie.add_point replace_idx=', replace_idx)
+            print("PointingModelBuie.add_point replace_idx=", replace_idx)
             fra = self.__from_points.ha.deg
             fdec = self.__from_points.dec.deg
             fra[replace_idx] = from_point.ha.deg
@@ -244,22 +273,32 @@ class PointingModelBuie:
         if len(self.__from_points) > 1:
             p0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             if len(self.__to_points) < len(p0):
-                p0 = p0[0:len(self.__to_points)]
-            xdata = numpy.array([self.__from_points.ha.deg, self.__from_points.dec.deg]).T
+                p0 = p0[0 : len(self.__to_points)]
+            xdata = numpy.array(
+                [self.__from_points.ha.deg, self.__from_points.dec.deg]
+            ).T
             ydata = numpy.array(self.__to_points)
             # Default maxfev=800 fails in some unit tests
-            result = scipy.optimize.leastsq(buie_model_error, numpy.array(p0), args=(xdata, ydata), full_output=True,
-                                            maxfev=1600)
+            result = scipy.optimize.leastsq(
+                buie_model_error,
+                numpy.array(p0),
+                args=(xdata, ydata),
+                full_output=True,
+                maxfev=1600,
+            )
             result_ier = result[4]
             result_msg = result[3]
             # print(result[2]['fvec'], len(self.__from_points))
             if result_ier in [1, 2, 3, 4]:
                 self.__buie_vals = result[0]
             else:
-                print('WARNING: model failed, using single point model until successful. ' +
-                      'scipy.optimize.leastsq: ier={result_ier:d}, mesg={result_msg:s}'.format(result_ier=result_ier,
-                                                                                               result_msg=result_msg),
-                      file=sys.stderr)
+                print(
+                    "WARNING: model failed, using single point model until successful. "
+                    + "scipy.optimize.leastsq: ier={result_ier:d}, mesg={result_msg:s}".format(
+                        result_ier=result_ier, result_msg=result_msg
+                    ),
+                    file=sys.stderr,
+                )
                 # Had problem with least squares, use single point model until successful
                 self.__buie_vals = None
 
@@ -274,7 +313,7 @@ class PointingModelBuie:
         if self.__buie_vals is not None:
             # print('buie_vals', self.__buie_vals)
             p0 = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-            p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals):]])
+            p0 = numpy.concatenate([self.__buie_vals, p0[len(self.__buie_vals) :]])
             new_point = buie_model(numpy.array([[point.ha.deg, point.dec.deg]]), *p0)
             return HADec(ha=new_point[0][0] * u.deg, dec=new_point[0][1] * u.deg)
         else:
@@ -289,17 +328,30 @@ class PointingModelBuie:
         :rtype: HADec
         """
         if self.__buie_vals is not None:
-            def our_func(coord):
-                new_point = self.transform_point(HADec(ha=coord[0] * u.deg, dec=coord[1] * u.deg))
-                return (new_point.ha.deg - point.ha.deg) ** 2.0 + (new_point.dec.deg - point.dec.deg) ** 2.0
 
-            results = scipy.optimize.fmin(our_func, [point.ha.deg, point.dec.deg], disp=False, full_output=True,
-                                          maxfun=1600)
+            def our_func(coord):
+                new_point = self.transform_point(
+                    HADec(ha=coord[0] * u.deg, dec=coord[1] * u.deg)
+                )
+                return (new_point.ha.deg - point.ha.deg) ** 2.0 + (
+                    new_point.dec.deg - point.dec.deg
+                ) ** 2.0
+
+            results = scipy.optimize.fmin(
+                our_func,
+                [point.ha.deg, point.dec.deg],
+                disp=False,
+                full_output=True,
+                maxfun=1600,
+            )
             inv_point = results[0]
             warnflag = results[4]
             if warnflag in [1, 2]:
                 # TODO: Not sure if this will change until model has change, maybe can set/check model update flag
-                print('WARNING: model failed, using single point model until successful. ', file=sys.stderr)
+                print(
+                    "WARNING: model failed, using single point model until successful. ",
+                    file=sys.stderr,
+                )
                 return point
             else:
                 return HADec(ha=inv_point[0] * u.deg, dec=inv_point[1] * u.deg)
@@ -312,7 +364,7 @@ class PointingModelBuie:
         :return: 'hadec'
         :rtype: str
         """
-        return 'hadec'
+        return "hadec"
 
     def clear(self):
         """
@@ -341,11 +393,11 @@ class PointingModelBuie:
 
     def __str__(self):
         if self.__buie_vals is None:
-            return 'PointingModelBuie: no points'
+            return "PointingModelBuie: no points"
         v = [None, None, None, None, None, None, None, None, None, None]
         for i in range(len(self.__buie_vals)):
             v[i] = self.__buie_vals[i]
-        return f""""PointingModelBuie:
+        return f"""PointingModelBuie:
 ih={v[0]} -- RA - index error
 id={v[1]} -- Dec - index error
 sh={v[2]} -- RA - scale error
@@ -359,7 +411,7 @@ fo={v[9]} -- Dec - tube flexure - sin term"""
 
 
 class PointingModelAffine:
-    def __init__(self, log=False, name='', isinverse=False, max_points=-1):
+    def __init__(self, log=False, name="", isinverse=False, max_points=-1):
         """
         :Example:
         """
@@ -386,7 +438,7 @@ class PointingModelAffine:
         """
         ret = []
         for point in self.__sync_points:
-            ret.append(point['from_point'])
+            ret.append(point["from_point"])
         return ret
 
     def add_point(self, from_point, to_point):
@@ -397,11 +449,15 @@ class PointingModelAffine:
         :param to_point: AltAz to point
         :type to_point: Union[AltAz, SkyCoord]
         """
-        if from_point.name != 'altaz' or to_point.name != 'altaz':
-            raise ValueError('coords should be an alt-az coordinate')
+        if from_point.name != "altaz" or to_point.name != "altaz":
+            raise ValueError("coords should be an alt-az coordinate")
 
-        if self.__max_points != -1 and len(self.__from_points) >= self.__max_points:
-            self.__from_points = self.__max_points[1:]
+        if (
+            self.__max_points != -1
+            and self.__from_points is not None
+            and len(self.__from_points) >= self.__max_points
+        ):
+            self.__from_points = self.__from_points[1:]
             self.__sync_points = self.__sync_points[1:]
 
         from_point = SkyCoord(AltAz(alt=from_point.alt, az=from_point.az))
@@ -411,36 +467,56 @@ class PointingModelAffine:
 
         replace_idx = None
         if self.__from_points is not None:
-            replace_idxex = numpy.where(self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD)[0]
+            replace_idxex = numpy.where(
+                self.__from_points.separation(from_point).deg < SEPERATION_THRESHOLD
+            )[0]
             if len(replace_idxex) > 0:
                 replace_idx = replace_idxex[0]
         if replace_idx is not None:
-            self.__sync_points[replace_idx] = {'from_point': from_point,
-                                               'from_projection': alt_az_projection(from_point), 'to_point': to_point,
-                                               'to_projection': alt_az_projection(to_point)}
+            self.__sync_points[replace_idx] = {
+                "from_point": from_point,
+                "from_projection": alt_az_projection(from_point),
+                "to_point": to_point,
+                "to_projection": alt_az_projection(to_point),
+            }
             alt = self.__from_points.alt.deg
             az = self.__from_points.az.deg
             alt[replace_idx] = from_point.alt.deg
             az[replace_idx] = from_point.az.deg
         else:
             self.__sync_points.append(
-                {'from_point': from_point, 'from_projection': alt_az_projection(from_point), 'to_point': to_point,
-                 'to_projection': alt_az_projection(to_point)})
+                {
+                    "from_point": from_point,
+                    "from_projection": alt_az_projection(from_point),
+                    "to_point": to_point,
+                    "to_projection": alt_az_projection(to_point),
+                }
+            )
             if self.__from_points is not None:
                 alt = numpy.append(self.__from_points.alt.deg, from_point.alt.deg)
                 az = numpy.append(self.__from_points.az.deg, from_point.az.deg)
             else:
                 alt = [from_point.alt.deg]
                 az = [from_point.az.deg]
-        self.__from_points = SkyCoord(AltAz(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg))
+        self.__from_points = SkyCoord(
+            AltAz(alt=numpy.array(alt) * u.deg, az=numpy.array(az) * u.deg)
+        )
 
         if len(self.__sync_points) >= 3:
             if self.__log:
-                pointing_logger.debug(json.dumps({'func': 'add_point', 'model': 'affine_all'}))
-            from_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
-                                             'from_projection')
-            to_npa = get_projection_coords(list(range(len(self.__sync_points))), self.__sync_points,
-                                           'to_projection')
+                pointing_logger.debug(
+                    json.dumps({"func": "add_point", "model": "affine_all"})
+                )
+            from_npa = get_projection_coords(
+                list(range(len(self.__sync_points))),
+                self.__sync_points,
+                "from_projection",
+            )
+            to_npa = get_projection_coords(
+                list(range(len(self.__sync_points))),
+                self.__sync_points,
+                "to_projection",
+            )
             self.__affineAll = affine_fit.affine_fit(from_npa, to_npa)
         if self.__inverseModel:
             self.__inverseModel.add_point(to_point, from_point)
@@ -463,9 +539,16 @@ class PointingModelAffine:
             new_az = 360 + new_az
         to_point = SkyCoord(AltAz(alt=new_alt * u.deg, az=new_az * u.deg))
         if self.__log:
-            pointing_logger.debug(json.dumps(
-                {'func': 'transform_point', 'model': '1point', 'from_point': log_p2dict(point),
-                 'to_point': log_p2dict(to_point)}))
+            pointing_logger.debug(
+                json.dumps(
+                    {
+                        "func": "transform_point",
+                        "model": "1point",
+                        "from_point": log_p2dict(point),
+                        "to_point": log_p2dict(to_point),
+                    }
+                )
+            )
         return to_point
 
     def transform_point(self, point):
@@ -479,31 +562,48 @@ class PointingModelAffine:
         point = SkyCoord(AltAz(alt=point.alt, az=point.az))
         proj_coord = alt_az_projection(point)
         if self.__affineAll:
-            transformed_projection = self.__affineAll.Transform([proj_coord['x'], proj_coord['y']])
+            transformed_projection = self.__affineAll.Transform(
+                [proj_coord["x"], proj_coord["y"]]
+            )
             to_point = inverse_altaz_projection(
-                {'x': transformed_projection[0], 'y': transformed_projection[1]})
+                {"x": transformed_projection[0], "y": transformed_projection[1]}
+            )
             if self.__log:
-                pointing_logger.debug(json.dumps(
-                    {'func': 'transform_point', 'model': 'affine_all', 'from_point': log_p2dict(point),
-                     'to_point': log_p2dict(to_point)}))
+                pointing_logger.debug(
+                    json.dumps(
+                        {
+                            "func": "transform_point",
+                            "model": "affine_all",
+                            "from_point": log_p2dict(point),
+                            "to_point": log_p2dict(to_point),
+                        }
+                    )
+                )
             return to_point
         elif len(self.__sync_points) >= 2:
             # Get nearest two_points
             nearest_point = self.__get_closest_sync_point_idx(point)
 
             # for 1 point use simple offsets
-            fp = self.__sync_points[nearest_point]['from_point']
-            tp = self.__sync_points[nearest_point]['to_point']
+            fp = self.__sync_points[nearest_point]["from_point"]
+            tp = self.__sync_points[nearest_point]["to_point"]
             return self.__two_point(point, fp, tp)
 
         elif len(self.__sync_points) == 1:
             # Just normal stepper slew using point as sync_point
             if self.__log:
-                pointing_logger.debug(json.dumps(
-                    {'func': 'transform_point', 'model': 'nomodel', 'from_point': log_p2dict(point)}))
+                pointing_logger.debug(
+                    json.dumps(
+                        {
+                            "func": "transform_point",
+                            "model": "nomodel",
+                            "from_point": log_p2dict(point),
+                        }
+                    )
+                )
             return point
         else:
-            raise ValueError('No sync points.')
+            raise ValueError("No sync points.")
 
     def inverse_transform_point(self, point):
         """
@@ -523,7 +623,7 @@ class PointingModelAffine:
         :return: 'altaz'
         :rtype: str
         """
-        return 'altaz'
+        return "altaz"
 
     def clear(self):
         """
