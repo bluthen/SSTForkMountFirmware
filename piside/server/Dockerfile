@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 RUN apt update && apt upgrade -y && apt clean
-RUN apt install socat python3-pip libblas3 liblapack3 libatlas3-base ntpdate ntpstat avahi-utils astrometry.net imagemagick libssl-dev libbz2-dev libncurses-dev libreadline-dev libffi-dev libsqlite3-dev lzma-dev -y && apt clean
+RUN apt install socat python3-pip libblas3 liblapack3 libatlas3-base ntpsec-ntpdate ntpstat avahi-utils astrometry.net imagemagick libssl-dev libbz2-dev libncurses-dev libreadline-dev libffi-dev libsqlite3-dev liblzma-dev -y && apt clean
 RUN apt install procps -y && apt clean
 RUN pip install poetry
 ENV POETRY_VIRTUALENVS_CREATE=false

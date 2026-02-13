@@ -54,8 +54,8 @@ class CoordinatesInput extends React.Component {
             sub.nextRef.current.focus();
         }
         if (v === 0 && negativeAllowed && first === '-') {
-            state.goto.coordinates[coord][sub.key] = '-';
-            state.goto.coordinates[coord + '_error'][sub.key] = 'invalid value';
+            state.goto.coordinates[coord][sub.key] = '-0';
+            state.goto.coordinates[coord + '_error'][sub.key] = null;
         } else if (v > sub.max || v < sub.min) {
             state.goto.coordinates[coord + '_error'][sub.key] = 'invalid value';
         } else {

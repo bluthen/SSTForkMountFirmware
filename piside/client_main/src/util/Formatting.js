@@ -56,21 +56,23 @@ const Formatting = {
                 parseFloat(s) / (60.0 * 60.0));
     },
     dmsDEC2deg(d, m, s) {
-        let sign = Math.sign(d);
-        sign = sign ? sign : 1;
-        return parseFloat(d) +
-            sign * parseFloat(m) / 60.0 +
-            sign * parseFloat(s) / (60.0 * 60.0);
+        let pd = parseFloat(d);
+        let sign = Object.is(pd, -0) || pd < 0 ? -1 : 1;
+        return sign * (Math.abs(pd) +
+            parseFloat(m) / 60.0 +
+            parseFloat(s) / (60.0 * 60.0));
     },
     degDEC2Str(dec) {
         if (dec !== null) {
             dec = parseFloat(dec);
             dec = Math.round(dec*10000)/10000.0;
+            const sign = dec < 0 ? '-' : '';
+            dec = Math.abs(dec);
             const deg = ~~dec;
-            let remain = Math.abs(dec - deg) * 60 * 60;
+            let remain = (dec - deg) * 60 * 60;
             const arcmin = ~~(remain / 60)
             const arcsec = (remain) - (arcmin * 60);
-            return deg + DEG_SYM + arcmin + '\'' + arcsec.toFixed(1) + '"'
+            return sign + deg + DEG_SYM + arcmin + '\'' + arcsec.toFixed(1) + '"'
         } else {
             return '';
         }
