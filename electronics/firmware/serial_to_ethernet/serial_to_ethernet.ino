@@ -11,7 +11,9 @@ namespace qn = qindesign::network;
 
 // Desktop test with nc: nc -lv 10002
 
-
+// Buffer size for relaying data between serial and ethernet.
+// LX200 commands/responses are small, 256 bytes is more than enough.
+#define BUF_SIZE 256
 
 IPAddress ip(192, 168, 46, 77);
 IPAddress mount(192, 168, 46, 2);
@@ -22,6 +24,8 @@ IPAddress gw(192,168,46,2);
 
 qn::EthernetClient client;
 
+uint8_t serialBuf[BUF_SIZE];
+uint8_t netBuf[BUF_SIZE];
 
 void setup() {
   Serial.begin(9600);
@@ -56,29 +60,42 @@ void loop() {
     DEBUG_SERIAL.println("Trying to connect client");
     client.stop();
     delay(10);
-    connectCounter += 1;
-    while (!client.connected() || connectCounter > 300) {
+    connectCounter = 0;
+    while (!client.connected() && connectCounter < 300) {
       connectCounter++;
       client.abort();
       client.connect(mount, 10002);
       delay(10);
     }
-    DEBUG_SERIAL.println("Client Conected");
+    if (client.connected()) {
+      // Disable Nagle's algorithm so small packets are sent immediately.
+      // Critical for low-latency request/response protocols like LX200.
+      client.setNoDelay(true);
+      DEBUG_SERIAL.println("Client Connected");
+    } else {
+      DEBUG_SERIAL.println("Client connection failed");
+    }
   } else {
-    // if there are incoming bytes available
-    // from the server, read them and print them:
-    if (client.available()) {
-      char c = client.read();
-      Serial.print(c);
+    // Read all available bytes from the network and relay to serial in bulk.
+    int avail = client.available();
+    if (avail > 0) {
+      if (avail > BUF_SIZE) avail = BUF_SIZE;
+      int n = client.read(netBuf, avail);
+      if (n > 0) {
+        Serial.write(netBuf, n);
+      }
     }
 
-    // as long as there are bytes in the serial queue,
-    // read them and send them out the socket if it's open:
-    while (Serial.available() > 0) {
-      char inChar = Serial.read();
-      if (client.connected()) {
-        client.writeFully(inChar);
+    // Read all available bytes from serial and send over TCP in a single write.
+    avail = Serial.available();
+    if (avail > 0 && client.connected()) {
+      if (avail > BUF_SIZE) avail = BUF_SIZE;
+      int n = 0;
+      while (n < avail) {
+        serialBuf[n++] = Serial.read();
       }
+      client.writeFully(serialBuf, n);
+      client.flush();
     }
   }
 }
