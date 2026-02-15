@@ -24,6 +24,7 @@ slew_speed = "fastest"
 target = {"ra": None, "dec": None, "alt": None, "az": None}  # type: typing.Dict[str, typing.Optional[float]]
 slew_intervals = {"n": None, "s": None, "e": None, "w": None}  # type: typing.Dict[str, typing.Optional[threading.Timer]]
 slewing_time_buffer = False
+slewing_time_buffer_timer = None  # type: typing.Optional[threading.Timer]
 extra_logging = False
 
 use_holders = True
@@ -79,10 +80,14 @@ def slew_commanded_delay_done():
 
 
 def slew_commanded():
-    global slewing_time_buffer
+    global slewing_time_buffer, slewing_time_buffer_timer
+    # Cancel any pending timer from a previous slew command so it doesn't
+    # prematurely clear the buffer for this new slew.
+    if slewing_time_buffer_timer is not None:
+        slewing_time_buffer_timer.cancel()
     slewing_time_buffer = True
-    timer = threading.Timer(2, slew_commanded_delay_done)
-    timer.start()
+    slewing_time_buffer_timer = threading.Timer(3, slew_commanded_delay_done)
+    slewing_time_buffer_timer.start()
 
 
 def ra_format(ra_deg, high_precision=True):
@@ -282,7 +287,12 @@ class LX200Client:
                 print("!!UNHANDLED CMD: ", cmd, file=sys.stderr)
         elif cmd[1] == "D":  # PRIORITY
             # If slewing hashes till how close we are? 0-8 #
-            if slewing_time_buffer or control.last_status["slewing"]:
+            # Check three sources to avoid false "not slewing" reports:
+            #   slewing_time_buffer: bridges the gap between :MS# and the slew
+            #     thread setting control.slewing = True
+            #   control.slewing: live flag set by the slew thread (no 1s delay)
+            #   control.last_status["slewing"]: status snapshot updated every ~1s
+            if slewing_time_buffer or control.slewing or control.last_status["slewing"]:
                 self.write(b"\x7f\x7f#")
             else:
                 self.write(b"#")  # or is it b'' ?

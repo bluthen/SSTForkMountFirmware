@@ -1,0 +1,11 @@
+profiles:
+  teensy41:
+    notes: Serial to Ethernet bridge for Teensy 4.1
+    fqbn: teensy:avr:teensy41
+    platforms:
+      - platform: teensy:avr (1.59.0)
+        platform_index_url: https://www.pjrc.com/teensy/package_teensy_index.json
+    libraries:
+      - QNEthernet (0.29.1)
+
+default_profile: teensy41
